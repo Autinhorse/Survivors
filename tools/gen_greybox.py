@@ -123,7 +123,7 @@ def materials():
                               macro_noise=macro, detail_noise=detail,
                               grass_detail=grass_n,
                               grass_scale="0.85", grass_contrast="0.70",
-                              bump_strength="3.2", bump_epsilon="0.055",
+                              bump_strength="1.5", bump_epsilon="0.055",
                               grass_dark=col(0.145, 0.141, 0.063),
                               grass_light=col(0.373, 0.333, 0.145),
                               dirt_color=col(0.361, 0.259, 0.145),
@@ -605,10 +605,13 @@ def build():
 
     # rocks: boulder field lower-left, gorge lip, far bank, frame-filling clumps
     spots = []
-    for cx, cz, n, sp in [(-17.0, 11.0, 14, 4.2), (-10.0, 19.0, 11, 4.0),
-                          (-21.0, 2.0, 9, 3.4), (-19.5, -8.0, 6, 3.0),
-                          (-4.0, 21.0, 8, 3.6), (-27.0, 16.0, 8, 4.0)]:
-        spots += cluster(n, cx, cz, sp, (0.7, 2.4), r_mul=0.8)
+    for cx, cz, n, sp in [(-17.0, 12.0, 11, 3.6), (-11.0, 19.5, 8, 3.4),
+                          (-22.0, 3.0, 6, 3.0), (-20.0, -8.0, 4, 2.6),
+                          (-5.0, 22.0, 5, 3.2), (-28.0, 16.0, 5, 3.4)]:
+        spots += cluster(n, cx, cz, sp, (0.45, 1.55), r_mul=0.9)
+    # 少数几块显眼的大石，作为视觉锚点 —— 参考图也是这个结构
+    for cx, cz in ((-15.5, 14.5), (-8.0, 20.5), (-24.0, 6.0)):
+        spots += cluster(1, cx, cz, 1.0, (2.1, 2.6), r_mul=1.2)
     for z in range(-22, 23, 3):                            # gorge lip
         px = river_x(z) - RIVER_W / 2.0 - random.uniform(0.6, 2.4)
         pz = z + random.uniform(-1.0, 1.0)
@@ -617,22 +620,43 @@ def build():
             claim(px, pz, s * 0.7)
             spots.append((px, pz, s))
     for cz in (-17.0, -2.0, 13.0):                         # far bank
-        spots += cluster(6, river_x(cz) + 9.0, cz, 4.0, (0.9, 2.2), r_mul=0.8)
+        spots += cluster(4, river_x(cz) + 9.0, cz, 4.0, (0.6, 1.6), r_mul=0.9)
     for cx, cz in ((-40.0, 20.0), (30.0, -34.0), (-42.0, -22.0), (38.0, 22.0),
                    (0.0, 34.0), (-30.0, -34.0)):
-        spots += cluster(8, cx, cz, 6.0, (1.0, 2.6), r_mul=0.8)
+        spots += cluster(6, cx, cz, 6.0, (0.7, 1.9), r_mul=0.9)
     rock_pl = []
     for px, pz, s in spots:
         sy = s * random.uniform(0.55, 0.85)
-        rock_pl += [px, bank_y(px, pz) + 0.22 * sy, pz,
+        rock_pl += [px, bank_y(px, pz) - 0.18 * sy, pz,
                     random.uniform(0.0, 360.0),
                     s, sy, s * random.uniform(0.7, 1.2)]
     node("Rocks", "Node3D", ".", {
         "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
         "kind": '"rock"',
-        "variants": "6",
-        "material": MAT["rock"],
+        "source_scene": ext("PackedScene", "res://assets/environment/rocks_lp.glb"),
+        "variants": "8",
         "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in rock_pl),
+    })
+
+    # 碎石：参考图的地面几乎没有空白，除了大石块还有满地小石子。
+    # 单独一层、不投影、成簇跟着大石块和路边走。
+    pebble_pl = []
+    for cx, cz, n, sp in [(-17.0, 11.0, 22, 5.0), (-10.0, 19.0, 18, 4.5),
+                          (-21.0, 2.0, 14, 4.0), (-4.0, 21.0, 12, 4.5),
+                          (-27.0, 16.0, 12, 4.5), (-19.5, -8.0, 10, 3.5),
+                          (12.0, 6.0, 12, 5.0), (16.0, -12.0, 10, 5.0),
+                          (-8.0, -3.0, 9, 6.0), (2.0, 8.0, 9, 6.0)]:
+        for px, pz, sc in cluster(n, cx, cz, sp, (0.35, 0.95), r_mul=0.2):
+            pebble_pl += [px, bank_y(px, pz) - 0.04, pz,
+                          random.uniform(0.0, 360.0),
+                          sc, sc * random.uniform(0.6, 1.0), sc]
+    node("Pebbles", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+        "kind": '"rock"',
+        "source_scene": ext("PackedScene", "res://assets/environment/pebbles.glb"),
+        "variants": "6",
+        "cast_shadows": "false",
+        "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in pebble_pl),
     })
 
     # trees: authored singles inside the core, groves filling the frame edges

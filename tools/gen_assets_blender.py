@@ -238,6 +238,83 @@ def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
     return o
 
 
+# ------------------------------------------------------------------ 石头 --
+# 参考图的石头是"碎裂的岩块"：几个大平面、锐边、轮廓各不相同。
+# 位移球体从原理上做不出这个 —— 它只会得到圆润的多面体，
+# 面的分布还很均匀，一眼就是程序生成的。
+#
+# 正确做法是**随机点的凸包**：天然产生平面和锐边；改变点云的轴比就能
+# 控制形状类型；点数直接控制面数（10 个点约 16 面 / 32 三角形）。
+# 点数不能太少：7-11 个点的凸包会退化成尖锐的四面体，看起来像碎玻璃而不是石头。
+# 参考图的石头是"十几个面的敦实块体"，所以点数要够、半径抖动要小。
+ROCK_ARCHETYPES = {
+    #            轴比 (x, y, z)        点数   垂直偏置
+    "chunky":   ((1.00, 0.95, 0.68), 17, 0.0),
+    "slab":     ((1.15, 1.30, 0.34), 15, 0.0),
+    "column":   ((0.72, 0.78, 1.05), 14, 0.20),
+    "wedge":    ((1.08, 0.76, 0.58), 14, -0.20),
+    "block":    ((0.95, 0.90, 0.78), 13, 0.0),
+    "pebble":   ((1.00, 0.92, 0.52), 9, 0.0),
+}
+
+
+def rock_hull(name, archetype, seed, loc=(0, 0, 0)):
+    import random
+    rng = random.Random(seed)
+    axes, n_pts, bias = ROCK_ARCHETYPES[archetype]
+
+    bm = bmesh.new()
+    for i in range(n_pts):
+        # 球面上的随机方向，再按轴比拉伸 —— 直接在盒子里取点会得到偏立方的结果
+        z = rng.uniform(-1.0, 1.0) + bias
+        z = max(-1.0, min(1.0, z))
+        r = math.sqrt(max(0.0, 1.0 - z * z))
+        a = rng.uniform(0.0, math.tau)
+        # 半径抖动要小：抖太狠会让某个面变得极大、其他面缩成一条，
+        # 结果就是尖锐的薄片
+        k = rng.uniform(0.88, 1.0)
+        bm.verts.new((math.cos(a) * r * axes[0] * k,
+                      math.sin(a) * r * axes[1] * k,
+                      z * axes[2] * k))
+    bmesh.ops.convex_hull(bm, input=bm.verts[:])
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    # 不切底面：切平会删掉大半几何（实测 8 块石头只剩 40 面），
+    # 而且真实的散落岩块本来就是半埋的 —— 交给摆放时下沉更简单也更自然。
+
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(o)
+    o.data.materials.append(mat("Stone"))
+    finalize(o, loc)
+    return o
+
+
+def build_rocks(out_dir):
+    """一个 GLB 装多个变体：石头走 MultiMesh 按变体取用，适合合并成一个文件。
+    形状类型和尺寸都要拉开 —— 参考图里从碎石到巨石跨了一个数量级。"""
+    clear()
+    plan = [
+        ("chunky", 1.00), ("chunky", 0.62), ("slab", 1.20), ("slab", 0.70),
+        ("column", 0.85), ("wedge", 1.05), ("wedge", 0.55), ("block", 0.90),
+    ]
+    for i, (arch, scale) in enumerate(plan):
+        o = rock_hull("rock_%02d" % i, arch, seed=1000 + i * 37,
+                      loc=(i * 3.0 - 10.5, 0, 0))
+        o.scale = (scale, scale, scale)
+    export(os.path.join(out_dir, "rocks_lp.glb"), "rocks")
+
+    clear()
+    for i in range(6):
+        o = rock_hull("pebble_%02d" % i, "pebble", seed=5000 + i * 53,
+                      loc=(i * 1.2 - 3.0, 0, 0))
+        o.scale = (0.34, 0.34, 0.34)
+    export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
+
+
 # -------------------------------------------------------------------- 树 --
 def tree(name, loc, height=5.4, trunk_r=0.17, canopy_layers=3, seed=0):
     """比 M2 的"两个球"多做的事：树干有锥度和弯曲、树冠是分层收拢的多面体、
@@ -330,9 +407,11 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", required=True)
-    ap.add_argument("--only", default="buildings,trees")
+    ap.add_argument("--only", default="buildings,trees,rocks")
     args = ap.parse_args(argv)
     only = [s.strip() for s in args.only.split(",")]
+    if "rocks" in only:
+        build_rocks(args.out_dir)
     if "buildings" in only:
         build_buildings(args.out_dir)
     if "trees" in only:
