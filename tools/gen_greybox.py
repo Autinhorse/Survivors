@@ -247,6 +247,15 @@ def node(name, ntype, parent, props=None, transform=None):
     return (parent + "/" + name) if parent != "." else name
 
 
+def instance(name, parent, packed, transform=None):
+    """实例化一个外部场景（GLB 导入后就是 PackedScene）。"""
+    head = '[node name="%s" parent="%s" instance=%s]' % (name, parent, packed)
+    if transform:
+        head = head + chr(10) + "transform = " + transform
+    nodes.append(head)
+    return (parent + "/" + name) if parent != "." else name
+
+
 def mesh(name, parent, meshres, material, pos=(0.0, 0.0, 0.0), ry=0.0,
          scale=(1.0, 1.0, 1.0), rx=0.0, cast_shadow=None, xform=None):
     p = {"mesh": meshres, "surface_material_override/0": material}
@@ -510,9 +519,17 @@ def build():
              (pos[0] + chim[0], h + 1.6, pos[1] + chim[1]), ry=ry,
              scale=(0.7, 2.4, 0.7))
 
-    building("HouseA", (-12.9, -13.2), 6.8, 4.8, 3.4, -8.0, (2.4, -1.5))
-    building("HouseB", (-2.7, -11.1), 4.4, 3.8, 2.8, 14.0, (-1.3, -1.1))
-    building("HouseC", (-21.5, -6.5), 5.0, 4.0, 3.0, 22.0, (1.6, 1.2))
+    # 建筑改用 Blender 程序化生成的资产（tools/gen_assets_blender.py）：
+    # 出檐、屋脊、门窗凹陷、转角立柱、门廊 —— 这些是 M2 判定的最大视觉短板，
+    # 每样只花几十个面。GLB 里三栋房子摆在 x = -9 / 0 / 9，
+    # 用一个偏移把需要的那栋挪到父节点原点，其余两栋跟着挪出画面外。
+    for nm, px, pz, ry, src in [
+            ("HouseA", -12.9, -13.2, -8.0, "house_large"),
+            ("HouseB", -2.7, -11.1, 14.0, "house_small"),
+            ("HouseC", -21.5, -6.5, 22.0, "house_tall")]:
+        instance(nm, bl, ext("PackedScene", "res://assets/environment/%s.glb" % src),
+                 T((px, 0.0, pz), ry=ry))
+
     mesh("ShedFloor", bl, box, MAT["woodlt"], (3.9, 0.6, -14.4), ry=6.0,
          scale=(3.6, 0.2, 3.0))
     for i, (dx, dz) in enumerate(((-1.6, -1.3), (1.6, -1.3),
@@ -636,13 +653,8 @@ def build():
     node("Trees", "Node3D", ".", {
         "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
         "kind": '"tree"',
-        "variants": "4",
-        "material": MAT["wood"],
-        "material_secondary": MAT["leafA"],
-        "trunk_height": "3.6",
-        "trunk_radius": "0.28",
-        "canopy_radius": "2.5",
-        "canopy_blobs": "4",
+        "source_scene": ext("PackedScene", "res://assets/environment/trees.glb"),
+        "variants": "3",
         "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in tree_pl),
     })
 
@@ -732,6 +744,8 @@ def build():
         node("Vfx", "Node3D", ".", {
             "script": ext("Script", "res://scripts/vfx/VfxManager.gd"),
             "explosion_light": "false",
+            # 只有压测场景需要大容量手动投放池（见 VfxManager.mass_pool）
+            "mass_pool": "8192",
         })
         node("VfxStress", "Node3D", ".", {
             "script": ext("Script", "res://scripts/vfx/VfxStress.gd"),

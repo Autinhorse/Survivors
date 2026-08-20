@@ -28,6 +28,13 @@ const MAX_ROCKETS := 96
 const MAX_ARCS := 12
 
 @export var explosion_light: bool = false   ## section 17/23 A-B switch
+## Manual-emission pool size, 0 = do not create the mass emitters at all.
+##
+## These pools are drawn every frame whether or not any particle is alive ——
+## measured at ~138k extra primitives per frame while completely idle.
+## Only the section 23 stress test needs them; the gameplay scene must not
+## pay for a load it never produces.
+@export var mass_pool: int = 0
 @export var tracer_width: float = 0.13
 @export var tracer_length: float = 3.2
 
@@ -180,6 +187,9 @@ func explosion(pos: Vector3, scale := 1.0) -> void:
 
 
 func explosion_mass(pos: Vector3, scale := 1.0) -> void:
+	if _mass_smoke == null:
+		explosion(pos, scale)      # 没建大池子就退回普通路径
+		return
 	## Same look as explosion(), but the particles go through the manual-emission
 	## emitters so hundreds of bursts can overlap without truncating each other.
 	var f := Puff.new()
@@ -373,9 +383,13 @@ func _build_particles() -> void:
 		add_child(p)
 		_debris.append(p)
 
-	_mass_spark = _make_mass_emitter(8192, 0.55, spark_mesh, VFX.spark_process())
-	_mass_smoke = _make_mass_emitter(8192, 2.1, smoke_mesh, VFX.smoke_process(1.7, 3.6))
-	_mass_debris = _make_mass_emitter(4096, 1.1, debris_mesh, VFX.debris_process())
+	if mass_pool > 0:
+		_mass_spark = _make_mass_emitter(mass_pool, 0.55, spark_mesh,
+				VFX.spark_process())
+		_mass_smoke = _make_mass_emitter(mass_pool, 2.1, smoke_mesh,
+				VFX.smoke_process(1.7, 3.6))
+		_mass_debris = _make_mass_emitter(maxi(mass_pool / 2, 1), 1.1, debris_mesh,
+				VFX.debris_process())
 
 
 func _build_rockets() -> void:

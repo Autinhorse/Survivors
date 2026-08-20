@@ -19,6 +19,10 @@ const PM = preload("res://scripts/environment/ProcMesh.gd")
 const STRIDE := 7
 
 @export_enum("rock", "tree", "bush") var kind: String = "rock"
+## 从 GLB 里取网格，而不是程序生成（tools/gen_assets_blender.py 的产物）。
+## 设了这个之后 kind 被忽略：每个网格就是一个变体，仍然走 MultiMesh 批处理 ——
+## 资产在 Blender 里做，批处理在 Godot 这边，两件事不冲突。
+@export var source_scene: PackedScene
 @export var placements: PackedFloat32Array = PackedFloat32Array()
 @export var variants: int = 6
 @export var rng_seed: int = 20260820
@@ -65,6 +69,15 @@ func _build() -> void:
 				Transform3D(basis, Vector3(placements[o], placements[o + 1],
 						placements[o + 2])))
 
+	var src_meshes := _meshes_from_source()
+	if not src_meshes.is_empty():
+		for v in variants:
+			if buckets[v].is_empty():
+				continue
+			_add_layer("Src%d" % v, src_meshes[v % src_meshes.size()],
+					null, buckets[v])
+		return
+
 	for v in variants:
 		if buckets[v].is_empty():
 			continue
@@ -84,7 +97,24 @@ func _build() -> void:
 						material_secondary, buckets[v])
 
 
-func _add_layer(nm: String, mesh: ArrayMesh, mat: Material,
+func _meshes_from_source() -> Array[Mesh]:
+	var out: Array[Mesh] = []
+	if source_scene == null:
+		return out
+	var inst := source_scene.instantiate()
+	_collect_meshes(inst, out)
+	inst.queue_free()
+	return out
+
+
+func _collect_meshes(n: Node, out: Array[Mesh]) -> void:
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		out.append((n as MeshInstance3D).mesh)
+	for c in n.get_children():
+		_collect_meshes(c, out)
+
+
+func _add_layer(nm: String, mesh: Mesh, mat: Material,
 		xforms: Array) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D

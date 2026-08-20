@@ -1,0 +1,67 @@
+[gd_scene load_steps=8 format=3]
+
+; 程序化生成资产的预览。镜头刻意用和正式游戏相同的 60° 俯角 ——
+; 资产要在实际观看角度下判断，平视看着漂亮不代表在这个机位读得出来。
+; 高度取 18 m（而非 44 m）是为了看清细节，角度不变。
+
+[ext_resource type="PackedScene" path="res://assets/environment/buildings.glb" id="1_buildings"]
+[ext_resource type="PackedScene" path="res://assets/environment/trees.glb" id="2_trees"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+sky_top_color = Color(0.235, 0.373, 0.576, 1)
+sky_horizon_color = Color(0.847, 0.729, 0.545, 1)
+ground_horizon_color = Color(0.702, 0.596, 0.451, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_energy = 0.45
+tonemap_mode = 3
+tonemap_exposure = 1.0
+tonemap_white = 6.0
+glow_enabled = true
+glow_intensity = 0.5
+adjustment_enabled = true
+adjustment_saturation = 1.06
+adjustment_contrast = 1.1
+
+[sub_resource type="PlaneMesh" id="Ground"]
+size = Vector2(80, 80)
+
+[sub_resource type="StandardMaterial3D" id="MatGround"]
+albedo_color = Color(0.298, 0.337, 0.114, 1)
+roughness = 1.0
+
+[node name="AssetPreview" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.66913, 0.49240, -0.55667, 0.00000, 0.74896, 0.66262, 0.74314, 0.44340, -0.50117, 0.00000, 20.00000, 0.00000)
+light_color = Color(1, 0.878, 0.706, 1)
+light_energy = 1.8
+shadow_enabled = true
+shadow_opacity = 0.92
+shadow_blur = 1.2
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.50000, 0.86603, 0.00000, -0.86603, 0.50000, 0.00000, 24.00000, 15.90000)
+fov = 46.0
+near = 0.5
+far = 300.0
+current = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Ground")
+surface_material_override/0 = SubResource("MatGround")
+
+[node name="Buildings" parent="." instance=ExtResource("1_buildings")]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000)
+
+[node name="Trees" parent="." instance=ExtResource("2_trees")]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, -11.00000)
