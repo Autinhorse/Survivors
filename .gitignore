@@ -8,3 +8,6 @@
 export_presets.cfg
 *.tmp
 Thumbs.db
+
+# Godot tries to import .csv as translations; results are data, not assets
+*.csv.import

@@ -25,8 +25,8 @@ import sys
 
 random.seed(20260820)
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                   "scenes", "VisualBenchmark.tscn")
+SCENES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scenes")
+OUT = os.path.join(SCENES, "VisualBenchmark.tscn")
 
 # ---------------------------------------------------------------- resources --
 subres = []
@@ -289,13 +289,19 @@ CAM_FOCUS_Z = 0.5
 
 
 FORWARD_PLUS = False     # emit the Forward+-only environment keys (--forward-plus)
+# Doc section 25: the visual scene stays stable as the reference; the crowd
+# benchmark lives in its own copy so stress testing never disturbs it.
+PERFORMANCE = False      # emit scenes/PerformanceBenchmark.tscn (--performance)
 
 
 def _cli_overrides():
-    global CAM_PITCH, CAM_HEIGHT, CAM_FOV, FORWARD_PLUS
+    global CAM_PITCH, CAM_HEIGHT, CAM_FOV, FORWARD_PLUS, PERFORMANCE, OUT
     a = sys.argv[1:]
     if "--forward-plus" in a:
         FORWARD_PLUS = True
+    if "--performance" in a:
+        PERFORMANCE = True
+        OUT = os.path.join(SCENES, "PerformanceBenchmark.tscn")
     for i, tok in enumerate(a):
         if tok == "--pitch":
             CAM_PITCH = float(a[i + 1])
@@ -699,6 +705,27 @@ def build():
              scale=(0.42, 0.9, 0.5))
         mesh("Foot%d" % i, pl, box, MAT["metal"], (dx, 0.12, 0.15),
              scale=(0.6, 0.25, 1.5))
+
+    if PERFORMANCE:
+        # ------------------------------------------------------ crowd benchmark
+        node("Crowd", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/units/EnemyCrowd.gd"),
+            "target_path": 'NodePath("../Player")',
+            "count": "0",
+            "spawn_radius": "30.0",
+            "move_speed": "1.6",
+            "stop_radius": "6.0",
+            "churn_per_sec": "10.0",
+            "shadow_mode": '"B"',
+        })
+        node("Benchmark", "Node", ".", {
+            "script": ext("Script", "res://benchmark/BenchmarkManager.gd"),
+            "crowd_path": 'NodePath("../Crowd")',
+            "warmup_sec": "5.0",
+            "measure_sec": "20.0",
+            "label": '"M4-node"',
+        })
+        return
 
     # ----------------------------------------------------- enemy placeholders
     en = node("Enemies", "Node3D", ".")
