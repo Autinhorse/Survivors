@@ -11,7 +11,11 @@ extends Node
 ## Must run WINDOWED.  Under --headless there is no rendering and
 ## RenderingServer.frame_post_draw never fires.
 
-@export var crowd_path: NodePath
+@export var crowd_path: NodePath              ## conventional Node crowd
+@export var crowd_mm_path: NodePath           ## data-oriented MultiMesh crowd
+## Architectures to run.  "node" = section 6 方案 A, "mm-parts"/"mm-merged" =
+## the two 方案 B variants (CPU transform per part vs shader animation).
+@export var architectures: PackedStringArray = PackedStringArray(["node"])
 @export var counts: PackedInt32Array = PackedInt32Array(
 		[100, 250, 500, 750, 1000, 1500, 2000])
 @export var shadow_modes: PackedStringArray = PackedStringArray(["A", "B"])
@@ -21,22 +25,30 @@ extends Node
 @export var label: String = "M4-node"
 @export var auto_quit: bool = true
 
+var move_override: float = -1.0
+var freeze_override: bool = false
+
 const HEADERS := [
 	"timestamp", "hardware", "renderer", "preset", "architecture",
 	"enemy_count", "alive_avg", "projectile_count", "explosion_rate",
-	"shadow_mode", "fps_avg", "fps_1pct_low", "frame_ms_avg", "frame_ms_1pct_low",
+	"shadow_mode", "move_speed", "frozen",
+	"fps_avg", "fps_1pct_low", "frame_ms_avg", "frame_ms_1pct_low",
 	"cpu_render_ms", "gpu_render_ms", "process_ms",
 	"draw_calls", "primitives", "tri_per_unit", "nodes",
 ]
 
-var _crowd: Node
+var _crowd: Node                 ## currently selected crowd
+var _crowd_node: Node
+var _crowd_mm: Node
 var _rows: Array[PackedStringArray] = []
 
 
 func _ready() -> void:
-	_crowd = get_node_or_null(crowd_path)
-	if _crowd == null:
-		push_error("BenchmarkManager: crowd_path not found")
+	_crowd_node = get_node_or_null(crowd_path)
+	_crowd_mm = get_node_or_null(crowd_mm_path)
+	_crowd = _crowd_node
+	if _crowd_node == null and _crowd_mm == null:
+		push_error("BenchmarkManager: no crowd node found")
 		return
 	_apply_cli()
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -68,8 +80,14 @@ func _apply_cli() -> void:
 			"label":
 				label = kv[1]
 			"freeze":
-				if _crowd:
-					_crowd.set("freeze_logic", kv[1] == "1")
+				freeze_override = kv[1] == "1"
+			"move":
+				move_override = float(kv[1])
+			"archs":
+				var az := PackedStringArray()
+				for t in kv[1].split(","):
+					az.append(t)
+				architectures = az
 
 
 func modes_from(csv: String) -> void:
@@ -81,21 +99,46 @@ func modes_from(csv: String) -> void:
 
 func _run() -> void:
 	var started := Time.get_datetime_string_from_system()
-	print("[bench] plan: %d counts x %d shadow modes, %.0fs warmup + %.0fs measure each"
-			% [counts.size(), shadow_modes.size(), warmup_sec, measure_sec])
+	var n_rows := counts.size() * shadow_modes.size() * architectures.size()
+	print("[bench] plan: %d rows (%s), %.0fs warmup + %.0fs measure each"
+			% [n_rows, ",".join(architectures), warmup_sec, measure_sec])
 	print("[bench] estimated wall clock: %.1f min"
-			% ((counts.size() * shadow_modes.size() * (warmup_sec + measure_sec)) / 60.0))
+			% ((n_rows * (warmup_sec + measure_sec)) / 60.0))
 
-	for mode in shadow_modes:
-		for c in counts:
-			await _measure_row(int(c), String(mode))
+	for arch in architectures:
+		for mode in shadow_modes:
+			for c in counts:
+				await _measure_row(String(arch), int(c), String(mode))
 
 	_write_csv(started)
 	if auto_quit:
 		get_tree().quit()
 
 
-func _measure_row(c: int, mode: String) -> void:
+func _select(arch: String) -> void:
+	## Only one crowd is populated at a time; the other is emptied so it cannot
+	## contribute nodes, draw calls or CPU time to the measurement.
+	match arch:
+		"node":
+			_crowd = _crowd_node
+		"mm-parts", "mm-merged":
+			_crowd = _crowd_mm
+			_crowd.set("variant", arch.substr(3))
+		_:
+			push_error("unknown architecture: " + arch)
+			return
+	for other in [_crowd_node, _crowd_mm]:
+		if other and other != _crowd:
+			other.set("count", 0)
+
+
+func _measure_row(arch: String, c: int, mode: String) -> void:
+	_select(arch)
+	if _crowd == null:
+		return
+	if move_override >= 0.0:
+		_crowd.set("move_speed", move_override)
+	_crowd.set("freeze_logic", freeze_override)
 	_crowd.set("shadow_mode", mode)
 	_crowd.set("count", c)
 	# node creation for 2000 units is not free; let it settle before warm-up
@@ -140,11 +183,13 @@ func _measure_row(c: int, mode: String) -> void:
 		RenderingServer.get_video_adapter_name(),
 		_renderer_name(),
 		"default",
-		"node-frozen" if bool(_crowd.get("freeze_logic")) else "node",
+		String(_crowd.call("arch_name")),
 		str(c),
 		"%.1f" % (alive_sum / n),
 		"0", "0",
 		mode,
+		"%.2f" % float(_crowd.get("move_speed")),
+		"1" if bool(_crowd.get("freeze_logic")) else "0",
 		"%.1f" % (1000.0 / avg),
 		"%.1f" % (1000.0 / p99),
 		"%.3f" % avg,
@@ -158,8 +203,8 @@ func _measure_row(c: int, mode: String) -> void:
 		str(get_tree().get_node_count()),
 	])
 	_rows.append(row)
-	print("[bench] count=%5d shadow=%s  avg=%6.1f fps (%.2f ms)  1%%low=%6.1f fps  gpu=%.2f ms  dc=%s"
-			% [c, mode, 1000.0 / avg, avg, 1000.0 / p99, gpu_ms / n, row[17]])
+	print("[bench] %-11s count=%5d shadow=%s  avg=%6.1f fps (%6.2f ms)  1%%low=%6.1f fps  gpu=%.2f ms  dc=%s"
+			% [row[4], c, mode, 1000.0 / avg, avg, 1000.0 / p99, gpu_ms / n, row[19]])
 
 
 func _renderer_name() -> String:

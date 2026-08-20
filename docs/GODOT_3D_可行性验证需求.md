@@ -253,6 +253,28 @@
 
 > 传统 Node 与 Data-Oriented + MultiMesh 的性能差距有多大。
 
+> **实测结论（2026-08-21，Milestone 5）**
+>
+> 三种实现在相同几何（约 150 面/单位）、阴影模式 B 下的对比：
+>
+> | 数量 | 传统 Node | MultiMesh + CPU 逐部件 Transform | MultiMesh 合并网格 + Shader 动画 |
+> |---|---|---|---|
+> | 500 | 1.92 ms / 2,622 dc | 1.45 ms / 301 dc | 0.74 ms / 297 dc |
+> | 1000 | 4.25 ms / 5,113 dc | 2.60 ms / 301 dc | 0.79 ms / 297 dc |
+> | 2000 | 10.64 ms / 10,073 dc | 4.99 ms / 301 dc | 1.02 ms / 297 dc |
+>
+> **结论：小兵采用「合并网格 + Shader 动画」的 MultiMesh 方案**，
+> 2000 单位时比传统 Node 快 10.4 倍，16,000 单位仍有 162 FPS。
+> 中型敌人（§4.2）和 Boss（§4.3）继续用传统 Node —— 实测 6.4 µs/单位，
+> 30 个中型敌人约 0.2 ms，不值得为它们放弃 Node 的灵活性。
+>
+> 重要的是收益的来源是**两半**：减少 draw call 只占约 59%，
+> 另外 41% 来自把逐单位 Transform 计算搬进 Shader。只换渲染不换动画方式，
+> 2000 单位只能从 10.64 ms 降到 4.99 ms。
+>
+> 适用边界（MultiMesh 无逐实例视锥剔除、一网格一材质、未测碰撞等）
+> 详见 `docs/M5_architecture_报告.md` §7。
+
 ---
 
 # 7. 程序化机械动画
@@ -269,6 +291,12 @@
     left_leg_rotation  = sin(time + phase)
     right_leg_rotation = -sin(time + phase)
     body_bob           = sin(time * 2 + phase)
+
+> **实测结论（2026-08-21，Milestone 5）**：这段数学应该跑在**顶点着色器**里，
+> 每单位的 `phase` 通过 `INSTANCE_CUSTOM` 传入，CPU 每帧每单位只写一个 Transform。
+> 同样的动画放在 CPU 逐部件算，1000 单位的更新循环要 3.16 ms；
+> 搬进 Shader 后只剩 0.10 ms（约 32 倍）。
+> 参考实现：`shaders/enemy_crowd.gdshader` + `scripts/units/EnemyCrowdMM.gd`。
 
 每个单位可以带不同的 `animation_phase`，避免所有敌人同步摆动。
 

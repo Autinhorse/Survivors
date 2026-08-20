@@ -82,6 +82,10 @@ func _ready() -> void:
 	_apply_shadow_mode()
 
 
+func arch_name() -> String:
+	return "node-frozen" if freeze_logic else "node"
+
+
 func alive_count() -> int:
 	var n := 0
 	for i in _dead_t.size():

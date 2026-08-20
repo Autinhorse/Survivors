@@ -1,0 +1,10 @@
+timestamp,hardware,renderer,preset,architecture,enemy_count,alive_avg,projectile_count,explosion_rate,shadow_mode,fps_avg,fps_1pct_low,frame_ms_avg,frame_ms_1pct_low,cpu_render_ms,gpu_render_ms,process_ms,draw_calls,primitives,tri_per_unit,nodes
+2026-08-21T00:51:15,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.7,0,0,B,521.9,368.2,1.916,2.716,0.579,0.394,5.240,2622,317162,288,3246
+2026-08-21T00:51:40,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.1,0,0,B,235.2,169.9,4.252,5.887,1.178,0.453,6.232,5113,460641,288,6246
+2026-08-21T00:52:05,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.1,0,0,B,93.9,81.5,10.644,12.264,2.413,0.578,11.727,10073,746345,288,12246
+2026-08-21T00:52:30,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,500,485.2,0,0,B,690.0,565.3,1.449,1.769,0.136,0.387,2.160,301,327170,288,250
+2026-08-21T00:52:55,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,1000,985.2,0,0,B,383.9,333.0,2.605,3.003,0.144,0.426,3.226,301,471170,288,250
+2026-08-21T00:53:20,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,2000,1985.1,0,0,B,200.3,175.3,4.992,5.705,0.182,0.476,5.946,301,759170,288,250
+2026-08-21T00:53:45,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,500,485.5,0,0,B,1360.1,968.1,0.735,1.033,0.140,0.395,1.640,297,327170,288,246
+2026-08-21T00:54:10,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.1,0,0,B,1270.6,885.0,0.787,1.130,0.140,0.437,1.658,297,471170,288,246
+2026-08-21T00:54:35,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,2000,1985.2,0,0,B,978.3,766.3,1.022,1.305,0.135,0.475,1.792,297,759170,288,246

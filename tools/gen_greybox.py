@@ -718,9 +718,21 @@ def build():
             "churn_per_sec": "10.0",
             "shadow_mode": '"B"',
         })
+        node("CrowdMM", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/units/EnemyCrowdMM.gd"),
+            "target_path": 'NodePath("../Player")',
+            "variant": '"merged"',
+            "count": "0",
+            "spawn_radius": "30.0",
+            "move_speed": "1.6",
+            "stop_radius": "6.0",
+            "churn_per_sec": "10.0",
+            "shadow_mode": '"B"',
+        })
         node("Benchmark", "Node", ".", {
             "script": ext("Script", "res://benchmark/BenchmarkManager.gd"),
             "crowd_path": 'NodePath("../Crowd")',
+            "crowd_mm_path": 'NodePath("../CrowdMM")',
             "warmup_sec": "5.0",
             "measure_sec": "20.0",
             "label": '"M4-node"',
