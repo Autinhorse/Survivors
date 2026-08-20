@@ -1,0 +1,80 @@
+[gd_scene load_steps=9 format=3]
+
+; §21 资产管线的 Godot 侧验收场景。
+; 检查四件事：导入是否报错、比例是否是米、原点是否在底面（y=0 就该贴地）、
+; 减面后轮廓还能不能看。灰色参照方块是 1 m 和 2 m，用来目测比例。
+
+[ext_resource type="PackedScene" path="res://assets/environment/rocks.glb" id="1_rocks"]
+[ext_resource type="PackedScene" path="res://assets/environment/bridge.glb" id="2_bridge"]
+[ext_resource type="PackedScene" path="res://assets/units/mech.glb" id="3_mech"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+sky_top_color = Color(0.3, 0.44, 0.62, 1)
+sky_horizon_color = Color(0.78, 0.72, 0.6, 1)
+ground_horizon_color = Color(0.6, 0.56, 0.46, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_energy = 0.5
+tonemap_mode = 3
+glow_enabled = true
+
+[sub_resource type="PlaneMesh" id="Ground"]
+size = Vector2(60, 60)
+
+[sub_resource type="StandardMaterial3D" id="MatGround"]
+albedo_color = Color(0.32, 0.34, 0.28, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="Box"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="MatRef"]
+albedo_color = Color(0.75, 0.75, 0.78, 1)
+roughness = 0.8
+
+[node name="AssetPipelineCheck" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.66913, 0.55667, -0.49240, 0.00000, 0.66262, 0.74896, 0.74314, 0.50117, -0.44340, 0.00000, 14.00000, 0.00000)
+light_color = Color(1, 0.9, 0.75, 1)
+light_energy = 1.7
+shadow_enabled = true
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.70711, 0.70711, 0.00000, -0.70711, 0.70711, 0.00000, 9.00000, 9.00000)
+fov = 48.0
+near = 0.1
+far = 200.0
+current = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Ground")
+surface_material_override/0 = SubResource("MatGround")
+
+[node name="Ref1m" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -8.00000, 0.50000, 3.00000)
+mesh = SubResource("Box")
+surface_material_override/0 = SubResource("MatRef")
+
+[node name="Ref2m" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 2.00000, 0.00000, 0.00000, 0.00000, 0.60000, -9.20000, 1.00000, 3.00000)
+mesh = SubResource("Box")
+surface_material_override/0 = SubResource("MatRef")
+
+[node name="Rocks" parent="." instance=ExtResource("1_rocks")]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 5.00000)
+
+[node name="Bridge" parent="." instance=ExtResource("2_bridge")]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, -2.00000)
+
+[node name="Mech" parent="." instance=ExtResource("3_mech")]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 9.00000, 0.00000, 1.00000)
