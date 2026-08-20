@@ -210,7 +210,7 @@ shader_parameter/fade_start = 55.0
 shader_parameter/fade_end = 78.0
 
 [sub_resource type="StandardMaterial3D" id="MatRock"]
-albedo_color = Color(0.298, 0.278, 0.255, 1)
+albedo_color = Color(0.255, 0.235, 0.231, 1)
 roughness = 0.88
 metallic = 0.0
 albedo_texture = SubResource("NoiseRock")
@@ -312,9 +312,9 @@ background_mode = 2
 sky = SubResource("Sky")
 ambient_light_source = 3
 ambient_light_sky_contribution = 1.0
-ambient_light_energy = 2.2
+ambient_light_energy = 1.35
 tonemap_mode = 3
-tonemap_exposure = 1.78
+tonemap_exposure = 1.47
 tonemap_white = 9.0
 glow_enabled = true
 glow_intensity = 0.7
@@ -344,7 +344,7 @@ environment = SubResource("Env")
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.71934, 0.42767, -0.54740, 0.00000, 0.78801, 0.61566, 0.69466, 0.44287, -0.56685, 0.00000, 20.00000, 0.00000)
 light_color = Color(1, 0.804, 0.588, 1)
-light_energy = 2.2
+light_energy = 3.4
 light_angular_distance = 1.4
 shadow_enabled = true
 shadow_opacity = 0.62

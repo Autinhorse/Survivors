@@ -179,7 +179,7 @@ def materials():
                              fade_start="55.0", fade_end="78.0")
 
     # --- solid props ----------------------------------------------------------
-    MAT["rock"] = mat("MatRock", (0.298, 0.278, 0.255), rough=0.88,
+    MAT["rock"] = mat("MatRock", (0.255, 0.235, 0.231), rough=0.88,
                       tex=rock_n, tex_scale=0.55)
     MAT["wood"] = mat("MatWood", (0.286, 0.192, 0.110), rough=0.92,
                       tex=wood_n, tex_scale=0.85)
@@ -363,8 +363,8 @@ def build():
     env = sub("Environment", "Env",
               background_mode="2", sky=sky,
               ambient_light_source="3", ambient_light_sky_contribution="1.0",
-              ambient_light_energy="2.2",
-              tonemap_mode="3", tonemap_exposure="1.78", tonemap_white="9.0",
+              ambient_light_energy="1.35",
+              tonemap_mode="3", tonemap_exposure="1.47", tonemap_white="9.0",
               glow_enabled="true", glow_intensity="0.7", glow_strength="1.1",
               glow_bloom="0.12", glow_hdr_threshold="0.95",
               glow_blend_mode="1",
@@ -397,7 +397,7 @@ def build():
     # Key light from the far upper-left; shadows fall to the lower-right, as in
     # docs/target.png.
     node("Sun", "DirectionalLight3D", ".",
-         {"light_color": col(1.0, 0.804, 0.588), "light_energy": "2.2",
+         {"light_color": col(1.0, 0.804, 0.588), "light_energy": "3.4",
           "light_angular_distance": "1.4", "shadow_enabled": "true",
           "shadow_opacity": "0.62",
           "shadow_bias": "0.035", "shadow_normal_bias": "1.2",

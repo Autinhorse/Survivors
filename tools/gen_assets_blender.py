@@ -44,7 +44,7 @@ PALETTE = {
     "ThatchDark": (0.235, 0.227, 0.125),
     "Wood":      (0.286, 0.192, 0.110),
     "WoodLight": (0.443, 0.318, 0.180),
-    "Stone":     (0.298, 0.278, 0.255),
+    "Stone":     (0.255, 0.235, 0.231),
     "Metal":     (0.298, 0.310, 0.337),
     "Dark":      (0.102, 0.086, 0.075),
     "LeafA":     (0.180, 0.271, 0.098),
@@ -129,10 +129,34 @@ def join_as(parts, name):
     return o
 
 
-def finalize(obj, loc=(0, 0, 0)):
-    """平面着色 + 原点落到底面中心 + 摆到指定位置。"""
-    for p in obj.data.polygons:
-        p.use_smooth = False
+def finalize(obj, loc=(0, 0, 0), smooth_angle=0.0):
+    """着色 + 原点落到底面中心 + 摆到指定位置。
+
+    smooth_angle = 0  纯平面着色（建筑、树干这种要硬边的）
+    smooth_angle > 0  按角度自动平滑：小于该夹角的边平滑过渡、大于的保持硬边。
+                      石头需要它 —— 倒角面才会和相邻面融成一条渐亮的带，
+                      而不是一条突兀的亮线。"""
+    if smooth_angle > 0.0:
+        bpy.context.view_layer.objects.active = obj
+        for p in obj.data.polygons:
+            p.use_smooth = True
+        try:
+            bpy.ops.object.shade_auto_smooth(angle=math.radians(smooth_angle))
+        except Exception:
+            # 老版本回退：按面夹角手动标锐边
+            import bmesh as _bm
+            bm = _bm.new()
+            bm.from_mesh(obj.data)
+            thr = math.cos(math.radians(smooth_angle))
+            for e in bm.edges:
+                if len(e.link_faces) == 2:
+                    a, b = e.link_faces
+                    e.smooth = a.normal.dot(b.normal) > thr
+            bm.to_mesh(obj.data)
+            bm.free()
+    else:
+        for p in obj.data.polygons:
+            p.use_smooth = False
     me = obj.data
     lo = Vector((1e9, 1e9, 1e9))
     hi = Vector((-1e9, -1e9, -1e9))
@@ -250,15 +274,16 @@ def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
 ROCK_ARCHETYPES = {
     #            轴比 (x, y, z)        点数   垂直偏置
     "chunky":   ((1.00, 0.95, 0.68), 17, 0.0),
-    "slab":     ((1.15, 1.30, 0.34), 15, 0.0),
-    "column":   ((0.72, 0.78, 1.05), 14, 0.20),
-    "wedge":    ((1.08, 0.76, 0.58), 14, -0.20),
-    "block":    ((0.95, 0.90, 0.78), 13, 0.0),
-    "pebble":   ((1.00, 0.92, 0.52), 9, 0.0),
+    "slab":     ((1.15, 1.30, 0.34), 16, 0.0),
+    "column":   ((0.72, 0.78, 1.05), 15, 0.20),
+    "wedge":    ((1.08, 0.76, 0.58), 15, -0.20),
+    "block":    ((0.95, 0.90, 0.78), 14, 0.0),
+    "pebble":   ((1.00, 0.92, 0.52), 10, 0.0),
 }
 
 
-def rock_hull(name, archetype, seed, loc=(0, 0, 0)):
+def rock_hull(name, archetype, seed, loc=(0, 0, 0), bevel=0.05,
+              smooth_angle=19.0):
     import random
     rng = random.Random(seed)
     axes, n_pts, bias = ROCK_ARCHETYPES[archetype]
@@ -289,7 +314,21 @@ def rock_hull(name, archetype, seed, loc=(0, 0, 0)):
     o = bpy.data.objects.new(name, me)
     bpy.context.collection.objects.link(o)
     o.data.materials.append(mat("Stone"))
-    finalize(o, loc)
+
+    # 参考图的石头有一圈随光变化的高亮棱 —— 那是**几何倒角**，不是贴图：
+    # 倒角面的法线在低角度夕阳下比水平顶面更正对光源，于是比顶面还亮，
+    # 而且亮的总是朝阳那一侧。贴图伪造的边缘光不会随石头朝向这样变化。
+    if bevel > 0.0:
+        bpy.context.view_layer.objects.active = o
+        m = o.modifiers.new("bevel", "BEVEL")
+        m.width = bevel
+        m.segments = 1
+        m.limit_method = "ANGLE"
+        m.angle_limit = math.radians(25.0)
+        m.harden_normals = False
+        bpy.ops.object.modifier_apply(modifier=m.name)
+
+    finalize(o, loc, smooth_angle=smooth_angle)
     return o
 
 
@@ -310,7 +349,7 @@ def build_rocks(out_dir):
     clear()
     for i in range(6):
         o = rock_hull("pebble_%02d" % i, "pebble", seed=5000 + i * 53,
-                      loc=(i * 1.2 - 3.0, 0, 0))
+                      loc=(i * 1.2 - 3.0, 0, 0), bevel=0.0, smooth_angle=0.0)
         o.scale = (0.34, 0.34, 0.34)
     export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
 
