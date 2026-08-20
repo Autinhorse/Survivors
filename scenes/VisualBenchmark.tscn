@@ -1,4 +1,4 @@
-[gd_scene load_steps=60 format=3]
+[gd_scene load_steps=63 format=3]
 
 [ext_resource type="Shader" path="res://shaders/ground.gdshader" id="ext_1_ground"]
 [ext_resource type="Shader" path="res://shaders/ground_patch.gdshader" id="ext_2_ground_patch"]
@@ -106,6 +106,21 @@ seamless = true
 width = 256
 height = 256
 
+[sub_resource type="FastNoiseLite" id="NoiseFleckN"]
+frequency = 0.085
+fractal_octaves = 2
+
+[sub_resource type="Gradient" id="NoiseFleckG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseFleck"]
+noise = SubResource("NoiseFleckN")
+color_ramp = SubResource("NoiseFleckG")
+seamless = true
+width = 256
+height = 256
+
 [sub_resource type="FastNoiseLite" id="NoiseGrassN"]
 frequency = 0.02
 fractal_octaves = 3
@@ -156,17 +171,19 @@ shader_parameter/coverage = 0.70
 [sub_resource type="ShaderMaterial" id="MatWater"]
 shader = ExtResource("ext_3_water")
 shader_parameter/wave_noise = SubResource("NoiseWater")
-shader_parameter/foam_color = Color(0.671, 0.694, 0.706, 1)
-shader_parameter/shallow_color = Color(0.239, 0.337, 0.353, 1)
-shader_parameter/deep_color = Color(0.078, 0.137, 0.169, 1)
-shader_parameter/flow_speed = 0.5
-shader_parameter/streak_stretch = 8.0
-shader_parameter/wave_scale = 0.16
-shader_parameter/foam_coverage = 0.44
-shader_parameter/foam_softness = 0.30
-shader_parameter/bank_foam = 0.26
-shader_parameter/normal_strength = 0.8
-shader_parameter/base_alpha = 0.94
+shader_parameter/fleck_noise = SubResource("NoiseFleck")
+shader_parameter/water_bright = Color(0.365, 0.376, 0.392, 1)
+shader_parameter/water_dark = Color(0.169, 0.212, 0.239, 1)
+shader_parameter/foam_color = Color(0.804, 0.816, 0.827, 1)
+shader_parameter/flow_speed = 0.9
+shader_parameter/fleck_scale = 0.34
+shader_parameter/swell_scale = 0.16
+shader_parameter/streak_stretch = 3.5
+shader_parameter/foam_threshold = 0.78
+shader_parameter/foam_softness = 0.075
+shader_parameter/bank_foam = 0.055
+shader_parameter/normal_strength = 0.45
+shader_parameter/base_alpha = 0.95
 shader_parameter/river_x0 = 10
 shader_parameter/river_slope = 0.28
 shader_parameter/river_amp = 2.6
@@ -384,219 +401,723 @@ size = Vector3(50, 6, 190)
 material = SubResource("MatTerrain")
 operation = 0
 
-[node name="RiverCut0" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.94067, 0.00000, 0.33933, 0.00000, 1.00000, -0.00000, -0.33933, 0.00000, 0.94067, -17.06029, 0.60000, -88.00000)
-size = Vector3(9.20863, 8, 7)
+[node name="RiverCut0" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -1.34279, 1.10000, -48.00000)
+radius = 4.48851
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut1" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.91586, 0.00000, 0.40149, 0.00000, 1.00000, -0.00000, -0.40149, 0.00000, 0.91586, -15.05334, 0.60000, -83.00000)
-size = Vector3(9.58907, 8, 7)
+[node name="RiverCut1" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -1.17418, 1.10000, -46.80000)
+radius = 4.70194
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut2" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.89876, 0.00000, 0.43845, 0.00000, 1.00000, -0.00000, -0.43845, 0.00000, 0.89876, -12.72375, 0.60000, -78.00000)
-size = Vector3(8.92563, 8, 7)
+[node name="RiverCut2" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -1.02562, 1.10000, -45.60000)
+radius = 4.8902
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut3" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.89431, 0.00000, 0.44745, 0.00000, 1.00000, -0.00000, -0.44745, 0.00000, 0.89431, -10.23693, 0.60000, -73.00000)
-size = Vector3(7.54981, 8, 7)
+[node name="RiverCut3" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.89517, 1.10000, -44.40000)
+radius = 5.04651
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut4" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.90376, 0.00000, 0.42803, 0.00000, 1.00000, -0.00000, -0.42803, 0.00000, 0.90376, -7.78623, 0.60000, -68.00000)
-size = Vector3(6.14911, 8, 7)
+[node name="RiverCut4" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.78070, 1.10000, -43.20000)
+radius = 5.16513
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut5" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.92446, 0.00000, 0.38129, 0.00000, 1.00000, -0.00000, -0.38129, 0.00000, 0.92446, -5.55861, 0.60000, -63.00000)
-size = Vector3(5.42343, 8, 7)
+[node name="RiverCut5" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.67990, 1.10000, -42.00000)
+radius = 5.24164
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut6" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.95027, 0.00000, 0.31142, 0.00000, 1.00000, -0.00000, -0.31142, 0.00000, 0.95027, -3.70132, 0.60000, -58.00000)
-size = Vector3(5.73539, 8, 7)
+[node name="RiverCut6" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.59033, 1.10000, -40.80000)
+radius = 5.27319
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut7" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.97359, 0.00000, 0.22830, 0.00000, 1.00000, -0.00000, -0.22830, 0.00000, 0.97359, -2.29571, 0.60000, -53.00000)
-size = Vector3(6.92912, 8, 7)
+[node name="RiverCut7" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.50943, 1.10000, -39.60000)
+radius = 5.25864
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut8" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.98903, 0.00000, 0.14773, 0.00000, 1.00000, -0.00000, -0.14773, 0.00000, 0.98903, -1.34279, 0.60000, -48.00000)
-size = Vector3(8.4081, 8, 7)
+[node name="RiverCut8" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.43454, 1.10000, -38.40000)
+radius = 5.19863
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut9" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99619, 0.00000, 0.08716, 0.00000, 1.00000, -0.00000, -0.08716, 0.00000, 0.99619, -0.76301, 0.60000, -43.00000)
-size = Vector3(9.43332, 8, 7)
+[node name="RiverCut9" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.36294, 1.10000, -37.20000)
+radius = 5.09551
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut10" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99821, 0.00000, 0.05976, 0.00000, 1.00000, -0.00000, -0.05976, 0.00000, 0.99821, -0.41044, 0.60000, -38.00000)
-size = Vector3(9.49247, 8, 7)
+[node name="RiverCut10" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.29191, 1.10000, -36.00000)
+radius = 4.95322
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut11" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99746, 0.00000, 0.07122, 0.00000, 1.00000, -0.00000, -0.07122, 0.00000, 0.99746, -0.09871, 0.60000, -33.00000)
-size = Vector3(8.55601, 8, 7)
+[node name="RiverCut11" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.21866, 1.10000, -34.80000)
+radius = 4.77705
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut12" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99287, 0.00000, 0.11920, 0.00000, 1.00000, -0.00000, -0.11920, 0.00000, 0.99287, 0.36581, 0.60000, -28.00000)
-size = Vector3(7.09187, 8, 7)
+[node name="RiverCut12" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.14049, 1.10000, -33.60000)
+radius = 4.5734
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut13" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.98111, 0.00000, 0.19344, 0.00000, 1.00000, -0.00000, -0.19344, 0.00000, 0.98111, 1.14955, 0.60000, -23.00000)
-size = Vector3(5.83167, 8, 7)
+[node name="RiverCut13" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, -0.05470, 1.10000, -32.40000)
+radius = 4.34938
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut14" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96068, 0.00000, 0.27765, 0.00000, 1.00000, -0.00000, -0.27765, 0.00000, 0.96068, 2.36216, 0.60000, -18.00000)
-size = Vector3(5.40511, 8, 7)
+[node name="RiverCut14" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.04131, 1.10000, -31.20000)
+radius = 4.11251
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut15" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.93501, 0.00000, 0.35461, 0.00000, 1.00000, -0.00000, -0.35461, 0.00000, 0.93501, 4.03699, 0.60000, -13.00000)
-size = Vector3(6.02535, 8, 7)
+[node name="RiverCut15" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.15002, 1.10000, -30.00000)
+radius = 3.8704
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut16" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.91129, 0.00000, 0.41176, 0.00000, 1.00000, -0.00000, -0.41176, 0.00000, 0.91129, 6.12514, 0.60000, -8.00000)
-size = Vector3(7.38246, 8, 7)
+[node name="RiverCut16" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.27381, 1.10000, -28.80000)
+radius = 3.63038
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut17" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.89662, 0.00000, 0.44280, 0.00000, 1.00000, -0.00000, -0.44280, 0.00000, 0.89662, 8.50416, 0.60000, -3.00000)
-size = Vector3(8.7983, 8, 7)
+[node name="RiverCut17" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.41488, 1.10000, -27.60000)
+radius = 3.3993
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut18" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.89521, 0.00000, 0.44565, 0.00000, 1.00000, -0.00000, -0.44565, 0.00000, 0.89521, 10.99987, 0.60000, 2.00000)
-size = Vector3(9.56539, 8, 7)
+[node name="RiverCut18" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.57525, 1.10000, -26.40000)
+radius = 3.18332
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut19" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.90745, 0.00000, 0.42017, 0.00000, 1.00000, -0.00000, -0.42017, 0.00000, 0.90745, 13.41732, 0.60000, 7.00000)
-size = Vector3(9.30043, 8, 7)
+[node name="RiverCut19" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.75675, 1.10000, -25.20000)
+radius = 2.98777
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut20" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.92986, 0.00000, 0.36791, 0.00000, 1.00000, -0.00000, -0.36791, 0.00000, 0.92986, 15.57548, 0.60000, 12.00000)
-size = Vector3(8.13581, 8, 7)
+[node name="RiverCut20" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.96099, 1.10000, -24.00000)
+radius = 2.8171
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut21" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.95577, 0.00000, 0.29412, 0.00000, 1.00000, -0.00000, -0.29412, 0.00000, 0.95577, 17.33945, 0.60000, 17.00000)
-size = Vector3(6.65348, 8, 7)
+[node name="RiverCut21" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 1.18933, 1.10000, -22.80000)
+radius = 2.67486
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut22" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.97769, 0.00000, 0.21006, 0.00000, 1.00000, -0.00000, -0.21006, 0.00000, 0.97769, 18.64449, 0.60000, 22.00000)
-size = Vector3(5.59415, 8, 7)
+[node name="RiverCut22" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 1.44290, 1.10000, -21.60000)
+radius = 2.56375
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut23" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99120, 0.00000, 0.13240, 0.00000, 1.00000, -0.00000, -0.13240, 0.00000, 0.99120, 19.50747, 0.60000, 27.00000)
-size = Vector3(5.48715, 8, 7)
+[node name="RiverCut23" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 1.72255, 1.10000, -20.40000)
+radius = 2.48569
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut24" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99694, 0.00000, 0.07811, 0.00000, 1.00000, -0.00000, -0.07811, 0.00000, 0.99694, 20.02396, 0.60000, 32.00000)
-size = Vector3(6.38596, 8, 7)
+[node name="RiverCut24" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 2.02887, 1.10000, -19.20000)
+radius = 2.4419
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut25" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99826, 0.00000, 0.05890, 0.00000, 1.00000, -0.00000, -0.05890, 0.00000, 0.99826, 20.35114, 0.60000, 37.00000)
-size = Vector3(7.84144, 8, 7)
+[node name="RiverCut25" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 2.36216, 1.10000, -18.00000)
+radius = 2.43295
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut26" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99690, 0.00000, 0.07873, 0.00000, 1.00000, -0.00000, -0.07873, 0.00000, 0.99690, 20.67990, 0.60000, 42.00000)
-size = Vector3(9.1263, 8, 7)
+[node name="RiverCut26" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 2.72246, 1.10000, -16.80000)
+radius = 2.45884
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut27" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.99105, 0.00000, 0.13350, 0.00000, 1.00000, -0.00000, -0.13350, 0.00000, 0.99105, 21.20084, 0.60000, 47.00000)
-size = Vector3(9.59852, 8, 7)
+[node name="RiverCut27" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 3.10951, 1.10000, -15.60000)
+radius = 2.51901
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut28" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.97740, 0.00000, 0.21141, 0.00000, 1.00000, -0.00000, -0.21141, 0.00000, 0.97740, 22.07035, 0.60000, 52.00000)
-size = Vector3(9.02213, 8, 7)
+[node name="RiverCut28" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 3.52279, 1.10000, -14.40000)
+radius = 2.61234
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut29" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.95537, 0.00000, 0.29542, 0.00000, 1.00000, -0.00000, -0.29542, 0.00000, 0.95537, 23.38283, 0.60000, 57.00000)
-size = Vector3(7.68514, 8, 7)
+[node name="RiverCut29" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 3.96148, 1.10000, -13.20000)
+radius = 2.73711
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut30" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.92945, 0.00000, 0.36894, 0.00000, 1.00000, -0.00000, -0.36894, 0.00000, 0.92945, 25.15384, 0.60000, 62.00000)
-size = Vector3(6.25564, 8, 7)
+[node name="RiverCut30" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 4.42452, 1.10000, -12.00000)
+radius = 2.89096
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut31" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.90716, 0.00000, 0.42079, 0.00000, 1.00000, -0.00000, -0.42079, 0.00000, 0.90716, 27.31738, 0.60000, 67.00000)
-size = Vector3(5.44794, 8, 7)
+[node name="RiverCut31" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 4.91059, 1.10000, -10.80000)
+radius = 3.07077
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut32" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.89512, 0.00000, 0.44583, 0.00000, 1.00000, -0.00000, -0.44583, 0.00000, 0.89512, 29.73760, 0.60000, 72.00000)
-size = Vector3(5.66562, 8, 7)
+[node name="RiverCut32" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 5.41813, 1.10000, -9.60000)
+radius = 3.2727
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut33" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.89676, 0.00000, 0.44252, 0.00000, 1.00000, -0.00000, -0.44252, 0.00000, 0.89676, 32.23297, 0.60000, 77.00000)
-size = Vector3(6.79993, 8, 7)
+[node name="RiverCut33" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 5.94536, 1.10000, -8.40000)
+radius = 3.49206
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut34" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.91162, 0.00000, 0.41104, 0.00000, 1.00000, -0.00000, -0.41104, 0.00000, 0.91162, 34.60860, 0.60000, 82.00000)
-size = Vector3(8.28406, 8, 7)
+[node name="RiverCut34" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 6.49029, 1.10000, -7.20000)
+radius = 3.7234
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
-[node name="RiverCut35" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.93543, 0.00000, 0.35351, 0.00000, 1.00000, -0.00000, -0.35351, 0.00000, 0.93543, 36.69091, 0.60000, 87.00000)
-size = Vector3(9.3764, 8, 7)
+[node name="RiverCut35" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 7.05074, 1.10000, -6.00000)
+radius = 3.96054
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut36" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 7.62439, 1.10000, -4.80000)
+radius = 4.19669
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut37" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 8.20876, 1.10000, -3.60000)
+radius = 4.4247
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut38" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 8.80127, 1.10000, -2.40000)
+radius = 4.63722
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut39" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 9.39926, 1.10000, -1.20000)
+radius = 4.8271
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut40" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 10.00000, 1.10000, 0.00000)
+radius = 4.98763
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut41" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 10.60074, 1.10000, 1.20000)
+radius = 5.11294
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut42" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 11.19873, 1.10000, 2.40000)
+radius = 5.19824
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut43" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 11.79124, 1.10000, 3.60000)
+radius = 5.24019
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut44" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 12.37561, 1.10000, 4.80000)
+radius = 5.23699
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut45" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 12.94926, 1.10000, 6.00000)
+radius = 5.18858
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut46" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 13.50971, 1.10000, 7.20000)
+radius = 5.09666
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut47" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 14.05464, 1.10000, 8.40000)
+radius = 4.96457
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut48" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 14.58187, 1.10000, 9.60000)
+radius = 4.79717
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut49" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 15.08941, 1.10000, 10.80000)
+radius = 4.60057
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut50" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 15.57548, 1.10000, 12.00000)
+radius = 4.38184
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut51" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 16.03852, 1.10000, 13.20000)
+radius = 4.14864
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut52" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 16.47721, 1.10000, 14.40000)
+radius = 3.90886
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut53" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 16.89049, 1.10000, 15.60000)
+radius = 3.67025
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut54" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 17.27754, 1.10000, 16.80000)
+radius = 3.44014
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut55" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 17.63784, 1.10000, 18.00000)
+radius = 3.22516
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut56" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 17.97113, 1.10000, 19.20000)
+radius = 3.03102
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut57" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 18.27745, 1.10000, 20.40000)
+radius = 2.86241
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut58" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 18.55710, 1.10000, 21.60000)
+radius = 2.72296
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut59" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 18.81067, 1.10000, 22.80000)
+radius = 2.61523
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut60" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.03901, 1.10000, 24.00000)
+radius = 2.5408
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut61" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.24325, 1.10000, 25.20000)
+radius = 2.50037
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut62" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.42475, 1.10000, 26.40000)
+radius = 2.49386
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut63" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.58512, 1.10000, 27.60000)
+radius = 2.52055
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut64" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.72619, 1.10000, 28.80000)
+radius = 2.57919
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut65" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.84998, 1.10000, 30.00000)
+radius = 2.66804
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut66" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 19.95869, 1.10000, 31.20000)
+radius = 2.78492
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut67" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.05470, 1.10000, 32.40000)
+radius = 2.92724
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut68" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.14049, 1.10000, 33.60000)
+radius = 3.09193
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut69" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.21866, 1.10000, 34.80000)
+radius = 3.27544
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut70" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.29191, 1.10000, 36.00000)
+radius = 3.47371
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut71" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.36294, 1.10000, 37.20000)
+radius = 3.68211
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut72" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.43454, 1.10000, 38.40000)
+radius = 3.89547
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut73" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.50943, 1.10000, 39.60000)
+radius = 4.10814
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut74" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.59033, 1.10000, 40.80000)
+radius = 4.31409
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut75" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.67990, 1.10000, 42.00000)
+radius = 4.50708
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut76" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.78070, 1.10000, 43.20000)
+radius = 4.68088
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut77" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 20.89517, 1.10000, 44.40000)
+radius = 4.8295
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut78" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 21.02562, 1.10000, 45.60000)
+radius = 4.94755
+height = 9.0
+sides = 32
+smooth_faces = true
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut79" type="CSGCylinder3D" parent="Terrain"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 21.17418, 1.10000, 46.80000)
+radius = 5.03043
+height = 9.0
+sides = 32
+smooth_faces = true
 operation = 2
 material = SubResource("MatTerrain")
 
@@ -604,259 +1125,259 @@ material = SubResource("MatTerrain")
 
 
 [node name="Water0" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.46615, 0.00000, 1.75916, 0.00000, 1.00000, -0.00000, -3.59576, 0.00000, 4.14190, -15.48498, -2.55000, -84.00000)
+transform = Transform3D(12.05580, 0.00000, 1.79825, 0.00000, 1.00000, -0.00000, -5.12036, 0.00000, 4.23395, -15.48498, -2.55000, -84.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water1" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.05346, 0.00000, 1.92124, 0.00000, 1.00000, -0.00000, -3.80233, 0.00000, 4.06925, -13.68469, -2.55000, -80.00000)
+transform = Transform3D(11.58014, 0.00000, 1.96394, 0.00000, 1.00000, -0.00000, -5.46741, 0.00000, 4.15968, -13.68469, -2.55000, -80.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water2" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.18664, 0.00000, 2.00457, 0.00000, 1.00000, -0.00000, -3.57574, 0.00000, 4.02886, -11.73733, -2.55000, -76.00000)
+transform = Transform3D(10.67831, 0.00000, 2.04912, 0.00000, 1.00000, -0.00000, -5.31304, 0.00000, 4.11839, -11.73733, -2.55000, -76.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water3" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.12887, 0.00000, 2.00622, 0.00000, 1.00000, -0.00000, -3.05257, 0.00000, 4.02804, -9.73760, -2.55000, -72.00000)
+transform = Transform3D(9.61983, 0.00000, 2.05080, 0.00000, 1.00000, -0.00000, -4.79129, 0.00000, 4.11755, -9.73760, -2.55000, -72.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water4" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.19584, 0.00000, 1.92613, 0.00000, 1.00000, -0.00000, -2.46079, 0.00000, 4.06694, -7.78623, -2.55000, -68.00000)
+transform = Transform3D(8.72052, 0.00000, 1.96894, 0.00000, 1.00000, -0.00000, -4.13010, 0.00000, 4.15732, -7.78623, -2.55000, -68.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water5" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.68124, 0.00000, 1.76709, 0.00000, 1.00000, -0.00000, -1.99882, 0.00000, 4.13853, -5.97841, -2.55000, -64.00000)
+transform = Transform3D(8.26797, 0.00000, 1.80635, 0.00000, 1.00000, -0.00000, -3.53029, 0.00000, 4.23049, -5.97841, -2.55000, -64.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water6" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.77817, 0.00000, 1.53746, 0.00000, 1.00000, -0.00000, -1.73702, 0.00000, 4.22921, -4.39288, -2.55000, -60.00000)
+transform = Transform3D(8.44349, 0.00000, 1.57162, 0.00000, 1.00000, -0.00000, -3.06949, 0.00000, 4.32319, -4.39288, -2.55000, -60.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water7" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.50541, 0.00000, 1.25542, 0.00000, 1.00000, -0.00000, -1.59942, 0.00000, 4.32133, -3.08295, -2.55000, -56.00000)
+transform = Transform3D(9.25057, 0.00000, 1.28332, 0.00000, 1.00000, -0.00000, -2.68746, 0.00000, 4.41736, -3.08295, -2.55000, -56.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water8" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.67179, 0.00000, 0.95134, 0.00000, 1.00000, -0.00000, -1.44310, 0.00000, 4.39829, -2.07035, -2.55000, -52.00000)
+transform = Transform3D(10.48364, 0.00000, 0.97249, 0.00000, 1.00000, -0.00000, -2.26760, 0.00000, 4.49603, -2.07035, -2.55000, -52.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water9" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.92023, 0.00000, 0.66480, 0.00000, 1.00000, -0.00000, -1.18307, 0.00000, 4.45062, -1.34279, -2.55000, -48.00000)
+transform = Transform3D(11.77744, 0.00000, 0.67958, 0.00000, 1.00000, -0.00000, -1.75923, 0.00000, 4.54952, -1.34279, -2.55000, -48.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water10" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.85320, 0.00000, 0.43625, 0.00000, 1.00000, -0.00000, -0.86232, 0.00000, 4.47880, -0.85535, -2.55000, -44.00000)
+transform = Transform3D(12.73484, 0.00000, 0.44594, 0.00000, 1.00000, -0.00000, -1.24040, 0.00000, 4.57833, -0.85535, -2.55000, -44.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water11" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(9.17872, 0.00000, 0.29786, 0.00000, 1.00000, -0.00000, -0.60889, 0.00000, 4.49013, -0.53559, -2.55000, -40.00000)
+transform = Transform3D(13.07017, 0.00000, 0.30448, 0.00000, 1.00000, -0.00000, -0.86704, 0.00000, 4.58991, -0.53559, -2.55000, -40.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water12" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.80510, 0.00000, 0.26833, 0.00000, 1.00000, -0.00000, -0.52597, 0.00000, 4.49199, -0.29191, -2.55000, -36.00000)
+transform = Transform3D(12.69816, 0.00000, 0.27429, 0.00000, 1.00000, -0.00000, -0.75853, 0.00000, 4.59181, -0.29191, -2.55000, -36.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water13" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.85954, 0.00000, 0.35150, 0.00000, 1.00000, -0.00000, -0.61580, 0.00000, 4.48625, -0.02396, -2.55000, -32.00000)
+transform = Transform3D(11.74762, 0.00000, 0.35931, 0.00000, 1.00000, -0.00000, -0.92044, 0.00000, 4.58595, -0.02396, -2.55000, -32.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water14" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.64416, 0.00000, 0.53639, 0.00000, 1.00000, -0.00000, -0.79766, 0.00000, 4.46792, 0.36581, -2.55000, -28.00000)
+transform = Transform3D(10.51635, 0.00000, 0.54831, 0.00000, 1.00000, -0.00000, -1.26253, 0.00000, 4.56720, 0.36581, -2.55000, -28.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water15" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.54355, 0.00000, 0.79748, 0.00000, 1.00000, -0.00000, -0.99822, 0.00000, 4.42877, 0.96099, -2.55000, -24.00000)
+transform = Transform3D(9.38182, 0.00000, 0.81521, 0.00000, 1.00000, -0.00000, -1.68938, 0.00000, 4.52719, 0.96099, -2.55000, -24.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water16" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.89770, 0.00000, 1.09767, 0.00000, 1.00000, -0.00000, -1.23190, 0.00000, 4.36407, 1.82167, -2.55000, -20.00000)
+transform = Transform3D(8.67989, 0.00000, 1.12207, 0.00000, 1.00000, -0.00000, -2.18321, 0.00000, 4.46105, 1.82167, -2.55000, -20.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water17" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.88057, 0.00000, 1.39569, 0.00000, 1.00000, -0.00000, -1.59224, 0.00000, 4.27809, 2.97755, -2.55000, -16.00000)
+transform = Transform3D(8.58824, 0.00000, 1.42671, 0.00000, 1.00000, -0.00000, -2.80184, 0.00000, 4.37316, 2.97755, -2.55000, -16.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water18" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.44528, 0.00000, 1.65560, 0.00000, 1.00000, -0.00000, -2.15450, 0.00000, 4.18437, 4.42452, -2.55000, -12.00000)
+transform = Transform3D(9.07174, 0.00000, 1.69240, 0.00000, 1.00000, -0.00000, -3.58936, 0.00000, 4.27736, 4.42452, -2.55000, -12.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water19" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.36306, 0.00000, 1.85293, 0.00000, 1.00000, -0.00000, -2.87511, 0.00000, 4.10081, 6.12514, -2.55000, -8.00000)
+transform = Transform3D(9.91710, 0.00000, 1.89410, 0.00000, 1.00000, -0.00000, -4.48098, 0.00000, 4.19194, 6.12514, -2.55000, -8.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water20" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.32078, 0.00000, 1.97468, 0.00000, 1.00000, -0.00000, -3.57509, 0.00000, 4.04359, 8.01293, -2.55000, -4.00000)
+transform = Transform3D(10.82522, 0.00000, 2.01856, 0.00000, 1.00000, -0.00000, -5.28649, 0.00000, 4.13345, 8.01293, -2.55000, -4.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water21" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.02117, 0.00000, 2.01568, 0.00000, 1.00000, -0.00000, -4.01861, 0.00000, 4.02331, 10.00000, -2.55000, 0.00000)
+transform = Transform3D(11.50804, 0.00000, 2.06047, 0.00000, 1.00000, -0.00000, -5.76553, 0.00000, 4.11272, 10.00000, -2.55000, 0.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water22" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.25606, 0.00000, 1.97468, 0.00000, 1.00000, -0.00000, -4.03184, 0.00000, 4.04359, 11.98707, -2.55000, 4.00000)
+transform = Transform3D(11.76051, 0.00000, 2.01856, 0.00000, 1.00000, -0.00000, -5.74323, 0.00000, 4.13345, 11.98707, -2.55000, 4.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water23" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.95194, 0.00000, 1.85293, 0.00000, 1.00000, -0.00000, -3.59303, 0.00000, 4.10081, 13.87486, -2.55000, 8.00000)
+transform = Transform3D(11.50598, 0.00000, 1.89410, 0.00000, 1.00000, -0.00000, -5.19890, 0.00000, 4.19194, 13.87486, -2.55000, 8.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water24" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.19322, 0.00000, 1.65560, 0.00000, 1.00000, -0.00000, -2.84610, 0.00000, 4.18437, 15.57548, -2.55000, 12.00000)
+transform = Transform3D(10.81968, 0.00000, 1.69240, 0.00000, 1.00000, -0.00000, -4.28096, 0.00000, 4.27736, 15.57548, -2.55000, 12.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water25" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.21658, 0.00000, 1.39569, 0.00000, 1.00000, -0.00000, -2.02811, 0.00000, 4.27809, 17.02245, -2.55000, 16.00000)
+transform = Transform3D(9.92425, 0.00000, 1.42671, 0.00000, 1.00000, -0.00000, -3.23771, 0.00000, 4.37316, 17.02245, -2.55000, 16.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water26" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.35764, 0.00000, 1.09767, 0.00000, 1.00000, -0.00000, -1.34758, 0.00000, 4.36407, 18.17833, -2.55000, 20.00000)
+transform = Transform3D(9.13984, 0.00000, 1.12207, 0.00000, 1.00000, -0.00000, -2.29890, 0.00000, 4.46105, 18.17833, -2.55000, 20.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water27" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.94236, 0.00000, 0.79748, 0.00000, 1.00000, -0.00000, -0.88997, 0.00000, 4.42877, 19.03901, -2.55000, 24.00000)
+transform = Transform3D(8.78063, 0.00000, 0.81521, 0.00000, 1.00000, -0.00000, -1.58112, 0.00000, 4.52719, 19.03901, -2.55000, 24.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water28" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.15731, 0.00000, 0.53639, 0.00000, 1.00000, -0.00000, -0.61916, 0.00000, 4.46792, 19.63419, -2.55000, 28.00000)
+transform = Transform3D(9.02951, 0.00000, 0.54831, 0.00000, 1.00000, -0.00000, -1.08403, 0.00000, 4.56720, 19.63419, -2.55000, 28.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water29" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.96767, 0.00000, 0.35150, 0.00000, 1.00000, -0.00000, -0.46757, 0.00000, 4.48625, 20.02396, -2.55000, 32.00000)
+transform = Transform3D(9.85575, 0.00000, 0.35931, 0.00000, 1.00000, -0.00000, -0.77221, 0.00000, 4.58595, 20.02396, -2.55000, 32.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water30" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.12680, 0.00000, 0.26833, 0.00000, 1.00000, -0.00000, -0.42572, 0.00000, 4.49199, 20.29191, -2.55000, 36.00000)
+transform = Transform3D(11.01986, 0.00000, 0.27429, 0.00000, 1.00000, -0.00000, -0.65827, 0.00000, 4.59181, 20.29191, -2.55000, 36.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water31" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.26206, 0.00000, 0.29786, 0.00000, 1.00000, -0.00000, -0.54809, 0.00000, 4.49013, 20.53559, -2.55000, 40.00000)
+transform = Transform3D(12.15351, 0.00000, 0.30448, 0.00000, 1.00000, -0.00000, -0.80623, 0.00000, 4.58991, 20.53559, -2.55000, 40.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water32" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.99493, 0.00000, 0.43625, 0.00000, 1.00000, -0.00000, -0.87613, 0.00000, 4.47880, 20.85535, -2.55000, 44.00000)
+transform = Transform3D(12.87656, 0.00000, 0.44594, 0.00000, 1.00000, -0.00000, -1.25421, 0.00000, 4.57833, 20.85535, -2.55000, 44.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water33" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(9.06474, 0.00000, 0.66480, 0.00000, 1.00000, -0.00000, -1.35403, 0.00000, 4.45062, 21.34279, -2.55000, 48.00000)
+transform = Transform3D(12.92195, 0.00000, 0.67958, 0.00000, 1.00000, -0.00000, -1.93019, 0.00000, 4.54952, 21.34279, -2.55000, 48.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water34" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(8.42725, 0.00000, 0.95134, 0.00000, 1.00000, -0.00000, -1.82280, 0.00000, 4.39829, 22.07035, -2.55000, 52.00000)
+transform = Transform3D(12.23910, 0.00000, 0.97249, 0.00000, 1.00000, -0.00000, -2.64730, 0.00000, 4.49603, 22.07035, -2.55000, 52.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water35" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.28330, 0.00000, 1.25542, 0.00000, 1.00000, -0.00000, -2.11593, 0.00000, 4.32133, 23.08295, -2.55000, 56.00000)
+transform = Transform3D(11.02845, 0.00000, 1.28332, 0.00000, 1.00000, -0.00000, -3.20396, 0.00000, 4.41736, 23.08295, -2.55000, 56.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water36" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.00487, 0.00000, 1.53746, 0.00000, 1.00000, -0.00000, -2.18297, 0.00000, 4.22921, 24.39288, -2.55000, 60.00000)
+transform = Transform3D(9.67018, 0.00000, 1.57162, 0.00000, 1.00000, -0.00000, -3.51543, 0.00000, 4.32319, 24.39288, -2.55000, 60.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water37" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.98936, 0.00000, 1.76709, 0.00000, 1.00000, -0.00000, -2.13038, 0.00000, 4.13853, 25.97841, -2.55000, 64.00000)
+transform = Transform3D(8.57608, 0.00000, 1.80635, 0.00000, 1.00000, -0.00000, -3.66185, 0.00000, 4.23049, 25.97841, -2.55000, 64.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water38" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.52342, 0.00000, 1.92613, 0.00000, 1.00000, -0.00000, -2.14232, 0.00000, 4.06694, 27.78623, -2.55000, 68.00000)
+transform = Transform3D(8.04810, 0.00000, 1.96894, 0.00000, 1.00000, -0.00000, -3.81164, 0.00000, 4.15732, 27.78623, -2.55000, 68.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water39" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(4.71336, 0.00000, 2.00622, 0.00000, 1.00000, -0.00000, -2.34756, 0.00000, 4.02804, 29.73760, -2.55000, 72.00000)
+transform = Transform3D(8.20433, 0.00000, 2.05080, 0.00000, 1.00000, -0.00000, -4.08628, 0.00000, 4.11755, 29.73760, -2.55000, 72.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water40" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(5.48115, 0.00000, 2.00457, 0.00000, 1.00000, -0.00000, -2.72717, 0.00000, 4.02886, 31.73733, -2.55000, 76.00000)
+transform = Transform3D(8.97283, 0.00000, 2.04912, 0.00000, 1.00000, -0.00000, -4.46447, 0.00000, 4.11839, 31.73733, -2.55000, 76.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water41" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.59792, 0.00000, 1.92124, 0.00000, 1.00000, -0.00000, -3.11512, 0.00000, 4.06925, 33.68469, -2.55000, 80.00000)
+transform = Transform3D(10.12460, 0.00000, 1.96394, 0.00000, 1.00000, -0.00000, -4.78020, 0.00000, 4.15968, 33.68469, -2.55000, 80.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water42" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(7.73777, 0.00000, 1.75916, 0.00000, 1.00000, -0.00000, -3.28640, 0.00000, 4.14190, 35.48498, -2.55000, 84.00000)
+transform = Transform3D(11.32742, 0.00000, 1.79825, 0.00000, 1.00000, -0.00000, -4.81100, 0.00000, 4.23395, 35.48498, -2.55000, 84.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0

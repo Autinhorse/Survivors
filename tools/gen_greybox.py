@@ -110,6 +110,7 @@ def materials():
     wood_n = noise_tex("NoiseWood", 0.090, lo=0.70, hi=1.08, octaves=2)
     plaster_n = noise_tex("NoisePlaster", 0.030, lo=0.80, hi=1.06, octaves=3)
     water_n = noise_tex("NoiseWater", 0.011, lo=0.12, hi=0.88, octaves=3)
+    fleck_n = noise_tex("NoiseFleck", 0.085, lo=0.0, hi=1.0, octaves=2, size=256)
     # Ridged fractal: the thin bright veins read as grass strands, which
     # smooth value noise never does.
     grass_n = noise_tex("NoiseGrass", 0.020, lo=0.0, hi=1.0, octaves=3,
@@ -141,14 +142,15 @@ def materials():
                              edge_break="0.60", coverage="0.70")
 
     MAT["water"] = shader_mat("MatWater", "res://shaders/water.gdshader",
-                              wave_noise=water_n,
-                              foam_color=col(0.671, 0.694, 0.706),
-                              shallow_color=col(0.239, 0.337, 0.353),
-                              deep_color=col(0.078, 0.137, 0.169),
-                              flow_speed="0.5", streak_stretch="8.0",
-                              wave_scale="0.16", foam_coverage="0.44",
-                              foam_softness="0.30", bank_foam="0.26",
-                              normal_strength="0.8", base_alpha="0.94",
+                              wave_noise=water_n, fleck_noise=fleck_n,
+                              water_bright=col(0.365, 0.376, 0.392),
+                              water_dark=col(0.169, 0.212, 0.239),
+                              foam_color=col(0.804, 0.816, 0.827),
+                              flow_speed="0.9", fleck_scale="0.34",
+                              swell_scale="0.16", streak_stretch="3.5",
+                              foam_threshold="0.78", foam_softness="0.075",
+                              bank_foam="0.055", normal_strength="0.45",
+                              base_alpha="0.95",
                               river_x0="%g" % RX0, river_slope="%g" % RSLOPE,
                               river_amp="%g" % RIVER_AMP,
                               river_freq="%g" % RIVER_FREQ,
@@ -448,18 +450,32 @@ def build():
          {"size": "Vector3(50, 6, 190)", "material": MAT["grass"],
           "operation": "0"},
          T(pc, ry=RANG))
-    for i, z in enumerate(range(-88, 89, 5)):
-        node("RiverCut%d" % i, "CSGBox3D", ter,
-             {"size": "Vector3(%g, 8, 7)" % river_w(z), "operation": "2",
-              "material": MAT["cliff"]},
-             T((river_x(z), BED_Y + 4.0, z), ry=river_ang(z)))
+    # 用一串重叠的圆柱挖河道，而不是盒子。
+    # 盒子无论怎么逐段旋转，在弯道外侧都会露出方角和直边 ——
+    # 人眼对"一段一段的直线 + 方形突起"极其敏感。圆柱的 footprint 是圆的，
+    # 重叠起来自然形成圆润不规则的岸线。
+    # 半径的抖动必须是**低频**的。高频抖动会让相邻圆柱互相探出，
+    # 形成扇贝状锯齿 —— 那正是"一段一段"的来源。
+    # 边数也要够（14 边的多边形轮廓在这个机位下能看出直边）。
+    step = 1.2
+    zi = -48.0
+    i = 0
+    while zi <= 48.0:
+        jitter = 1.0 + 0.10 * math.sin(zi * 0.13 + 0.7)
+        node("RiverCut%d" % i, "CSGCylinder3D", ter,
+             {"radius": "%g" % (river_w(zi) * 0.5 * jitter),
+              "height": "9.0", "sides": "32", "smooth_faces": "true",
+              "operation": "2", "material": MAT["cliff"]},
+             T((river_x(zi), BED_Y + 4.5, zi)))
+        zi += step
+        i += 1
 
     # ------------------------------------------------------------------ water
     water = node("Water", "Node3D", ".")
     for i, z in enumerate(range(-84, 85, 4)):
         mesh("Water%d" % i, water, plane, MAT["water"],
              (river_x(z), WATER_Y, z), ry=river_ang(z),
-             scale=(river_w(z) - 0.4, 1.0, 4.5), cast_shadow="0")
+             scale=(river_w(z) + 3.5, 1.0, 4.6), cast_shadow="0")
 
     # ------------------------------------------------------------ dirt tracks
     paths = node("Paths", "Node3D", ".")
