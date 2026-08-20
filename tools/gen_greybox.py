@@ -720,6 +720,23 @@ def build():
             mesh("Leg%d" % j, g, box, MAT["metal"], (dx, 0.26, 0.0),
                  scale=(0.24, 0.52, 0.3))
 
+    # ------------------------------------------------------------ combat VFX
+    # Milestone 3: presentation only -- pooled/batched VFX plus a director that
+    # fires the three reference weapons at the rates from doc section 22.
+    node("Vfx", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/vfx/VfxManager.gd"),
+        "explosion_light": "false",
+    })
+    node("Combat", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/units/CombatDirector.gd"),
+        "vfx_path": 'NodePath("../Vfx")',
+        "player_path": 'NodePath("../Player")',
+        "enemies_path": 'NodePath("../Enemies")',
+        "mg_rate": "10.0",
+        "rocket_rate": "2.0",
+        "tesla_rate": "1.0",
+    })
+
     # One mid-sized enemy on the bridge, for scale reference.
     md = node("MidEnemy", "Node3D", ".", None,
               T((bcx + 4.5, DECK_Y + 0.15, bz), ry=-108.0))

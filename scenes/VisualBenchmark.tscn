@@ -1,4 +1,4 @@
-[gd_scene load_steps=52 format=3]
+[gd_scene load_steps=54 format=3]
 
 [ext_resource type="Shader" path="res://shaders/ground.gdshader" id="ext_1_ground"]
 [ext_resource type="Shader" path="res://shaders/ground_patch.gdshader" id="ext_2_ground_patch"]
@@ -7,6 +7,8 @@
 [ext_resource type="Shader" path="res://shaders/grass_tuft.gdshader" id="ext_5_grass_tuft"]
 [ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_6_ScatterField"]
 [ext_resource type="Script" path="res://scripts/environment/GrassField.gd" id="ext_7_GrassField"]
+[ext_resource type="Script" path="res://scripts/vfx/VfxManager.gd" id="ext_8_VfxManager"]
+[ext_resource type="Script" path="res://scripts/units/CombatDirector.gd" id="ext_9_CombatDirector"]
 
 [sub_resource type="FastNoiseLite" id="NoiseMacroN"]
 frequency = 0.01
@@ -2289,6 +2291,19 @@ surface_material_override/0 = SubResource("MatMetal")
 transform = Transform3D(0.24000, 0.00000, 0.00000, 0.00000, 0.52000, -0.00000, -0.00000, 0.00000, 0.30000, 0.30000, 0.26000, 0.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
+
+[node name="Vfx" type="Node3D" parent="."]
+script = ExtResource("ext_8_VfxManager")
+explosion_light = false
+
+[node name="Combat" type="Node3D" parent="."]
+script = ExtResource("ext_9_CombatDirector")
+vfx_path = NodePath("../Vfx")
+player_path = NodePath("../Player")
+enemies_path = NodePath("../Enemies")
+mg_rate = 10.0
+rocket_rate = 2.0
+tesla_rate = 1.0
 
 [node name="MidEnemy" type="Node3D" parent="."]
 transform = Transform3D(-0.30902, -0.00000, -0.95106, 0.00000, 1.00000, -0.00000, 0.95106, -0.00000, -0.30902, 12.26000, 2.25000, -8.00000)

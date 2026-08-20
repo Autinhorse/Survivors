@@ -5,7 +5,10 @@ extends Node
 ##       --resolution 1920x1080 res://tools/Screenshot.tscn -- <out.png> [scene]
 ##
 ## Loads the target scene, lets it settle for a few frames, writes a PNG and
-## quits.  Used to compare the blockout against docs/target.png.
+## quits.
+##
+## Do NOT pass --headless: the dummy renderer never fires
+## RenderingServer.frame_post_draw, so the await below hangs forever.  Used to compare the blockout against docs/target.png.
 
 const SETTLE_FRAMES := 20
 
@@ -63,8 +66,19 @@ func _ready() -> void:
 			" objects=", Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
 			" fps=", Performance.get_monitor(Performance.TIME_FPS))
 
-	var img: Image = get_viewport().get_texture().get_image()
-	var err: int = img.save_png(out_path)
-	print("[screenshot] wrote ", out_path, " (", img.get_width(), "x",
-			img.get_height(), ") err=", err)
+	# Multiple shots over time: combat VFX cannot be judged from one frame.
+	var shots: int = int(args[3]) if args.size() > 3 else 1
+	var interval: float = float(args[4]) if args.size() > 4 else 0.5
+	var err := OK
+	for shot in maxi(shots, 1):
+		if shot > 0:
+			await get_tree().create_timer(interval).timeout
+			await RenderingServer.frame_post_draw
+		var img: Image = get_viewport().get_texture().get_image()
+		var path := out_path
+		if shots > 1:
+			path = out_path.get_basename() + "_%d." % (shot + 1) + out_path.get_extension()
+		err = img.save_png(path)
+		print("[screenshot] wrote ", path, " (", img.get_width(), "x",
+				img.get_height(), ") err=", err)
 	get_tree().quit(0 if err == OK else 1)
