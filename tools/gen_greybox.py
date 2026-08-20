@@ -124,9 +124,9 @@ def materials():
                               grass_detail=grass_n,
                               grass_scale="0.85", grass_contrast="0.70",
                               bump_strength="3.2", bump_epsilon="0.055",
-                              grass_dark=col(0.106, 0.145, 0.055),
-                              grass_light=col(0.310, 0.341, 0.129),
-                              dirt_color=col(0.325, 0.243, 0.145),
+                              grass_dark=col(0.145, 0.141, 0.063),
+                              grass_light=col(0.373, 0.333, 0.145),
+                              dirt_color=col(0.361, 0.259, 0.145),
                               rock_color=col(0.235, 0.212, 0.184),
                               macro_scale="0.022", detail_scale="0.30",
                               dirt_threshold="0.74",
@@ -352,31 +352,31 @@ def build():
 
     # ------------------------------------------------------------ environment
     sky_mat = sub("ProceduralSkyMaterial", "SkyMat",
-                  sky_top_color=col(0.235, 0.373, 0.576),
-                  sky_horizon_color=col(0.847, 0.729, 0.545),
-                  sky_curve="0.16",
-                  ground_bottom_color=col(0.263, 0.220, 0.169),
-                  ground_horizon_color=col(0.702, 0.596, 0.451),
-                  sun_angle_max="18.0", sun_curve="0.18",
-                  energy_multiplier="1.05")
+                  sky_top_color=col(0.361, 0.435, 0.588),
+                  sky_horizon_color=col(0.882, 0.663, 0.435),
+                  sky_curve="0.09",
+                  ground_bottom_color=col(0.180, 0.145, 0.125),
+                  ground_horizon_color=col(0.741, 0.573, 0.404),
+                  sun_angle_max="26.0", sun_curve="0.10",
+                  energy_multiplier="1.15")
     sky = sub("Sky", "Sky", sky_material=sky_mat)
     env = sub("Environment", "Env",
               background_mode="2", sky=sky,
               ambient_light_source="3", ambient_light_sky_contribution="1.0",
-              ambient_light_energy="0.42",
-              tonemap_mode="3", tonemap_exposure="1.0", tonemap_white="6.0",
-              glow_enabled="true", glow_intensity="0.65", glow_strength="1.1",
+              ambient_light_energy="2.2",
+              tonemap_mode="3", tonemap_exposure="1.78", tonemap_white="9.0",
+              glow_enabled="true", glow_intensity="0.7", glow_strength="1.1",
               glow_bloom="0.12", glow_hdr_threshold="0.95",
               glow_blend_mode="1",
               # Mobile renderer has no SSAO/SSIL/SDFGI; depth fog is the only
               # atmospheric depth cue available here (doc section 10).
               fog_enabled="true", fog_mode="0",
-              fog_light_color=col(0.769, 0.686, 0.541),
-              fog_light_energy="0.9", fog_sun_scatter="0.25",
-              fog_density="0.0016", fog_sky_affect="0.0",
+              fog_light_color=col(0.788, 0.635, 0.463),
+              fog_light_energy="0.8", fog_sun_scatter="0.15",
+              fog_density="0.0011", fog_sky_affect="0.0",
               fog_height="-6.0", fog_height_density="0.02",
-              adjustment_enabled="true", adjustment_saturation="1.06",
-              adjustment_contrast="1.12", adjustment_brightness="1.0")
+              adjustment_enabled="true", adjustment_saturation="0.94",
+              adjustment_contrast="1.02", adjustment_brightness="1.0")
     if FORWARD_PLUS:
         # High preset.  These keys are Forward+ only -- under Mobile the engine
         # prints a warning and ignores them, so they are emitted on demand
@@ -397,16 +397,16 @@ def build():
     # Key light from the far upper-left; shadows fall to the lower-right, as in
     # docs/target.png.
     node("Sun", "DirectionalLight3D", ".",
-         {"light_color": col(1.0, 0.878, 0.706), "light_energy": "1.8",
+         {"light_color": col(1.0, 0.804, 0.588), "light_energy": "2.2",
           "light_angular_distance": "1.4", "shadow_enabled": "true",
-          "shadow_opacity": "0.92",
+          "shadow_opacity": "0.62",
           "shadow_bias": "0.035", "shadow_normal_bias": "1.2",
           "shadow_blur": "1.2",
           "directional_shadow_max_distance": "130.0",
           "directional_shadow_split_1": "0.07",
           "directional_shadow_split_2": "0.22",
           "directional_shadow_blend_splits": "true"},
-         T((0.0, 20.0, 0.0), ry=-132.0, rx=-48.0))
+         T((0.0, 20.0, 0.0), ry=-136.0, rx=-38.0))
 
     node("GameplayCamera", "Camera3D", ".",
          {"fov": "%.1f" % CAM_FOV, "near": "0.5", "far": "300.0",
