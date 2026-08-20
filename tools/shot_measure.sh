@@ -16,6 +16,9 @@ def stats(path, label, box):
     print('%-8s mean=%5.1f p10=%5.1f p50=%5.1f p90=%5.1f  ratio=%4.1f  RGB=(%3.0f,%3.0f,%3.0f)'
           % (label, sum(lum)/n, lum[int(n*0.1)], lum[n//2], lum[int(n*0.9)],
              lum[int(n*0.9)]/max(lum[int(n*0.1)],1), mr, mg, mb))
-stats('docs/target.png','target', (100,250,1180,700))
-stats(r'$SP/tune.png','mine', (150,430,1740,1030))
+# 只取"纯地面"区域：河面在两张图里占的面积比例不同，
+# 把河算进来会让整体统计失真（白水会把 p90 推高一大截），
+# 于是照着数字调反而会把地面调暗。
+stats('docs/target.png','target', (150,300,700,640))
+stats(r'$SP/tune.png','mine', (150,500,900,1000))
 " 2>/dev/null

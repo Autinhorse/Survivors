@@ -109,7 +109,7 @@ def materials():
     rock_n = noise_tex("NoiseRock", 0.055, lo=0.62, hi=1.05, octaves=4)
     wood_n = noise_tex("NoiseWood", 0.090, lo=0.70, hi=1.08, octaves=2)
     plaster_n = noise_tex("NoisePlaster", 0.030, lo=0.80, hi=1.06, octaves=3)
-    water_n = noise_tex("NoiseWater", 0.014, lo=0.38, hi=0.62, octaves=2)
+    water_n = noise_tex("NoiseWater", 0.011, lo=0.12, hi=0.88, octaves=3)
     # Ridged fractal: the thin bright veins read as grass strands, which
     # smooth value noise never does.
     grass_n = noise_tex("NoiseGrass", 0.020, lo=0.0, hi=1.0, octaves=3,
@@ -142,12 +142,17 @@ def materials():
 
     MAT["water"] = shader_mat("MatWater", "res://shaders/water.gdshader",
                               wave_noise=water_n,
-                              shallow_color=col(0.129, 0.278, 0.278),
-                              deep_color=col(0.024, 0.075, 0.114),
-                              foam_color=col(0.769, 0.804, 0.820),
-                              wave_scale="0.22", flow_speed="0.07",
-                              normal_strength="0.45", base_alpha="0.93",
-                              bank_foam="0.22", streak_amount="0.14")
+                              foam_color=col(0.671, 0.694, 0.706),
+                              shallow_color=col(0.239, 0.337, 0.353),
+                              deep_color=col(0.078, 0.137, 0.169),
+                              flow_speed="0.5", streak_stretch="8.0",
+                              wave_scale="0.16", foam_coverage="0.44",
+                              foam_softness="0.30", bank_foam="0.26",
+                              normal_strength="0.8", base_alpha="0.94",
+                              river_x0="%g" % RX0, river_slope="%g" % RSLOPE,
+                              river_amp="%g" % RIVER_AMP,
+                              river_freq="%g" % RIVER_FREQ,
+                              river_half="%g" % (RIVER_W / 2.0))
 
     # --- foliage: wind sway + noise break-up ---------------------------------
     MAT["leafA"] = shader_mat("MatLeafA", "res://shaders/foliage.gdshader",
@@ -272,7 +277,27 @@ GROUND = 160.0                   # CSG ground block; sized only so the fixed
 # lower-right as in docs/target.png.
 RX0, RSLOPE = 10.0, 0.28
 RANG = math.degrees(math.atan(RSLOPE))
-RIVER_W = 7.5                    # channel width
+RIVER_W = 7.5                    # 基准宽度
+# 河道不是直线：参考图的河是蜿蜒的、宽窄变化的。等宽直带子读起来像运河。
+RIVER_AMP = 2.6                  # 蜿蜒振幅（米）
+RIVER_FREQ = 0.085               # 蜿蜒频率（弧度/米）
+RIVER_W_AMP = 0.28               # 宽度起伏比例
+
+
+def river_x(z):
+    return RX0 + RSLOPE * z + RIVER_AMP * math.sin(z * RIVER_FREQ)
+
+
+def river_w(z):
+    """宽窄变化：窄处水更急，正好放急流白水。"""
+    return RIVER_W * (1.0 + RIVER_W_AMP * math.sin(z * RIVER_FREQ * 1.7 + 1.1))
+
+
+def river_ang(z):
+    """局部切线方向（度）。河道弯了之后，挖槽的盒子必须逐段跟着转，
+    否则外侧会豁口。"""
+    dxdz = RSLOPE + RIVER_AMP * RIVER_FREQ * math.cos(z * RIVER_FREQ)
+    return math.degrees(math.atan(dxdz))
 FAR_BANK_Y = 2.0                 # top of the far-bank plateau
 WATER_Y = -2.55
 BED_Y = -3.4
@@ -334,10 +359,6 @@ def frame_size(aspect=16.0 / 9.0):
     return camera_z() - far, camera_z() - near, width
 
 
-def river_x(z):
-    return RX0 + RSLOPE * z
-
-
 def build():
     materials()
     box = sub("BoxMesh", "MeshBox", size="Vector3(1, 1, 1)")
@@ -364,7 +385,7 @@ def build():
               background_mode="2", sky=sky,
               ambient_light_source="3", ambient_light_sky_contribution="1.0",
               ambient_light_energy="1.35",
-              tonemap_mode="3", tonemap_exposure="1.47", tonemap_white="9.0",
+              tonemap_mode="3", tonemap_exposure="1.34", tonemap_white="9.0",
               glow_enabled="true", glow_intensity="0.7", glow_strength="1.1",
               glow_bloom="0.12", glow_hdr_threshold="0.95",
               glow_blend_mode="1",
@@ -399,7 +420,7 @@ def build():
     node("Sun", "DirectionalLight3D", ".",
          {"light_color": col(1.0, 0.804, 0.588), "light_energy": "3.4",
           "light_angular_distance": "1.4", "shadow_enabled": "true",
-          "shadow_opacity": "0.62",
+          "shadow_opacity": "0.50",
           "shadow_bias": "0.035", "shadow_normal_bias": "1.2",
           "shadow_blur": "1.2",
           "directional_shadow_max_distance": "130.0",
@@ -427,18 +448,18 @@ def build():
          {"size": "Vector3(50, 6, 190)", "material": MAT["grass"],
           "operation": "0"},
          T(pc, ry=RANG))
-    for i, z in enumerate(range(-88, 89, 8)):
+    for i, z in enumerate(range(-88, 89, 5)):
         node("RiverCut%d" % i, "CSGBox3D", ter,
-             {"size": "Vector3(%g, 8, 10)" % RIVER_W, "operation": "2",
+             {"size": "Vector3(%g, 8, 7)" % river_w(z), "operation": "2",
               "material": MAT["cliff"]},
-             T((river_x(z), BED_Y + 4.0, z), ry=RANG))
+             T((river_x(z), BED_Y + 4.0, z), ry=river_ang(z)))
 
     # ------------------------------------------------------------------ water
     water = node("Water", "Node3D", ".")
-    for i, z in enumerate(range(-84, 85, 6)):
+    for i, z in enumerate(range(-84, 85, 4)):
         mesh("Water%d" % i, water, plane, MAT["water"],
-             (river_x(z), WATER_Y, z), ry=RANG,
-             scale=(RIVER_W - 0.5, 1.0, 6.4), cast_shadow="0")
+             (river_x(z), WATER_Y, z), ry=river_ang(z),
+             scale=(river_w(z) - 0.4, 1.0, 4.5), cast_shadow="0")
 
     # ------------------------------------------------------------ dirt tracks
     paths = node("Paths", "Node3D", ".")
@@ -612,13 +633,21 @@ def build():
     # 少数几块显眼的大石，作为视觉锚点 —— 参考图也是这个结构
     for cx, cz in ((-15.5, 14.5), (-8.0, 20.5), (-24.0, 6.0)):
         spots += cluster(1, cx, cz, 1.0, (2.1, 2.6), r_mul=1.2)
-    for z in range(-22, 23, 3):                            # gorge lip
-        px = river_x(z) - RIVER_W / 2.0 - random.uniform(0.6, 2.4)
-        pz = z + random.uniform(-1.0, 1.0)
-        s = random.uniform(0.6, 1.8)
-        if not blocked(px, pz, s * 0.7):
-            claim(px, pz, s * 0.7)
-            spots.append((px, pz, s))
+    # 岸线：参考图的水陆边界完全被石头打碎，没有一段是直的。
+    # 两岸都放，并且往水里探一点。
+    for z in range(-24, 25, 2):
+        hw = river_w(z) / 2.0
+        for side in (-1.0, 1.0):
+            for _k in range(2):
+                off = random.uniform(-0.9, 2.2)      # 负值 = 探进水里
+                px = river_x(z) + side * (hw + off)
+                pz = z + random.uniform(-1.0, 1.0)
+                sc = random.uniform(0.45, 1.5)
+                if off < 0.0 or not blocked(px, pz, sc * 0.6):
+                    if off >= 0.0:
+                        claim(px, pz, sc * 0.6)
+                    # 探进水里的石头要坐进水里：按标记传给下面的摆放循环
+                    spots.append((px, pz, sc if off >= 0.0 else -sc))
     for cz in (-17.0, -2.0, 13.0):                         # far bank
         spots += cluster(4, river_x(cz) + 9.0, cz, 4.0, (0.6, 1.6), r_mul=0.9)
     for cx, cz in ((-40.0, 20.0), (30.0, -34.0), (-42.0, -22.0), (38.0, 22.0),
@@ -626,8 +655,11 @@ def build():
         spots += cluster(6, cx, cz, 6.0, (0.7, 1.9), r_mul=0.9)
     rock_pl = []
     for px, pz, s in spots:
+        in_water = s < 0.0
+        s = abs(s)
         sy = s * random.uniform(0.55, 0.85)
-        rock_pl += [px, bank_y(px, pz) - 0.18 * sy, pz,
+        base = WATER_Y + 0.10 if in_water else bank_y(px, pz) - 0.18 * sy
+        rock_pl += [px, base, pz,
                     random.uniform(0.0, 360.0),
                     s, sy, s * random.uniform(0.7, 1.2)]
     node("Rocks", "Node3D", ".", {

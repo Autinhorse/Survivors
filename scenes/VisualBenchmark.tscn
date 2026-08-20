@@ -92,12 +92,12 @@ width = 256
 height = 256
 
 [sub_resource type="FastNoiseLite" id="NoiseWaterN"]
-frequency = 0.014
-fractal_octaves = 2
+frequency = 0.011
+fractal_octaves = 3
 
 [sub_resource type="Gradient" id="NoiseWaterG"]
 offsets = PackedFloat32Array(0, 1)
-colors = PackedColorArray(0.38, 0.38, 0.38, 1, 0.62, 0.62, 0.62, 1)
+colors = PackedColorArray(0.12, 0.12, 0.12, 1, 0.88, 0.88, 0.88, 1)
 
 [sub_resource type="NoiseTexture2D" id="NoiseWater"]
 noise = SubResource("NoiseWaterN")
@@ -156,15 +156,22 @@ shader_parameter/coverage = 0.70
 [sub_resource type="ShaderMaterial" id="MatWater"]
 shader = ExtResource("ext_3_water")
 shader_parameter/wave_noise = SubResource("NoiseWater")
-shader_parameter/shallow_color = Color(0.129, 0.278, 0.278, 1)
-shader_parameter/deep_color = Color(0.024, 0.075, 0.114, 1)
-shader_parameter/foam_color = Color(0.769, 0.804, 0.82, 1)
-shader_parameter/wave_scale = 0.22
-shader_parameter/flow_speed = 0.07
-shader_parameter/normal_strength = 0.45
-shader_parameter/base_alpha = 0.93
-shader_parameter/bank_foam = 0.22
-shader_parameter/streak_amount = 0.14
+shader_parameter/foam_color = Color(0.671, 0.694, 0.706, 1)
+shader_parameter/shallow_color = Color(0.239, 0.337, 0.353, 1)
+shader_parameter/deep_color = Color(0.078, 0.137, 0.169, 1)
+shader_parameter/flow_speed = 0.5
+shader_parameter/streak_stretch = 8.0
+shader_parameter/wave_scale = 0.16
+shader_parameter/foam_coverage = 0.44
+shader_parameter/foam_softness = 0.30
+shader_parameter/bank_foam = 0.26
+shader_parameter/normal_strength = 0.8
+shader_parameter/base_alpha = 0.94
+shader_parameter/river_x0 = 10
+shader_parameter/river_slope = 0.28
+shader_parameter/river_amp = 2.6
+shader_parameter/river_freq = 0.085
+shader_parameter/river_half = 3.75
 
 [sub_resource type="ShaderMaterial" id="MatLeafA"]
 shader = ExtResource("ext_4_foliage")
@@ -314,7 +321,7 @@ ambient_light_source = 3
 ambient_light_sky_contribution = 1.0
 ambient_light_energy = 1.35
 tonemap_mode = 3
-tonemap_exposure = 1.47
+tonemap_exposure = 1.34
 tonemap_white = 9.0
 glow_enabled = true
 glow_intensity = 0.7
@@ -347,7 +354,7 @@ light_color = Color(1, 0.804, 0.588, 1)
 light_energy = 3.4
 light_angular_distance = 1.4
 shadow_enabled = true
-shadow_opacity = 0.62
+shadow_opacity = 0.50
 shadow_bias = 0.035
 shadow_normal_bias = 1.2
 shadow_blur = 1.2
@@ -378,140 +385,218 @@ material = SubResource("MatTerrain")
 operation = 0
 
 [node name="RiverCut0" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -14.64000, 0.60000, -88.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.94067, 0.00000, 0.33933, 0.00000, 1.00000, -0.00000, -0.33933, 0.00000, 0.94067, -17.06029, 0.60000, -88.00000)
+size = Vector3(9.20863, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut1" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -12.40000, 0.60000, -80.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.91586, 0.00000, 0.40149, 0.00000, 1.00000, -0.00000, -0.40149, 0.00000, 0.91586, -15.05334, 0.60000, -83.00000)
+size = Vector3(9.58907, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut2" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -10.16000, 0.60000, -72.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.89876, 0.00000, 0.43845, 0.00000, 1.00000, -0.00000, -0.43845, 0.00000, 0.89876, -12.72375, 0.60000, -78.00000)
+size = Vector3(8.92563, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut3" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -7.92000, 0.60000, -64.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.89431, 0.00000, 0.44745, 0.00000, 1.00000, -0.00000, -0.44745, 0.00000, 0.89431, -10.23693, 0.60000, -73.00000)
+size = Vector3(7.54981, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut4" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -5.68000, 0.60000, -56.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.90376, 0.00000, 0.42803, 0.00000, 1.00000, -0.00000, -0.42803, 0.00000, 0.90376, -7.78623, 0.60000, -68.00000)
+size = Vector3(6.14911, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut5" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -3.44000, 0.60000, -48.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.92446, 0.00000, 0.38129, 0.00000, 1.00000, -0.00000, -0.38129, 0.00000, 0.92446, -5.55861, 0.60000, -63.00000)
+size = Vector3(5.42343, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut6" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -1.20000, 0.60000, -40.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.95027, 0.00000, 0.31142, 0.00000, 1.00000, -0.00000, -0.31142, 0.00000, 0.95027, -3.70132, 0.60000, -58.00000)
+size = Vector3(5.73539, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut7" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 1.04000, 0.60000, -32.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.97359, 0.00000, 0.22830, 0.00000, 1.00000, -0.00000, -0.22830, 0.00000, 0.97359, -2.29571, 0.60000, -53.00000)
+size = Vector3(6.92912, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut8" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 3.28000, 0.60000, -24.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.98903, 0.00000, 0.14773, 0.00000, 1.00000, -0.00000, -0.14773, 0.00000, 0.98903, -1.34279, 0.60000, -48.00000)
+size = Vector3(8.4081, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut9" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 5.52000, 0.60000, -16.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.99619, 0.00000, 0.08716, 0.00000, 1.00000, -0.00000, -0.08716, 0.00000, 0.99619, -0.76301, 0.60000, -43.00000)
+size = Vector3(9.43332, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut10" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 7.76000, 0.60000, -8.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.99821, 0.00000, 0.05976, 0.00000, 1.00000, -0.00000, -0.05976, 0.00000, 0.99821, -0.41044, 0.60000, -38.00000)
+size = Vector3(9.49247, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut11" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 10.00000, 0.60000, 0.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.99746, 0.00000, 0.07122, 0.00000, 1.00000, -0.00000, -0.07122, 0.00000, 0.99746, -0.09871, 0.60000, -33.00000)
+size = Vector3(8.55601, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut12" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 12.24000, 0.60000, 8.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.99287, 0.00000, 0.11920, 0.00000, 1.00000, -0.00000, -0.11920, 0.00000, 0.99287, 0.36581, 0.60000, -28.00000)
+size = Vector3(7.09187, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut13" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 14.48000, 0.60000, 16.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.98111, 0.00000, 0.19344, 0.00000, 1.00000, -0.00000, -0.19344, 0.00000, 0.98111, 1.14955, 0.60000, -23.00000)
+size = Vector3(5.83167, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut14" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 16.72000, 0.60000, 24.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.96068, 0.00000, 0.27765, 0.00000, 1.00000, -0.00000, -0.27765, 0.00000, 0.96068, 2.36216, 0.60000, -18.00000)
+size = Vector3(5.40511, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut15" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 18.96000, 0.60000, 32.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.93501, 0.00000, 0.35461, 0.00000, 1.00000, -0.00000, -0.35461, 0.00000, 0.93501, 4.03699, 0.60000, -13.00000)
+size = Vector3(6.02535, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut16" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 21.20000, 0.60000, 40.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.91129, 0.00000, 0.41176, 0.00000, 1.00000, -0.00000, -0.41176, 0.00000, 0.91129, 6.12514, 0.60000, -8.00000)
+size = Vector3(7.38246, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut17" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 23.44000, 0.60000, 48.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.89662, 0.00000, 0.44280, 0.00000, 1.00000, -0.00000, -0.44280, 0.00000, 0.89662, 8.50416, 0.60000, -3.00000)
+size = Vector3(8.7983, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut18" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 25.68000, 0.60000, 56.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.89521, 0.00000, 0.44565, 0.00000, 1.00000, -0.00000, -0.44565, 0.00000, 0.89521, 10.99987, 0.60000, 2.00000)
+size = Vector3(9.56539, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut19" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 27.92000, 0.60000, 64.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.90745, 0.00000, 0.42017, 0.00000, 1.00000, -0.00000, -0.42017, 0.00000, 0.90745, 13.41732, 0.60000, 7.00000)
+size = Vector3(9.30043, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut20" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 30.16000, 0.60000, 72.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.92986, 0.00000, 0.36791, 0.00000, 1.00000, -0.00000, -0.36791, 0.00000, 0.92986, 15.57548, 0.60000, 12.00000)
+size = Vector3(8.13581, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut21" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 32.40000, 0.60000, 80.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.95577, 0.00000, 0.29412, 0.00000, 1.00000, -0.00000, -0.29412, 0.00000, 0.95577, 17.33945, 0.60000, 17.00000)
+size = Vector3(6.65348, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
 [node name="RiverCut22" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 34.64000, 0.60000, 88.00000)
-size = Vector3(7.5, 8, 10)
+transform = Transform3D(0.97769, 0.00000, 0.21006, 0.00000, 1.00000, -0.00000, -0.21006, 0.00000, 0.97769, 18.64449, 0.60000, 22.00000)
+size = Vector3(5.59415, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut23" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.99120, 0.00000, 0.13240, 0.00000, 1.00000, -0.00000, -0.13240, 0.00000, 0.99120, 19.50747, 0.60000, 27.00000)
+size = Vector3(5.48715, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut24" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.99694, 0.00000, 0.07811, 0.00000, 1.00000, -0.00000, -0.07811, 0.00000, 0.99694, 20.02396, 0.60000, 32.00000)
+size = Vector3(6.38596, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut25" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.99826, 0.00000, 0.05890, 0.00000, 1.00000, -0.00000, -0.05890, 0.00000, 0.99826, 20.35114, 0.60000, 37.00000)
+size = Vector3(7.84144, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut26" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.99690, 0.00000, 0.07873, 0.00000, 1.00000, -0.00000, -0.07873, 0.00000, 0.99690, 20.67990, 0.60000, 42.00000)
+size = Vector3(9.1263, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut27" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.99105, 0.00000, 0.13350, 0.00000, 1.00000, -0.00000, -0.13350, 0.00000, 0.99105, 21.20084, 0.60000, 47.00000)
+size = Vector3(9.59852, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut28" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.97740, 0.00000, 0.21141, 0.00000, 1.00000, -0.00000, -0.21141, 0.00000, 0.97740, 22.07035, 0.60000, 52.00000)
+size = Vector3(9.02213, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut29" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.95537, 0.00000, 0.29542, 0.00000, 1.00000, -0.00000, -0.29542, 0.00000, 0.95537, 23.38283, 0.60000, 57.00000)
+size = Vector3(7.68514, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut30" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.92945, 0.00000, 0.36894, 0.00000, 1.00000, -0.00000, -0.36894, 0.00000, 0.92945, 25.15384, 0.60000, 62.00000)
+size = Vector3(6.25564, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut31" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.90716, 0.00000, 0.42079, 0.00000, 1.00000, -0.00000, -0.42079, 0.00000, 0.90716, 27.31738, 0.60000, 67.00000)
+size = Vector3(5.44794, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut32" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.89512, 0.00000, 0.44583, 0.00000, 1.00000, -0.00000, -0.44583, 0.00000, 0.89512, 29.73760, 0.60000, 72.00000)
+size = Vector3(5.66562, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut33" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.89676, 0.00000, 0.44252, 0.00000, 1.00000, -0.00000, -0.44252, 0.00000, 0.89676, 32.23297, 0.60000, 77.00000)
+size = Vector3(6.79993, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut34" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.91162, 0.00000, 0.41104, 0.00000, 1.00000, -0.00000, -0.41104, 0.00000, 0.91162, 34.60860, 0.60000, 82.00000)
+size = Vector3(8.28406, 8, 7)
+operation = 2
+material = SubResource("MatTerrain")
+
+[node name="RiverCut35" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(0.93543, 0.00000, 0.35351, 0.00000, 1.00000, -0.00000, -0.35351, 0.00000, 0.93543, 36.69091, 0.60000, 87.00000)
+size = Vector3(9.3764, 8, 7)
 operation = 2
 material = SubResource("MatTerrain")
 
@@ -519,175 +604,259 @@ material = SubResource("MatTerrain")
 
 
 [node name="Water0" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -13.52000, -2.55000, -84.00000)
+transform = Transform3D(8.46615, 0.00000, 1.75916, 0.00000, 1.00000, -0.00000, -3.59576, 0.00000, 4.14190, -15.48498, -2.55000, -84.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water1" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -11.84000, -2.55000, -78.00000)
+transform = Transform3D(8.05346, 0.00000, 1.92124, 0.00000, 1.00000, -0.00000, -3.80233, 0.00000, 4.06925, -13.68469, -2.55000, -80.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water2" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -10.16000, -2.55000, -72.00000)
+transform = Transform3D(7.18664, 0.00000, 2.00457, 0.00000, 1.00000, -0.00000, -3.57574, 0.00000, 4.02886, -11.73733, -2.55000, -76.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water3" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -8.48000, -2.55000, -66.00000)
+transform = Transform3D(6.12887, 0.00000, 2.00622, 0.00000, 1.00000, -0.00000, -3.05257, 0.00000, 4.02804, -9.73760, -2.55000, -72.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water4" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -6.80000, -2.55000, -60.00000)
+transform = Transform3D(5.19584, 0.00000, 1.92613, 0.00000, 1.00000, -0.00000, -2.46079, 0.00000, 4.06694, -7.78623, -2.55000, -68.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water5" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -5.12000, -2.55000, -54.00000)
+transform = Transform3D(4.68124, 0.00000, 1.76709, 0.00000, 1.00000, -0.00000, -1.99882, 0.00000, 4.13853, -5.97841, -2.55000, -64.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water6" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -3.44000, -2.55000, -48.00000)
+transform = Transform3D(4.77817, 0.00000, 1.53746, 0.00000, 1.00000, -0.00000, -1.73702, 0.00000, 4.22921, -4.39288, -2.55000, -60.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water7" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -1.76000, -2.55000, -42.00000)
+transform = Transform3D(5.50541, 0.00000, 1.25542, 0.00000, 1.00000, -0.00000, -1.59942, 0.00000, 4.32133, -3.08295, -2.55000, -56.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water8" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, -0.08000, -2.55000, -36.00000)
+transform = Transform3D(6.67179, 0.00000, 0.95134, 0.00000, 1.00000, -0.00000, -1.44310, 0.00000, 4.39829, -2.07035, -2.55000, -52.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water9" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 1.60000, -2.55000, -30.00000)
+transform = Transform3D(7.92023, 0.00000, 0.66480, 0.00000, 1.00000, -0.00000, -1.18307, 0.00000, 4.45062, -1.34279, -2.55000, -48.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water10" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 3.28000, -2.55000, -24.00000)
+transform = Transform3D(8.85320, 0.00000, 0.43625, 0.00000, 1.00000, -0.00000, -0.86232, 0.00000, 4.47880, -0.85535, -2.55000, -44.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water11" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 4.96000, -2.55000, -18.00000)
+transform = Transform3D(9.17872, 0.00000, 0.29786, 0.00000, 1.00000, -0.00000, -0.60889, 0.00000, 4.49013, -0.53559, -2.55000, -40.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water12" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 6.64000, -2.55000, -12.00000)
+transform = Transform3D(8.80510, 0.00000, 0.26833, 0.00000, 1.00000, -0.00000, -0.52597, 0.00000, 4.49199, -0.29191, -2.55000, -36.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water13" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 8.32000, -2.55000, -6.00000)
+transform = Transform3D(7.85954, 0.00000, 0.35150, 0.00000, 1.00000, -0.00000, -0.61580, 0.00000, 4.48625, -0.02396, -2.55000, -32.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water14" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 10.00000, -2.55000, 0.00000)
+transform = Transform3D(6.64416, 0.00000, 0.53639, 0.00000, 1.00000, -0.00000, -0.79766, 0.00000, 4.46792, 0.36581, -2.55000, -28.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water15" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 11.68000, -2.55000, 6.00000)
+transform = Transform3D(5.54355, 0.00000, 0.79748, 0.00000, 1.00000, -0.00000, -0.99822, 0.00000, 4.42877, 0.96099, -2.55000, -24.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water16" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 13.36000, -2.55000, 12.00000)
+transform = Transform3D(4.89770, 0.00000, 1.09767, 0.00000, 1.00000, -0.00000, -1.23190, 0.00000, 4.36407, 1.82167, -2.55000, -20.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water17" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 15.04000, -2.55000, 18.00000)
+transform = Transform3D(4.88057, 0.00000, 1.39569, 0.00000, 1.00000, -0.00000, -1.59224, 0.00000, 4.27809, 2.97755, -2.55000, -16.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water18" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 16.72000, -2.55000, 24.00000)
+transform = Transform3D(5.44528, 0.00000, 1.65560, 0.00000, 1.00000, -0.00000, -2.15450, 0.00000, 4.18437, 4.42452, -2.55000, -12.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water19" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 18.40000, -2.55000, 30.00000)
+transform = Transform3D(6.36306, 0.00000, 1.85293, 0.00000, 1.00000, -0.00000, -2.87511, 0.00000, 4.10081, 6.12514, -2.55000, -8.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water20" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 20.08000, -2.55000, 36.00000)
+transform = Transform3D(7.32078, 0.00000, 1.97468, 0.00000, 1.00000, -0.00000, -3.57509, 0.00000, 4.04359, 8.01293, -2.55000, -4.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water21" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 21.76000, -2.55000, 42.00000)
+transform = Transform3D(8.02117, 0.00000, 2.01568, 0.00000, 1.00000, -0.00000, -4.01861, 0.00000, 4.02331, 10.00000, -2.55000, 0.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water22" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 23.44000, -2.55000, 48.00000)
+transform = Transform3D(8.25606, 0.00000, 1.97468, 0.00000, 1.00000, -0.00000, -4.03184, 0.00000, 4.04359, 11.98707, -2.55000, 4.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water23" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 25.12000, -2.55000, 54.00000)
+transform = Transform3D(7.95194, 0.00000, 1.85293, 0.00000, 1.00000, -0.00000, -3.59303, 0.00000, 4.10081, 13.87486, -2.55000, 8.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water24" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 26.80000, -2.55000, 60.00000)
+transform = Transform3D(7.19322, 0.00000, 1.65560, 0.00000, 1.00000, -0.00000, -2.84610, 0.00000, 4.18437, 15.57548, -2.55000, 12.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water25" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 28.48000, -2.55000, 66.00000)
+transform = Transform3D(6.21658, 0.00000, 1.39569, 0.00000, 1.00000, -0.00000, -2.02811, 0.00000, 4.27809, 17.02245, -2.55000, 16.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water26" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 30.16000, -2.55000, 72.00000)
+transform = Transform3D(5.35764, 0.00000, 1.09767, 0.00000, 1.00000, -0.00000, -1.34758, 0.00000, 4.36407, 18.17833, -2.55000, 20.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water27" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 31.84000, -2.55000, 78.00000)
+transform = Transform3D(4.94236, 0.00000, 0.79748, 0.00000, 1.00000, -0.00000, -0.88997, 0.00000, 4.42877, 19.03901, -2.55000, 24.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
 
 [node name="Water28" type="MeshInstance3D" parent="Water"]
-transform = Transform3D(6.74075, 0.00000, 1.72563, 0.00000, 1.00000, -0.00000, -1.88741, 0.00000, 6.16297, 33.52000, -2.55000, 84.00000)
+transform = Transform3D(5.15731, 0.00000, 0.53639, 0.00000, 1.00000, -0.00000, -0.61916, 0.00000, 4.46792, 19.63419, -2.55000, 28.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water29" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(5.96767, 0.00000, 0.35150, 0.00000, 1.00000, -0.00000, -0.46757, 0.00000, 4.48625, 20.02396, -2.55000, 32.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water30" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(7.12680, 0.00000, 0.26833, 0.00000, 1.00000, -0.00000, -0.42572, 0.00000, 4.49199, 20.29191, -2.55000, 36.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water31" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(8.26206, 0.00000, 0.29786, 0.00000, 1.00000, -0.00000, -0.54809, 0.00000, 4.49013, 20.53559, -2.55000, 40.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water32" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(8.99493, 0.00000, 0.43625, 0.00000, 1.00000, -0.00000, -0.87613, 0.00000, 4.47880, 20.85535, -2.55000, 44.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water33" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(9.06474, 0.00000, 0.66480, 0.00000, 1.00000, -0.00000, -1.35403, 0.00000, 4.45062, 21.34279, -2.55000, 48.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water34" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(8.42725, 0.00000, 0.95134, 0.00000, 1.00000, -0.00000, -1.82280, 0.00000, 4.39829, 22.07035, -2.55000, 52.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water35" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(7.28330, 0.00000, 1.25542, 0.00000, 1.00000, -0.00000, -2.11593, 0.00000, 4.32133, 23.08295, -2.55000, 56.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water36" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(6.00487, 0.00000, 1.53746, 0.00000, 1.00000, -0.00000, -2.18297, 0.00000, 4.22921, 24.39288, -2.55000, 60.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water37" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(4.98936, 0.00000, 1.76709, 0.00000, 1.00000, -0.00000, -2.13038, 0.00000, 4.13853, 25.97841, -2.55000, 64.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water38" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(4.52342, 0.00000, 1.92613, 0.00000, 1.00000, -0.00000, -2.14232, 0.00000, 4.06694, 27.78623, -2.55000, 68.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water39" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(4.71336, 0.00000, 2.00622, 0.00000, 1.00000, -0.00000, -2.34756, 0.00000, 4.02804, 29.73760, -2.55000, 72.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water40" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(5.48115, 0.00000, 2.00457, 0.00000, 1.00000, -0.00000, -2.72717, 0.00000, 4.02886, 31.73733, -2.55000, 76.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water41" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(6.59792, 0.00000, 1.92124, 0.00000, 1.00000, -0.00000, -3.11512, 0.00000, 4.06925, 33.68469, -2.55000, 80.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatWater")
+cast_shadow = 0
+
+[node name="Water42" type="MeshInstance3D" parent="Water"]
+transform = Transform3D(7.73777, 0.00000, 1.75916, 0.00000, 1.00000, -0.00000, -3.28640, 0.00000, 4.14190, 35.48498, -2.55000, 84.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatWater")
 cast_shadow = 0
@@ -1005,196 +1174,196 @@ cast_shadow = 0
 
 
 [node name="Deck" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(12.51853, 0.00000, 1.13245, 0.00000, 0.30000, -0.00000, -3.50519, 0.00000, 4.04445, 7.76000, 2.10000, -8.00000)
+transform = Transform3D(12.51853, 0.00000, 1.13245, 0.00000, 0.30000, -0.00000, -3.50519, 0.00000, 4.04445, 6.12514, 2.10000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Plank0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 2.07250, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 0.43764, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 3.69750, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 2.06264, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank2" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 5.32250, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 3.68764, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank3" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 6.94750, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 5.31264, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank4" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 8.57250, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 6.93764, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank5" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 10.19750, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 8.56264, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank6" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 11.82250, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 10.18764, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Plank7" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 13.44750, 2.28000, -8.00000)
+transform = Transform3D(0.36593, 0.00000, 1.18637, 0.00000, 0.10000, -0.00000, -0.10246, 0.00000, 4.23704, 11.81264, 2.28000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Pylon00" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 4.91000, -0.65000, -9.60000)
+transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 3.27514, -0.65000, -9.60000)
 mesh = SubResource("MeshCyl")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Pylon01" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 10.61000, -0.65000, -9.60000)
+transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 8.97514, -0.65000, -9.60000)
 mesh = SubResource("MeshCyl")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Pylon10" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 4.91000, -0.65000, -6.40000)
+transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 3.27514, -0.65000, -6.40000)
 mesh = SubResource("MeshCyl")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Pylon11" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 10.61000, -0.65000, -6.40000)
+transform = Transform3D(0.60000, 0.00000, 0.00000, 0.00000, 5.50000, -0.00000, -0.00000, 0.00000, 0.60000, 8.97514, -0.65000, -6.40000)
 mesh = SubResource("MeshCyl")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post0_0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 2.34333, 2.85000, -9.90000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 0.70847, 2.85000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post0_1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 2.34333, 2.85000, -6.10000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 0.70847, 2.85000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post1_0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 4.51000, 2.85000, -9.90000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 2.87514, 2.85000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post1_1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 4.51000, 2.85000, -6.10000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 2.87514, 2.85000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post2_0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 6.67667, 2.85000, -9.90000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 5.04180, 2.85000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post2_1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 6.67667, 2.85000, -6.10000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 5.04180, 2.85000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post3_0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 8.84333, 2.85000, -9.90000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 7.20847, 2.85000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post3_1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 8.84333, 2.85000, -6.10000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 7.20847, 2.85000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post4_0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 11.01000, 2.85000, -9.90000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 9.37514, 2.85000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post4_1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 11.01000, 2.85000, -6.10000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 9.37514, 2.85000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post5_0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 13.17667, 2.85000, -9.90000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 11.54180, 2.85000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Post5_1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 13.17667, 2.85000, -6.10000)
+transform = Transform3D(0.15407, 0.00000, 0.04314, 0.00000, 1.20000, -0.00000, -0.04314, 0.00000, 0.15407, 11.54180, 2.85000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Rail0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(12.13335, 0.00000, 0.04314, 0.00000, 0.16000, -0.00000, -3.39734, 0.00000, 0.15407, 7.76000, 3.40000, -9.90000)
+transform = Transform3D(12.13335, 0.00000, 0.04314, 0.00000, 0.16000, -0.00000, -3.39734, 0.00000, 0.15407, 6.12514, 3.40000, -9.90000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Rail1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(12.13335, 0.00000, 0.04314, 0.00000, 0.16000, -0.00000, -3.39734, 0.00000, 0.15407, 7.76000, 3.40000, -6.10000)
+transform = Transform3D(12.13335, 0.00000, 0.04314, 0.00000, 0.16000, -0.00000, -3.39734, 0.00000, 0.15407, 6.12514, 3.40000, -6.10000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Abut0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(1.92593, 0.00000, 1.13245, 0.00000, 1.57500, -0.00000, -0.53926, 0.00000, 4.04445, 0.06000, 0.78750, -8.00000)
+transform = Transform3D(1.92593, 0.00000, 1.13245, 0.00000, 1.57500, -0.00000, -0.53926, 0.00000, 4.04445, -1.57486, 0.78750, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Abut1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(1.92593, 0.00000, 1.13245, 0.00000, 0.88200, -0.00000, -0.53926, 0.00000, 4.04445, -1.74000, 0.44100, -8.00000)
+transform = Transform3D(1.92593, 0.00000, 1.13245, 0.00000, 0.88200, -0.00000, -0.53926, 0.00000, 4.04445, -3.37486, 0.44100, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Abut2" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(1.92593, 0.00000, 1.13245, 0.00000, 0.33600, -0.00000, -0.53926, 0.00000, 4.04445, -3.54000, 0.16800, -8.00000)
+transform = Transform3D(1.92593, 0.00000, 1.13245, 0.00000, 0.33600, -0.00000, -0.53926, 0.00000, 4.04445, -5.17486, 0.16800, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWoodLt")
 
 [node name="Mast0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.48148, 0.00000, 0.13481, 0.00000, 7.20000, -0.00000, -0.13481, 0.00000, 0.48148, 1.56000, 4.50000, -9.50000)
+transform = Transform3D(0.48148, 0.00000, 0.13481, 0.00000, 7.20000, -0.00000, -0.13481, 0.00000, 0.48148, -0.07486, 4.50000, -9.50000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Mast1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.48148, 0.00000, 0.13481, 0.00000, 7.20000, -0.00000, -0.13481, 0.00000, 0.48148, 1.56000, 4.50000, -6.50000)
+transform = Transform3D(0.48148, 0.00000, 0.13481, 0.00000, 7.20000, -0.00000, -0.13481, 0.00000, 0.48148, -0.07486, 4.50000, -6.50000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="MastTop" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(0.42370, 0.00000, 1.13245, 0.00000, 0.44000, -0.00000, -0.11864, 0.00000, 4.04445, 1.56000, 7.70000, -8.00000)
+transform = Transform3D(0.42370, 0.00000, 1.13245, 0.00000, 0.44000, -0.00000, -0.11864, 0.00000, 4.04445, -0.07486, 7.70000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Cable0" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(3.20000, 0.06078, 0.00000, -5.60000, 0.03473, 0.00000, 0.00000, 0.00000, 0.07000, 3.16000, 4.90000, -8.00000)
+transform = Transform3D(3.20000, 0.06078, 0.00000, -5.60000, 0.03473, 0.00000, 0.00000, 0.00000, 0.07000, 1.52514, 4.90000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 cast_shadow = 0
 
 [node name="Cable1" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(6.40000, 0.04610, 0.00000, -5.60000, 0.05268, 0.00000, 0.00000, 0.00000, 0.07000, 4.76000, 4.90000, -8.00000)
+transform = Transform3D(6.40000, 0.04610, 0.00000, -5.60000, 0.05268, 0.00000, 0.00000, 0.00000, 0.07000, 3.12514, 4.90000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 cast_shadow = 0
 
 [node name="Cable2" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(9.60000, 0.03527, 0.00000, -5.60000, 0.06046, 0.00000, 0.00000, 0.00000, 0.07000, 6.36000, 4.90000, -8.00000)
+transform = Transform3D(9.60000, 0.03527, 0.00000, -5.60000, 0.06046, 0.00000, 0.00000, 0.00000, 0.07000, 4.72514, 4.90000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 cast_shadow = 0
 
 [node name="Cable3" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(12.80000, 0.02806, 0.00000, -5.60000, 0.06413, 0.00000, 0.00000, 0.00000, 0.07000, 7.96000, 4.90000, -8.00000)
+transform = Transform3D(12.80000, 0.02806, 0.00000, -5.60000, 0.06413, 0.00000, 0.00000, 0.00000, 0.07000, 6.32514, 4.90000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 cast_shadow = 0
 
 [node name="CableBack" type="MeshInstance3D" parent="Bridge"]
-transform = Transform3D(-6.50000, 0.05349, 0.00000, -7.70000, -0.04515, 0.00000, 0.00000, 0.00000, 0.07000, -1.69000, 3.85000, -8.00000)
+transform = Transform3D(-6.50000, 0.05349, 0.00000, -7.70000, -0.04515, 0.00000, 0.00000, 0.00000, 0.07000, -3.32486, 3.85000, -8.00000)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 cast_shadow = 0
@@ -1439,7 +1608,7 @@ script = ExtResource("ext_9_ScatterField")
 kind = "rock"
 source_scene = ExtResource("ext_10_rocks_lp")
 variants = 8
-placements = PackedFloat32Array(-13.364, -0.173, 9.823, 164.768, 1.204, 0.961, 1.032, -21.609, -0.161, 14.146, 252.142, 1.279, 0.892, 1.026, -25.802, -0.106, 7.864, 224.946, 0.906, 0.591, 1.019, -15.680, -0.184, 6.433, 79.733, 1.502, 1.020, 1.764, -22.539, -0.149, 8.811, 196.442, 1.058, 0.829, 1.178, -20.572, -0.141, 10.947, 84.927, 1.094, 0.784, 1.043, -17.444, -0.073, 13.113, 116.944, 0.530, 0.405, 0.490, -15.330, -0.093, 9.351, 284.383, 0.931, 0.519, 0.922, -16.262, -0.148, 14.900, 317.068, 1.457, 0.822, 1.612, -20.005, -0.060, 13.939, 101.007, 0.463, 0.334, 0.334, -18.933, -0.161, 5.967, 58.029, 1.311, 0.892, 1.085, -11.464, -0.137, 18.588, 339.980, 1.244, 0.761, 0.882, -7.764, -0.163, 16.282, 254.725, 1.276, 0.906, 0.946, -7.358, -0.184, 19.999, 317.937, 1.246, 1.025, 1.104, -17.225, -0.166, 17.447, 333.776, 1.429, 0.920, 1.036, -13.251, -0.202, 20.887, 55.919, 1.439, 1.121, 1.223, -12.062, -0.053, 16.570, 68.202, 0.482, 0.294, 0.477, -11.122, -0.152, 24.499, 177.982, 1.116, 0.847, 1.136, -9.826, -0.176, 21.293, 50.524, 1.266, 0.976, 0.981, -24.917, -0.106, -0.967, 62.614, 0.918, 0.591, 1.053, -21.558, -0.068, 2.258, 103.585, 0.653, 0.376, 0.605, -24.143, -0.155, 4.988, 172.154, 1.453, 0.859, 1.029, -24.096, -0.154, 1.111, 253.555, 1.413, 0.853, 1.044, -17.150, -0.154, 2.371, 352.811, 1.297, 0.857, 1.426, -22.051, -0.098, 0.164, 42.048, 0.683, 0.543, 0.744, -21.121, -0.084, -12.446, 326.361, 0.564, 0.465, 0.576, -4.305, -0.113, 18.481, 28.311, 0.935, 0.630, 0.890, -4.577, -0.136, 15.192, 236.840, 1.168, 0.754, 1.237, -5.403, -0.110, 24.455, 125.697, 1.025, 0.611, 1.023, -13.949, -0.069, 23.550, 49.347, 0.521, 0.382, 0.608, -0.198, -0.095, 26.111, 341.897, 0.651, 0.530, 0.706, -29.891, -0.052, 18.069, 50.695, 0.499, 0.290, 0.488, -29.828, -0.134, 15.730, 201.446, 1.044, 0.746, 1.144, -26.632, -0.203, 22.863, 137.677, 1.362, 1.127, 1.474, -32.957, -0.090, 6.597, 57.733, 0.757, 0.499, 0.730, -29.676, -0.078, 23.610, 48.014, 0.614, 0.434, 0.490, -1.645, -0.141, -22.476, 1.104, 1.014, 0.785, 1.103, 7.292, -0.096, 8.175, 123.692, 0.882, 0.531, 0.867, 7.293, -0.147, 11.169, 37.243, 1.187, 0.817, 1.060, 8.072, -0.130, 14.498, 173.979, 1.040, 0.723, 1.162, 9.124, -0.135, 17.126, 177.507, 1.027, 0.750, 0.953, 10.429, -0.135, 19.274, 88.030, 0.952, 0.752, 0.914, 19.330, 1.885, -17.954, 167.662, 1.033, 0.638, 0.902, 13.311, 1.803, -25.285, 269.571, 1.586, 1.096, 1.617, 15.147, 1.915, -22.099, 186.510, 0.715, 0.474, 0.600, 14.390, 1.875, -18.705, 64.375, 1.032, 0.697, 1.122, 20.316, 1.876, 1.265, 143.404, 0.962, 0.691, 1.027, 18.690, 1.894, -0.083, 66.655, 0.746, 0.586, 0.870, 22.113, 1.909, 0.813, 111.530, 0.786, 0.503, 0.589, 23.014, 1.797, -2.184, 334.671, 1.471, 1.126, 1.509, 23.607, 1.912, 10.765, 76.207, 0.845, 0.489, 0.830, 27.251, 1.915, 15.324, 5.197, 0.780, 0.470, 0.674, 26.044, 1.799, 11.259, 124.305, 1.536, 1.119, 1.780, 24.145, 1.891, 14.100, 75.984, 1.046, 0.605, 0.993, -36.924, -0.099, 14.306, 206.888, 0.853, 0.550, 0.936, -41.928, -0.114, 22.241, 245.818, 0.991, 0.633, 0.999, -51.556, -0.110, 19.393, 98.622, 0.739, 0.613, 0.639, -41.441, -0.161, 16.068, 136.155, 1.201, 0.894, 1.361, -35.329, -0.250, 21.821, 25.500, 1.788, 1.389, 1.271, -30.586, -0.169, 32.692, 288.540, 1.538, 0.941, 1.789, 30.808, 1.859, -40.430, 72.629, 0.985, 0.782, 0.825, 38.097, 1.900, -43.358, 186.181, 0.729, 0.555, 0.814, 32.510, 1.861, -25.783, 125.449, 0.971, 0.775, 1.004, 29.592, 1.829, -26.730, 144.185, 1.677, 0.948, 1.403, 33.311, 1.769, -29.517, 324.695, 1.776, 1.282, 1.500, 25.095, 1.812, -40.172, 139.615, 1.715, 1.042, 1.568, -29.028, -0.178, -30.565, 199.240, 1.279, 0.990, 1.055, -37.304, -0.133, -18.061, 231.699, 0.885, 0.737, 0.765, -49.762, -0.207, -15.657, 223.918, 1.741, 1.147, 1.283, -36.122, -0.118, -20.075, 111.733, 0.967, 0.655, 0.951, -40.484, -0.131, -23.823, 325.219, 1.022, 0.725, 0.926, -49.795, -0.174, -28.538, 352.521, 1.679, 0.966, 1.710, 42.492, 1.809, 20.108, 194.385, 1.657, 1.059, 1.372, 38.886, 1.761, 25.288, 241.866, 1.898, 1.328, 1.676, 41.006, 1.925, 22.355, 257.685, 0.706, 0.415, 0.660, 36.872, 1.810, 17.657, 300.098, 1.708, 1.057, 1.925, 33.044, 1.920, 22.012, 192.965, 0.786, 0.447, 0.926, 32.323, 1.804, 16.391, 272.216, 1.415, 1.087, 1.033, -2.070, -0.190, 39.023, 116.463, 1.750, 1.053, 1.923, -8.530, -0.187, 26.132, 250.775, 1.527, 1.039, 1.721, 4.474, -0.271, 32.260, 200.986, 1.790, 1.507, 1.969, 7.972, -0.206, 32.704, 125.810, 1.650, 1.143, 1.937, 0.962, -0.216, 32.994, 19.740, 1.574, 1.198, 1.317, -10.552, -0.227, 34.363, 108.282, 1.654, 1.261, 1.911, -37.232, -0.133, -35.064, 242.258, 1.283, 0.741, 1.201, -33.621, -0.220, -29.103, 82.326, 1.573, 1.225, 1.606, -30.025, -0.087, -23.530, 60.863, 0.789, 0.484, 0.560, -22.773, -0.116, -23.374, 184.197, 0.796, 0.644, 0.954, -32.022, -0.095, -30.547, 48.191, 0.763, 0.525, 0.605, -16.691, -0.191, -36.117, 245.838, 1.600, 1.059, 1.580)
+placements = PackedFloat32Array(-13.364, -0.145, 9.823, 104.801, 1.204, 0.805, 1.101, -21.609, -0.181, 14.146, 106.934, 1.279, 1.007, 1.500, -25.802, -0.123, 7.864, 155.817, 0.906, 0.681, 0.744, -15.680, -0.208, 6.433, 289.652, 1.502, 1.154, 1.429, -22.539, -0.115, 8.811, 74.113, 1.058, 0.640, 1.162, -20.572, -0.161, 10.947, 124.177, 1.094, 0.893, 0.976, -17.444, -0.074, 13.113, 167.852, 0.530, 0.412, 0.480, -15.330, -0.139, 9.351, 331.323, 0.931, 0.770, 1.056, -16.262, -0.179, 14.900, 181.433, 1.457, 0.995, 1.151, -20.005, -0.048, 13.939, 316.185, 0.463, 0.269, 0.540, -18.933, -0.185, 5.967, 148.023, 1.311, 1.029, 1.416, -11.464, -0.138, 18.588, 142.313, 1.244, 0.769, 1.381, -7.764, -0.179, 16.282, 52.415, 1.276, 0.996, 1.264, -7.358, -0.177, 19.999, 175.501, 1.246, 0.983, 1.038, -17.225, -0.151, 17.447, 224.409, 1.429, 0.840, 1.689, -13.251, -0.160, 20.887, 157.927, 1.439, 0.890, 1.160, -12.062, -0.056, 16.570, 177.463, 0.482, 0.311, 0.353, -11.122, -0.114, 24.499, 157.112, 1.116, 0.633, 0.901, -9.826, -0.175, 21.293, 329.388, 1.266, 0.970, 1.498, -24.917, -0.099, -0.967, 53.275, 0.918, 0.550, 1.085, -21.558, -0.068, 2.258, 135.202, 0.653, 0.379, 0.654, -24.143, -0.171, 4.988, 174.729, 1.453, 0.951, 1.555, -24.096, -0.214, 1.111, 35.398, 1.413, 1.189, 1.641, -17.150, -0.155, 2.371, 103.010, 1.297, 0.861, 0.975, -22.051, -0.083, 0.164, 108.395, 0.683, 0.463, 0.515, -21.121, -0.066, -12.446, 356.164, 0.564, 0.367, 0.395, -4.305, -0.112, 18.481, 210.220, 0.935, 0.623, 0.690, -4.577, -0.128, 15.192, 190.558, 1.168, 0.710, 1.044, -5.403, -0.121, 24.455, 237.543, 1.025, 0.670, 0.758, -13.949, -0.065, 23.550, 163.197, 0.521, 0.358, 0.375, -0.198, -0.068, 26.111, 306.860, 0.651, 0.377, 0.488, -29.891, -0.070, 18.069, 169.561, 0.499, 0.386, 0.352, -29.828, -0.113, 15.730, 286.603, 1.044, 0.627, 0.834, -26.632, -0.175, 22.863, 223.870, 1.362, 0.974, 1.503, -32.957, -0.085, 6.597, 274.968, 0.757, 0.475, 0.891, -29.676, -0.064, 23.610, 180.223, 0.614, 0.357, 0.588, -1.718, -2.450, -24.132, 326.750, 0.474, 0.377, 0.460, 3.271, -2.450, -24.007, 162.505, 1.389, 0.921, 1.010, -0.752, -2.450, -22.019, 272.040, 0.610, 0.466, 0.702, -0.113, -2.450, -20.410, 323.392, 1.278, 0.798, 1.184, 0.879, -2.450, -14.717, 290.637, 0.774, 0.628, 0.884, 6.197, -2.450, -14.284, 45.047, 0.830, 0.679, 0.851, 1.486, -2.450, -12.779, 141.932, 0.603, 0.461, 0.530, 6.975, -2.450, -12.025, 315.260, 0.646, 0.399, 0.609, 7.972, -2.450, -9.869, 56.893, 0.639, 0.422, 0.697, 3.022, -2.450, -8.794, 188.154, 0.918, 0.644, 0.754, 10.327, -2.450, -6.411, 67.443, 1.402, 0.865, 1.019, 10.603, -2.450, -5.062, 120.085, 1.183, 0.778, 1.165, 12.015, -2.450, -3.717, 41.675, 0.687, 0.558, 0.748, 4.586, -2.450, -1.958, 142.787, 1.305, 0.939, 1.186, 4.928, -2.450, -2.299, 257.540, 1.392, 1.104, 1.274, 15.423, 1.892, -1.070, 180.589, 0.957, 0.598, 0.956, 5.870, -2.450, -0.187, 34.291, 0.612, 0.450, 0.631, 13.942, -2.450, -0.176, 145.615, 0.684, 0.537, 0.644, 16.453, 1.889, -0.850, 286.803, 0.732, 0.614, 0.738, 15.528, -2.450, 1.297, 292.220, 1.498, 0.987, 1.366, 14.941, -2.450, 1.239, 174.530, 0.455, 0.351, 0.480, 18.081, 1.858, 3.488, 177.249, 1.332, 0.789, 1.348, 7.196, -0.127, 6.174, 216.154, 1.076, 0.703, 0.764, 18.685, 1.821, 6.692, 47.116, 1.173, 0.997, 0.990, 7.619, -0.141, 7.612, 88.195, 1.410, 0.781, 1.543, 20.558, 1.867, 8.192, 102.276, 1.281, 0.741, 0.983, 9.780, -0.179, 10.575, 307.359, 1.285, 0.995, 0.940, 18.969, -2.450, 10.564, 176.624, 0.528, 0.306, 0.409, 11.927, -2.450, 12.798, 108.692, 0.534, 0.429, 0.529, 19.301, -2.450, 11.200, 159.650, 1.358, 0.990, 1.206, 21.766, 1.857, 12.839, 227.871, 1.237, 0.796, 1.345, 10.897, -0.088, 13.915, 275.388, 0.780, 0.488, 0.891, 12.045, -0.131, 16.091, 182.233, 1.318, 0.729, 1.392, 19.676, -2.450, 16.580, 266.993, 1.061, 0.594, 0.944, 15.200, -2.450, 18.761, 73.679, 1.303, 0.751, 1.272, 20.567, -2.450, 18.889, 238.781, 0.469, 0.344, 0.507, 13.305, -0.090, 20.766, 271.337, 0.840, 0.498, 0.650, 16.123, -2.450, 21.379, 199.722, 1.058, 0.589, 0.774, 16.968, -2.450, 23.575, 356.408, 0.926, 0.687, 0.807, 16.799, -2.450, 23.956, 126.737, 0.468, 0.335, 0.511, 21.407, -2.450, 24.409, 219.618, 0.532, 0.335, 0.456, 12.441, 1.830, -18.834, 183.505, 1.377, 0.945, 1.256, 19.109, 1.848, -21.513, 331.126, 1.242, 0.846, 1.311, 15.162, 1.820, -18.779, 321.086, 1.364, 1.000, 1.557, 9.787, 1.854, -26.023, 22.866, 1.251, 0.809, 1.053, 20.285, 1.833, -0.453, 204.639, 1.164, 0.926, 1.392, 18.312, 1.884, -1.393, 139.959, 0.926, 0.643, 1.079, 20.908, 1.884, -3.337, 208.040, 0.928, 0.646, 0.707, 18.048, 1.906, -3.533, 137.820, 0.621, 0.520, 0.539, 26.931, 1.845, 19.919, 240.991, 1.527, 0.862, 1.181, 25.965, 1.876, 10.509, 333.423, 0.875, 0.688, 1.009, 23.608, 1.847, 8.367, 356.869, 1.433, 0.850, 1.285, 28.802, 1.896, 14.278, 332.377, 0.873, 0.576, 0.932, -51.592, -0.116, 14.271, 321.019, 1.046, 0.645, 0.871, -37.871, -0.164, 25.550, 80.702, 1.215, 0.911, 1.231, -40.138, -0.143, 12.382, 66.169, 0.999, 0.792, 1.180, -31.941, -0.111, 16.945, 322.718, 1.093, 0.619, 0.771, -45.492, -0.083, 26.315, 91.576, 0.789, 0.460, 0.917, -44.582, -0.175, 22.400, 215.664, 1.380, 0.971, 1.330, 17.312, 1.877, -36.696, 130.615, 1.196, 0.682, 1.117, 44.420, 1.846, -25.574, 20.843, 1.465, 0.857, 1.350, 27.837, 1.859, -26.843, 252.497, 1.007, 0.782, 0.782, 21.043, 1.886, -33.951, 24.876, 1.139, 0.631, 1.050, 36.616, 1.872, -27.159, 274.676, 1.266, 0.711, 0.904, 31.465, 1.802, -22.732, 63.430, 1.726, 1.101, 1.414, -35.136, -0.224, -19.140, 112.032, 1.849, 1.242, 1.530, -43.468, -0.113, -31.973, 101.559, 0.772, 0.630, 0.776, -39.515, -0.222, -17.313, 41.511, 1.657, 1.234, 1.814, -50.509, -0.210, -18.331, 115.500, 1.725, 1.165, 1.874, -34.436, -0.217, -23.270, 210.583, 1.660, 1.204, 1.551, -47.496, -0.185, -21.136, 325.319, 1.837, 1.030, 2.025, 37.408, 1.859, 20.074, 193.818, 1.027, 0.783, 0.771, 36.690, 1.754, 17.096, 80.491, 1.793, 1.367, 1.367, 45.538, 1.871, 26.862, 87.436, 1.267, 0.715, 0.894, 38.839, 1.893, 25.554, 210.214, 0.725, 0.595, 0.762, 42.680, 1.778, 16.550, 231.856, 1.895, 1.233, 1.631, 34.881, 1.874, 22.789, 306.046, 0.922, 0.703, 0.719, -6.352, -0.186, 40.507, 256.025, 1.390, 1.034, 1.086, -8.992, -0.207, 35.430, 155.092, 1.724, 1.150, 1.371, -5.225, -0.115, 35.630, 162.006, 0.995, 0.641, 0.829, -0.151, -0.140, 31.180, 108.266, 1.339, 0.778, 1.113, -1.282, -0.193, 34.215, 126.284, 1.769, 1.070, 1.468, -3.544, -0.160, 42.143, 269.362, 1.341, 0.890, 1.600, -33.090, -0.241, -40.572, 219.772, 1.651, 1.341, 1.914, -25.111, -0.151, -35.371, 45.889, 1.400, 0.840, 1.209, -30.688, -0.205, -37.341, 209.682, 1.418, 1.140, 1.401, -28.031, -0.212, -23.014, 100.760, 1.870, 1.180, 1.569, -49.962, -0.227, -32.852, 62.112, 1.858, 1.263, 1.913, -36.049, -0.198, -43.352, 5.049, 1.418, 1.102, 1.352)
 
 [node name="Pebbles" type="Node3D" parent="."]
 script = ExtResource("ext_9_ScatterField")
@@ -1447,21 +1616,21 @@ kind = "rock"
 source_scene = ExtResource("ext_11_pebbles")
 variants = 6
 cast_shadows = false
-placements = PackedFloat32Array(-24.493, -0.040, 12.191, 125.840, 0.862, 0.685, 0.862, -21.354, -0.040, 12.358, 266.876, 0.498, 0.492, 0.498, -17.126, -0.040, 8.650, 35.398, 0.670, 0.649, 0.670, -18.068, -0.040, 11.179, 136.764, 0.885, 0.632, 0.885, -19.954, -0.040, 17.786, 36.970, 0.671, 0.517, 0.671, -20.672, -0.040, 19.803, 108.395, 0.741, 0.477, 0.741, -17.574, -0.040, 8.215, 120.442, 0.709, 0.706, 0.709, -15.359, -0.040, 20.155, 0.469, 0.935, 0.707, 0.935, -12.378, -0.040, 8.579, 210.220, 0.657, 0.414, 0.657, -33.635, -0.040, 11.956, 68.908, 0.929, 0.754, 0.929, -22.041, -0.040, 3.207, 139.149, 0.709, 0.523, 0.709, -13.516, -0.040, 7.997, 237.543, 0.581, 0.367, 0.581, -22.541, -0.040, 13.087, 165.003, 0.458, 0.358, 0.458, -8.998, -0.040, 17.425, 13.384, 0.909, 0.580, 0.909, -16.640, -0.040, 8.218, 306.860, 0.699, 0.447, 0.699, -12.068, -0.040, 15.950, 268.287, 0.928, 0.732, 0.928, -16.318, -0.040, 16.330, 3.590, 0.478, 0.319, 0.478, -19.521, -0.040, 16.254, 286.603, 0.390, 0.265, 0.390, -12.005, -0.040, 12.929, 198.374, 0.479, 0.407, 0.479, -19.001, -0.040, 0.081, 290.375, 0.930, 0.654, 0.930, -15.552, -0.040, 13.431, 274.968, 0.929, 0.912, 0.929, -13.122, -0.040, 13.916, 38.089, 0.711, 0.569, 0.711, -14.242, -0.040, 17.909, 284.153, 0.621, 0.396, 0.621, -3.297, -0.040, 21.403, 102.276, 0.803, 0.525, 0.803, -18.730, -0.040, 21.683, 269.639, 0.834, 0.786, 0.834, -2.857, -0.040, 12.659, 23.087, 0.425, 0.272, 0.425, -14.117, -0.040, 13.169, 176.624, 0.587, 0.387, 0.587, -14.272, -0.040, 19.365, 303.819, 0.445, 0.321, 0.445, -8.991, -0.040, 13.756, 209.092, 0.664, 0.556, 0.664, -5.988, -0.040, 20.412, 159.650, 0.550, 0.413, 0.550, -18.314, -0.040, 15.093, 111.609, 0.419, 0.358, 0.419, -8.993, -0.040, 13.264, 278.373, 0.588, 0.413, 0.588, -17.159, -0.040, 23.033, 275.388, 0.779, 0.743, 0.779, -14.200, -0.040, 12.305, 3.721, 0.593, 0.476, 0.593, -21.595, -0.040, 20.078, 256.730, 0.828, 0.507, 0.828, -13.163, -0.040, 16.129, 266.993, 0.837, 0.629, 0.837, -16.517, -0.040, 22.437, 31.705, 0.641, 0.437, 0.641, -10.633, -0.040, 16.586, 198.874, 0.645, 0.546, 0.645, 6.486, -0.040, 21.166, 238.781, 0.429, 0.388, 0.429, -10.168, -0.040, 19.703, 51.640, 0.497, 0.448, 0.497, -20.492, -0.040, 2.688, 168.390, 0.683, 0.441, 0.683, -15.720, -0.040, 4.228, 20.843, 0.944, 0.734, 0.944, -20.300, -0.040, -1.070, 271.284, 0.716, 0.631, 0.716, -22.739, -0.040, 6.051, 54.696, 0.656, 0.397, 0.656, -18.368, -0.040, -0.348, 24.876, 0.388, 0.302, 0.388, -21.649, -0.040, 3.070, 13.805, 0.752, 0.680, 0.752, -16.761, -0.040, 7.592, 10.080, 0.906, 0.650, 0.906, -19.148, -0.040, 0.743, 63.430, 0.945, 0.657, 0.945, -21.280, -0.040, -0.823, 146.289, 0.885, 0.641, 0.885, -21.559, -0.040, 7.889, 91.643, 0.485, 0.463, 0.485, -26.119, -0.040, -3.198, 101.559, 0.460, 0.388, 0.460, -19.712, -0.040, 1.684, 233.725, 0.888, 0.574, 0.888, -19.066, -0.040, 2.138, 284.448, 0.503, 0.385, 0.503, -22.465, -0.040, 1.734, 115.500, 0.568, 0.516, 0.568, -9.145, -0.040, 17.976, 97.319, 0.631, 0.449, 0.631, 5.478, -0.040, 23.221, 99.913, 0.833, 0.644, 0.833, -0.802, -0.040, 22.021, 62.112, 0.357, 0.308, 0.357, 0.874, -0.040, 17.571, 272.855, 0.772, 0.467, 0.772, -6.302, -0.040, 12.540, 182.487, 0.445, 0.411, 0.445, -7.674, -0.040, 24.053, 322.822, 0.464, 0.391, 0.464, -5.913, -0.040, 25.534, 176.904, 0.510, 0.369, 0.510, -0.949, -0.040, 23.276, 292.803, 0.507, 0.447, 0.507, -2.282, -0.040, 24.814, 109.824, 0.506, 0.423, 0.506, 0.348, -0.040, 16.610, 33.236, 0.901, 0.590, 0.901, -2.823, -0.040, 23.034, 136.851, 0.546, 0.332, 0.546, -0.616, -0.040, 16.110, 99.006, 0.695, 0.575, 0.695, -27.267, -0.040, 16.185, 40.651, 0.553, 0.433, 0.553, -20.668, -0.040, 18.848, 325.782, 0.828, 0.534, 0.828, -34.345, -0.040, 19.774, 17.015, 0.685, 0.631, 0.685, -26.379, -0.040, 10.975, 56.078, 0.807, 0.708, 0.807, -25.549, -0.040, 15.449, 53.029, 0.539, 0.439, 0.539, -27.891, -0.040, 19.268, 304.716, 0.730, 0.514, 0.730, -24.181, -0.040, 6.514, 44.025, 0.931, 0.568, 0.931, -27.871, -0.040, 12.972, 266.733, 0.877, 0.633, 0.877, -31.943, -0.040, 21.026, 112.095, 0.694, 0.593, 0.694, -23.881, -0.040, 10.457, 51.231, 0.779, 0.745, 0.779, -32.149, -0.040, 14.379, 339.963, 0.745, 0.636, 0.745, -25.681, -0.040, 16.373, 218.206, 0.671, 0.663, 0.671, -23.899, -0.040, -11.311, 35.512, 0.560, 0.525, 0.560, -29.683, -0.040, -15.741, 128.460, 0.689, 0.420, 0.689, -19.812, -0.040, -12.718, 177.962, 0.742, 0.711, 0.742, -21.983, -0.040, -12.087, 346.291, 0.828, 0.828, 0.828, -25.669, -0.040, -17.311, 117.253, 0.478, 0.307, 0.478, -23.187, -0.040, -16.902, 35.700, 0.605, 0.529, 0.605, -23.032, -0.040, -13.715, 87.678, 0.492, 0.451, 0.492, -19.365, -0.040, -11.615, 285.559, 0.359, 0.261, 0.359, -21.875, -0.040, -12.492, 265.586, 0.451, 0.362, 0.451, 18.528, 1.960, 5.906, 246.159, 0.427, 0.410, 0.427, 16.371, 1.960, 2.596, 125.159, 0.902, 0.889, 0.902, 16.753, 1.960, -1.347, 225.662, 0.462, 0.291, 0.462, 9.188, -0.040, 21.366, 35.688, 0.597, 0.364, 0.597, 16.538, 1.960, 1.012, 224.855, 0.914, 0.891, 0.914, 18.979, 1.960, 3.146, 178.737, 0.480, 0.362, 0.480, 18.208, 1.960, -3.429, 340.918, 0.566, 0.398, 0.566, 5.660, -0.040, 13.624, 149.453, 0.769, 0.750, 0.769, 19.731, 1.960, 10.181, 72.919, 0.743, 0.693, 0.743, 17.568, 1.960, 7.768, 40.945, 0.507, 0.381, 0.507, 5.586, -0.040, 10.132, 181.464, 0.892, 0.605, 0.892, 17.832, 1.960, -1.606, 69.392, 0.682, 0.517, 0.682, 13.206, 1.960, -17.993, 101.682, 0.828, 0.694, 0.828, 23.673, 1.960, -20.325, 87.614, 0.688, 0.478, 0.688, 26.387, 1.960, -13.069, 327.208, 0.942, 0.782, 0.942, 16.112, 1.960, -20.966, 166.657, 0.619, 0.418, 0.619, 19.410, 1.960, -14.776, 163.907, 0.505, 0.483, 0.505, 19.631, 1.960, -12.436, 45.751, 0.794, 0.508, 0.794, 26.184, 1.960, -12.039, 317.844, 0.443, 0.299, 0.443, 25.918, 1.960, -7.885, 25.781, 0.648, 0.606, 0.648, 19.010, 1.960, -7.892, 310.495, 0.483, 0.310, 0.483, 18.935, 1.960, -8.727, 237.908, 0.762, 0.565, 0.762, 6.887, -0.040, 9.596, 12.729, 0.688, 0.514, 0.688, -18.588, -0.040, -0.507, 69.994, 0.542, 0.431, 0.542, -13.544, -0.040, 7.409, 205.004, 0.376, 0.311, 0.376, -13.420, -0.040, 8.653, 258.556, 0.423, 0.368, 0.423, -14.534, -0.040, 4.684, 249.060, 0.454, 0.417, 0.454, -19.667, -0.040, 1.028, 29.234, 0.457, 0.383, 0.457, -13.791, -0.040, 5.009, 259.772, 0.698, 0.494, 0.698, 11.765, -0.040, 23.764, 151.312, 0.579, 0.422, 0.579, 5.468, -0.040, 12.187, 97.511, 0.710, 0.512, 0.710, 5.188, -0.040, 15.053, 66.421, 0.476, 0.416, 0.476, 6.249, -0.040, 13.110, 186.601, 0.854, 0.678, 0.854, -1.557, -0.040, 19.040, 134.364, 0.651, 0.592, 0.651, 4.262, -0.040, 13.527, 208.170, 0.416, 0.253, 0.416, 0.486, -0.040, 12.103, 153.704, 0.851, 0.705, 0.851, 4.030, -0.040, 14.077, 220.036, 0.396, 0.324, 0.396, -10.940, -0.040, 15.914, 32.788, 0.817, 0.800, 0.817)
+placements = PackedFloat32Array(-14.743, -0.040, 12.479, 89.124, 0.578, 0.392, 0.578, -13.020, -0.040, 11.493, 137.067, 0.691, 0.671, 0.691, -17.297, -0.040, 11.206, 37.721, 0.553, 0.420, 0.553, -9.965, -0.040, 14.164, 74.437, 0.828, 0.563, 0.828, -25.161, -0.040, 15.193, 67.374, 0.685, 0.519, 0.685, -15.388, -0.040, 10.388, 83.262, 0.539, 0.527, 0.539, -17.990, -0.040, 14.631, 211.732, 0.730, 0.550, 0.730, -17.968, -0.040, 7.636, 37.180, 0.877, 0.823, 0.877, -22.492, -0.040, 16.585, 117.733, 0.694, 0.599, 0.694, -13.535, -0.040, 4.841, 348.457, 0.779, 0.643, 0.779, -15.534, -0.040, 11.414, 251.566, 0.671, 0.596, 0.671, -12.800, -0.040, 14.607, 15.270, 0.893, 0.578, 0.893, -15.831, -0.040, 12.027, 201.734, 0.832, 0.518, 0.832, -12.724, -0.040, 17.358, 209.021, 0.438, 0.306, 0.438, -26.449, -0.040, 8.901, 51.047, 0.506, 0.364, 0.506, -16.174, -0.040, 11.798, 342.832, 0.795, 0.602, 0.795, -18.447, -0.040, 15.069, 274.087, 0.731, 0.615, 0.731, -21.580, -0.040, 5.939, 359.547, 0.930, 0.769, 0.930, -23.284, -0.040, 6.270, 38.454, 0.560, 0.415, 0.560, -14.991, -0.040, 12.188, 31.095, 0.572, 0.540, 0.572, -9.241, -0.040, 15.243, 298.625, 0.811, 0.499, 0.811, -20.631, -0.040, 9.465, 254.694, 0.909, 0.602, 0.909, -14.994, -0.040, 11.146, 281.322, 0.423, 0.322, 0.423, -6.362, -0.040, 17.221, 76.314, 0.792, 0.693, 0.792, -9.473, -0.040, 24.383, 282.138, 0.768, 0.613, 0.768, -13.867, -0.040, 12.427, 172.736, 0.831, 0.810, 0.831, -17.239, -0.040, 22.555, 4.373, 0.501, 0.385, 0.501, -14.263, -0.040, 25.025, 96.270, 0.709, 0.707, 0.709, -14.183, -0.040, 12.975, 140.632, 0.481, 0.377, 0.481, -10.431, -0.040, 16.042, 183.214, 0.395, 0.267, 0.395, -13.053, -0.040, 16.316, 285.571, 0.845, 0.699, 0.845, -6.746, -0.040, 22.433, 88.196, 0.483, 0.418, 0.483, -9.294, -0.040, 23.328, 218.427, 0.520, 0.478, 0.520, -17.295, -0.040, 24.142, 156.612, 0.639, 0.522, 0.639, -1.893, -0.040, 18.676, 60.048, 0.824, 0.505, 0.824, -6.070, -0.040, 21.915, 117.687, 0.671, 0.572, 0.671, -2.295, -0.040, 16.023, 281.988, 0.799, 0.532, 0.799, -15.360, -0.040, 19.276, 98.615, 0.856, 0.836, 0.856, -3.181, -0.040, 11.838, 73.421, 0.410, 0.270, 0.410, -1.553, -0.040, 15.772, 236.476, 0.651, 0.649, 0.651, -17.291, -0.040, 7.645, 174.463, 0.358, 0.231, 0.358, -25.995, -0.040, -1.215, 304.670, 0.374, 0.361, 0.374, -25.919, -0.040, 5.609, 5.111, 0.936, 0.908, 0.936, -25.706, -0.040, 4.406, 42.711, 0.538, 0.367, 0.538, -22.678, -0.040, 4.023, 280.679, 0.483, 0.295, 0.483, -23.526, -0.040, -1.057, 334.488, 0.510, 0.437, 0.510, -20.519, -0.040, 7.829, 36.717, 0.485, 0.352, 0.485, -19.762, -0.040, 1.472, 15.722, 0.785, 0.692, 0.785, -27.472, -0.040, -0.268, 219.899, 0.599, 0.360, 0.599, -23.210, -0.040, -1.182, 90.950, 0.538, 0.490, 0.538, -20.846, -0.040, 6.053, 29.122, 0.477, 0.342, 0.477, -22.855, -0.040, 0.414, 292.538, 0.497, 0.377, 0.497, -23.810, -0.040, 3.045, 202.051, 0.739, 0.498, 0.739, -24.134, -0.040, 9.847, 239.044, 0.569, 0.343, 0.569, -1.338, -0.040, 21.992, 187.257, 0.381, 0.252, 0.381, -0.869, -0.040, 21.040, 136.238, 0.911, 0.621, 0.911, -2.093, -0.040, 24.805, 91.626, 0.465, 0.393, 0.465, 2.957, -0.040, 19.887, 312.245, 0.590, 0.580, 0.590, -6.439, -0.040, 27.656, 275.560, 0.652, 0.569, 0.652, -3.826, -0.040, 16.353, 84.972, 0.359, 0.237, 0.359, -8.633, -0.040, 21.950, 71.657, 0.359, 0.270, 0.359, -0.590, -0.040, 21.935, 26.138, 0.415, 0.413, 0.415, -1.968, -0.040, 14.210, 62.123, 0.559, 0.338, 0.559, -0.051, -0.040, 19.160, 27.283, 0.439, 0.394, 0.439, -3.396, -0.040, 21.567, 238.522, 0.716, 0.669, 0.716, -5.534, -0.040, 16.925, 132.096, 0.526, 0.355, 0.526, -30.550, -0.040, 13.438, 46.227, 0.915, 0.745, 0.915, -24.108, -0.040, 18.910, 285.162, 0.385, 0.301, 0.385, -24.553, -0.040, 12.556, 163.060, 0.945, 0.929, 0.945, -30.476, -0.040, 18.553, 248.985, 0.379, 0.264, 0.379, -23.639, -0.040, 11.003, 288.309, 0.740, 0.695, 0.740, -26.720, -0.040, 17.367, 357.757, 0.466, 0.450, 0.466, -24.858, -0.040, 17.059, 75.900, 0.657, 0.505, 0.657, -24.354, -0.040, 17.286, 240.369, 0.688, 0.627, 0.688, -30.053, -0.040, 10.225, 220.954, 0.451, 0.283, 0.451, -33.776, -0.040, 15.515, 248.916, 0.753, 0.599, 0.753, -24.377, -0.040, 11.673, 201.790, 0.556, 0.370, 0.556, -28.599, -0.040, 18.162, 125.855, 0.698, 0.468, 0.698, -16.189, -0.040, -6.834, 353.157, 0.549, 0.381, 0.549, -21.878, -0.040, -12.736, 266.487, 0.559, 0.421, 0.559, -26.418, -0.040, -16.120, 55.664, 0.579, 0.451, 0.579, -25.383, -0.040, -16.076, 72.250, 0.865, 0.596, 0.865, -22.290, -0.040, -13.046, 120.394, 0.531, 0.530, 0.531, -20.412, -0.040, -13.859, 314.764, 0.807, 0.534, 0.807, -22.519, -0.040, -14.831, 22.533, 0.559, 0.536, 0.559, -19.422, -0.040, -14.276, 178.751, 0.619, 0.498, 0.619, -20.519, -0.040, 0.326, 338.342, 0.870, 0.847, 0.870, 10.637, -0.040, 12.593, 333.392, 0.496, 0.379, 0.496, 17.298, 1.960, -2.434, 188.052, 0.413, 0.277, 0.413, 7.533, -0.040, 15.223, 127.857, 0.462, 0.433, 0.462, 26.996, 1.960, 2.355, 119.726, 0.675, 0.650, 0.675, 23.410, 1.960, 1.156, 66.127, 0.415, 0.339, 0.415, 18.436, 1.960, 5.794, 96.996, 0.867, 0.822, 0.867, 9.296, -0.040, 13.115, 350.916, 0.566, 0.491, 0.566, 16.851, 1.960, 2.716, 143.403, 0.520, 0.470, 0.520, 20.212, 1.960, 3.841, 344.955, 0.887, 0.578, 0.887, 9.393, -0.040, 11.620, 46.901, 0.366, 0.243, 0.366, 18.908, 1.960, 8.119, 50.200, 0.880, 0.752, 0.880, 5.982, -0.040, 9.153, 325.008, 0.681, 0.563, 0.681, 19.232, 1.960, -10.526, 93.301, 0.856, 0.682, 0.856, 13.799, 1.960, -20.124, 30.141, 0.662, 0.536, 0.662, 17.284, 1.960, -17.484, 118.722, 0.485, 0.424, 0.485, 19.967, 1.960, -9.790, 206.664, 0.738, 0.443, 0.738, 20.375, 1.960, -10.007, 308.976, 0.389, 0.334, 0.389, 16.821, 1.960, -20.015, 329.749, 0.911, 0.578, 0.911, 24.975, 1.960, -10.096, 21.760, 0.923, 0.770, 0.923, 15.880, 1.960, -16.142, 137.437, 0.863, 0.784, 0.863, 12.893, 1.960, -20.118, 130.559, 0.381, 0.319, 0.381, 19.248, 1.960, -7.930, 348.840, 0.512, 0.364, 0.512, -13.420, -0.040, 8.653, 234.310, 0.423, 0.331, 0.423, -14.534, -0.040, 4.684, 210.010, 0.454, 0.329, 0.454, -19.667, -0.040, 1.028, 34.450, 0.457, 0.376, 0.457, -13.791, -0.040, 5.009, 269.472, 0.698, 0.661, 0.698, -3.513, -0.040, -18.031, 265.583, 0.679, 0.670, 0.679, -19.099, -0.040, -0.037, 342.198, 0.844, 0.714, 0.844, -17.845, -0.040, 5.160, 310.066, 0.756, 0.714, 0.756, -2.603, -0.040, -18.375, 341.333, 0.380, 0.281, 0.380, 3.470, -0.040, 10.687, 269.640, 0.778, 0.548, 0.778, -4.885, -0.040, 11.011, 188.863, 0.694, 0.533, 0.694, 5.766, -0.040, 13.891, 299.749, 0.419, 0.323, 0.419, 3.343, -0.040, 15.190, 61.636, 0.716, 0.653, 0.716, -6.817, -0.040, 13.112, 135.004, 0.533, 0.482, 0.533, 2.023, -0.040, 14.407, 69.712, 0.773, 0.559, 0.773, 5.566, -0.040, 7.556, 305.657, 0.571, 0.549, 0.571, 6.289, -0.040, 9.197, 75.543, 0.353, 0.298, 0.353, -1.924, -0.040, 16.257, 275.206, 0.849, 0.570, 0.849)
 
 [node name="Trees" type="Node3D" parent="."]
 script = ExtResource("ext_9_ScatterField")
 kind = "tree"
 source_scene = ExtResource("ext_12_trees")
 variants = 3
-placements = PackedFloat32Array(-3.000, 0.000, 17.000, 262.281, 1.100, 1.100, 1.100, 2.400, 0.000, 20.000, 294.890, 0.900, 0.900, 0.900, -20.000, 0.000, -19.000, 195.635, 1.050, 1.050, 1.050, -14.400, 0.000, -20.700, 208.167, 0.900, 0.900, 0.900, 12.000, 0.000, 21.000, 111.206, 0.950, 0.950, 0.950, -23.000, 0.000, 6.000, 293.695, 0.950, 0.950, 0.950, 23.000, 2.000, -19.000, 17.460, 1.100, 1.100, 1.100, 20.000, 2.000, 16.000, 274.268, 1.000, 1.000, 1.000, -28.000, 0.000, -12.000, 270.096, 1.000, 1.000, 1.000, 16.000, 2.000, 8.000, 28.202, 0.950, 0.950, 0.950, -9.000, 0.000, 23.000, 204.962, 1.000, 1.000, 1.000, -32.978, 0.000, 1.052, 84.717, 0.908, 0.908, 0.908, -45.000, 0.000, 8.600, 68.587, 1.240, 1.240, 1.240, -45.015, 0.000, -4.426, 59.414, 1.115, 1.115, 1.115, -39.248, 0.000, -7.282, 62.491, 1.117, 1.117, 1.117, -31.798, 0.000, -7.410, 137.022, 1.227, 1.227, 1.227, -43.412, 0.000, 3.057, 173.390, 1.051, 1.051, 1.051, -27.838, 0.000, 3.557, 128.955, 0.980, 0.980, 0.980, -23.677, 0.000, -43.437, 60.512, 1.203, 1.203, 1.203, -25.751, 0.000, -33.593, 27.361, 1.152, 1.152, 1.152, -30.847, 0.000, -35.505, 183.856, 0.855, 0.855, 0.855, -34.731, 0.000, -40.085, 255.533, 0.889, 0.889, 0.889, -29.027, 0.000, -19.007, 134.076, 1.224, 1.224, 1.224, -12.193, 0.000, -32.788, 258.067, 1.033, 1.033, 1.033, 1.779, 2.000, -55.771, 27.084, 1.194, 1.194, 1.194, 14.533, 2.000, -29.748, 7.282, 1.082, 1.082, 1.082, 9.473, 2.000, -47.006, 175.029, 0.993, 0.993, 0.993, 7.579, 2.000, -56.396, 57.341, 1.230, 1.230, 1.230, 15.109, 2.000, -40.064, 220.167, 0.918, 0.918, 0.918, 5.548, 2.000, -37.846, 276.687, 1.056, 1.056, 1.056, 35.269, 2.000, -6.389, 345.312, 1.193, 1.193, 1.193, 31.024, 2.000, -12.642, 55.780, 1.201, 1.201, 1.201, 37.249, 2.000, -18.491, 239.950, 1.127, 1.127, 1.127, 47.237, 2.000, -5.812, 266.890, 0.938, 0.938, 0.938, 49.565, 2.000, -12.769, 267.009, 1.017, 1.017, 1.017, 29.965, 2.000, -4.624, 307.272, 1.135, 1.135, 1.135, 48.830, 2.000, 0.371, 162.969, 1.232, 1.232, 1.232, 37.133, 2.000, 37.063, 330.480, 1.242, 1.242, 1.242, 37.442, 2.000, 30.751, 3.584, 1.125, 1.125, 1.125, 34.042, 2.000, 25.719, 308.682, 1.101, 1.101, 1.101, 48.590, 2.000, 19.830, 11.862, 0.866, 0.866, 0.866, 25.636, 2.000, 25.540, 284.532, 0.883, 0.883, 0.883, 29.667, 2.000, 29.117, 241.508, 0.908, 0.908, 0.908, -11.789, 0.000, 45.000, 5.068, 1.061, 1.061, 1.061, -8.444, 0.000, 30.470, 241.047, 1.109, 1.109, 1.109, -14.184, 0.000, 28.294, 88.373, 0.884, 0.884, 0.884, -2.422, 0.000, 29.702, 241.089, 1.113, 1.113, 1.113, -15.907, 0.000, 39.022, 53.428, 0.979, 0.979, 0.979, -44.014, 0.000, 30.442, 266.246, 1.240, 1.240, 1.240, -40.155, 0.000, 38.072, 175.564, 1.091, 1.091, 1.091, -56.609, 0.000, 23.719, 289.399, 1.174, 1.174, 1.174, -63.487, 0.000, 36.338, 177.328, 0.992, 0.992, 0.992, -45.164, 0.000, 23.950, 322.427, 1.151, 1.151, 1.151, 14.215, 0.000, 37.104, 121.649, 1.044, 1.044, 1.044, 30.491, 2.000, 37.864, 213.933, 1.096, 1.096, 1.096, 11.408, 0.000, 28.902, 266.138, 1.004, 1.004, 1.004, 29.992, 2.000, 47.024, 305.397, 1.085, 1.085, 1.085, 47.026, 2.000, 13.934, 24.910, 1.104, 1.104, 1.104, 31.178, 2.000, 3.385, 244.871, 0.855, 0.855, 0.855, 55.868, 2.000, 9.000, 209.570, 1.214, 1.214, 1.214, 45.774, 2.000, 6.079, 65.714, 1.045, 1.045, 1.045, 56.660, 2.000, 17.991, 288.239, 1.014, 1.014, 1.014)
+placements = PackedFloat32Array(-3.000, 0.000, 17.000, 145.249, 1.100, 1.100, 1.100, 2.400, 0.000, 20.000, 282.785, 0.900, 0.900, 0.900, -20.000, 0.000, -19.000, 310.369, 1.050, 1.050, 1.050, -14.400, 0.000, -20.700, 175.004, 0.900, 0.900, 0.900, 12.000, 0.000, 21.000, 266.674, 0.950, 0.950, 0.950, -23.000, 0.000, 6.000, 320.111, 0.950, 0.950, 0.950, 23.000, 2.000, -19.000, 254.792, 1.100, 1.100, 1.100, 20.000, 0.000, 16.000, 211.829, 1.000, 1.000, 1.000, -28.000, 0.000, -12.000, 181.252, 1.000, 1.000, 1.000, 16.000, 0.000, 8.000, 351.924, 0.950, 0.950, 0.950, -9.000, 0.000, 23.000, 157.074, 1.000, 1.000, 1.000, -32.945, 0.000, 1.020, 263.562, 1.055, 1.055, 1.055, -40.284, 0.000, -3.051, 334.126, 1.206, 1.206, 1.206, -51.225, 0.000, -11.397, 312.161, 1.016, 1.016, 1.016, -46.270, 0.000, -11.242, 312.390, 0.919, 0.919, 0.919, -61.618, 0.000, 7.632, 307.727, 1.234, 1.234, 1.234, -52.678, 0.000, 6.898, 110.174, 1.004, 1.004, 1.004, -42.343, 0.000, 1.771, 145.538, 0.954, 0.954, 0.954, -24.927, 0.000, -39.650, 261.547, 1.057, 1.057, 1.057, -32.418, 0.000, -30.864, 164.570, 0.952, 0.952, 0.952, -27.599, 0.000, -54.728, 293.999, 1.097, 1.097, 1.097, -16.799, 0.000, -32.393, 126.843, 1.126, 1.126, 1.126, -24.733, 0.000, -30.959, 115.608, 0.970, 0.970, 0.970, -22.923, 0.000, -47.848, 116.971, 0.977, 0.977, 0.977, 9.116, 2.000, -39.037, 128.281, 1.007, 1.007, 1.007, 11.281, 2.000, -47.937, 58.532, 1.173, 1.173, 1.173, 16.819, 2.000, -48.225, 40.959, 0.897, 0.897, 0.897, 11.897, 2.000, -30.829, 51.740, 1.041, 1.041, 1.041, 7.187, 2.000, -28.694, 282.007, 1.013, 1.013, 1.013, 4.495, 2.000, -45.957, 137.343, 0.879, 0.879, 0.879, 33.891, 2.000, -0.944, 167.357, 1.139, 1.139, 1.139, 42.227, 2.000, -6.582, 92.533, 1.086, 1.086, 1.086, 38.752, 2.000, -12.416, 75.738, 0.940, 0.940, 0.940, 38.289, 2.000, -17.864, 258.508, 0.901, 0.901, 0.901, 49.154, 2.000, -6.206, 272.513, 1.104, 1.104, 1.104, 33.658, 2.000, -5.897, 89.236, 0.878, 0.878, 0.878, 47.595, 2.000, -20.208, 264.832, 0.987, 0.987, 0.987, 29.322, 2.000, 25.561, 334.482, 1.190, 1.190, 1.190, 34.419, 2.000, 29.532, 192.185, 0.916, 0.916, 0.916, 36.062, 2.000, 7.414, 71.447, 0.912, 0.912, 0.912, 31.457, 2.000, 20.403, 239.734, 1.118, 1.118, 1.118, 40.842, 2.000, 34.222, 169.885, 1.045, 1.045, 1.045, 29.067, 2.000, 33.004, 55.436, 1.146, 1.146, 1.146, -10.465, 0.000, 29.839, 172.261, 1.122, 1.122, 1.122, -24.644, 0.000, 39.614, 332.367, 1.107, 1.107, 1.107, -19.426, 0.000, 25.597, 48.662, 0.983, 0.983, 0.983, -14.813, 0.000, 39.077, 87.600, 1.129, 1.129, 1.129, -19.767, 0.000, 45.897, 59.725, 1.121, 1.121, 1.121, -41.432, 0.000, 32.294, 317.844, 1.166, 1.166, 1.166, -35.537, 0.000, 31.954, 202.807, 1.198, 1.198, 1.198, -32.511, 0.000, 38.414, 156.476, 0.938, 0.938, 0.938, -54.229, 0.000, 29.791, 312.336, 0.970, 0.970, 0.970, -20.402, 0.000, 20.444, 92.268, 1.171, 1.171, 1.171, 8.585, 0.000, 28.331, 233.991, 0.887, 0.887, 0.887, 33.905, 2.000, 37.152, 156.739, 1.018, 1.018, 1.018, 14.173, 0.000, 40.617, 262.000, 0.991, 0.991, 0.991, 29.374, 2.000, 47.762, 291.716, 0.971, 0.971, 0.971, 28.605, 2.000, 39.291, 56.771, 1.187, 1.187, 1.187, 56.940, 2.000, 13.903, 298.595, 0.946, 0.946, 0.946, 44.151, 2.000, 7.055, 275.379, 1.053, 1.053, 1.053, 54.794, 2.000, -6.972, 239.256, 1.087, 1.087, 1.087, 42.547, 2.000, -0.259, 300.866, 1.207, 1.207, 1.207, 46.966, 2.000, 14.469, 53.953, 1.096, 1.096, 1.096)
 
 [node name="Bushes" type="Node3D" parent="."]
 script = ExtResource("ext_9_ScatterField")
 kind = "bush"
 variants = 4
 material = SubResource("MatBush")
-placements = PackedFloat32Array(-10.904, 0.000, 8.496, 118.106, 1.170, 0.757, 1.032, -22.048, 0.000, 21.926, 92.103, 1.711, 1.107, 1.509, -23.806, 0.000, 15.422, 65.847, 1.326, 0.858, 1.170, -14.972, 0.000, 11.151, 48.434, 1.437, 0.930, 1.268, -28.939, 0.000, 7.951, 261.573, 1.114, 0.721, 0.983, -10.853, 0.000, 14.252, 1.151, 1.448, 0.937, 1.278, -24.722, 0.000, 16.960, 121.670, 1.287, 0.833, 1.135, -22.795, 0.000, 10.888, 70.316, 1.147, 0.742, 1.012, -10.484, 0.000, 11.816, 67.892, 1.116, 0.722, 0.985, 0.133, 0.000, 24.468, 331.620, 1.265, 0.819, 1.116, -9.303, 0.000, 19.279, 2.518, 1.050, 0.680, 0.927, -3.235, 0.000, 25.543, 219.108, 1.409, 0.912, 1.243, -8.912, 0.000, 9.418, 60.407, 1.565, 1.012, 1.380, -5.830, 0.000, 21.967, 292.988, 1.189, 0.769, 1.049, -23.887, 0.000, -12.534, 144.531, 1.173, 0.759, 1.035, -33.107, 0.000, -12.339, 316.841, 1.579, 1.022, 1.393, 9.357, 2.000, -22.721, 134.053, 1.972, 1.276, 1.740, -3.365, 0.000, -25.280, 99.549, 1.571, 1.016, 1.386, -1.148, 0.000, -16.675, 335.259, 1.118, 0.723, 0.986, -2.316, 0.000, -20.597, 223.201, 1.984, 1.284, 1.751, 26.606, 2.000, 4.000, 230.682, 1.314, 0.850, 1.159, 9.171, 0.000, 23.049, 79.509, 1.203, 0.779, 1.062, 23.002, 2.000, 5.342, 220.471, 1.277, 0.826, 1.127, 21.979, 2.000, 11.109, 7.450, 1.069, 0.692, 0.943, 18.113, 2.000, 1.354, 275.888, 1.032, 0.668, 0.910, 25.153, 2.000, -0.857, 123.338, 1.817, 1.176, 1.603, 26.350, 2.000, 6.042, 333.512, 1.226, 0.794, 1.082, 12.192, 2.000, -20.079, 57.957, 1.029, 0.666, 0.908, 21.854, 2.000, -13.175, 219.049, 1.910, 1.236, 1.686, 24.968, 2.000, -15.170, 60.434, 1.778, 1.151, 1.569, 15.890, 2.000, -17.147, 183.442, 1.461, 0.945, 1.289, 21.032, 2.000, -5.862, 5.834, 1.268, 0.820, 1.119, 21.358, 2.000, -8.564, 153.092, 1.947, 1.260, 1.718, -40.549, 0.000, 7.457, 265.385, 1.767, 1.144, 1.559, -29.280, 0.000, -0.369, 240.446, 1.162, 0.752, 1.025, -27.779, 0.000, 17.729, 322.164, 1.646, 1.065, 1.452, -32.246, 0.000, 16.918, 203.999, 1.132, 0.733, 0.999, -40.546, 0.000, 13.360, 348.660, 1.702, 1.102, 1.502, -36.613, 0.000, 17.120, 51.489, 1.891, 1.224, 1.669, -31.908, 0.000, 11.836, 276.848, 1.495, 0.967, 1.319, 25.764, 2.000, -36.940, 48.061, 1.362, 0.881, 1.202, 19.054, 2.000, -35.779, 168.376, 1.042, 0.674, 0.919, 45.408, 2.000, -19.838, 294.756, 1.748, 1.131, 1.543, 25.283, 2.000, -27.991, 333.038, 1.924, 1.245, 1.698, 17.113, 2.000, -22.604, 160.957, 1.819, 1.177, 1.605, 8.891, 2.000, -29.439, 318.096, 1.154, 0.747, 1.018, 18.400, 2.000, -20.266, 349.888, 1.307, 0.846, 1.153, -21.363, 0.000, 17.071, 76.602, 1.358, 0.879, 1.198, -25.200, 0.000, 25.945, 296.355, 1.288, 0.834, 1.137, -19.403, 0.000, 24.717, 357.502, 1.805, 1.168, 1.592, -18.272, 0.000, 26.694, 320.562, 1.535, 0.993, 1.355, -18.161, 0.000, 22.975, 226.548, 1.049, 0.679, 0.926, -33.381, 0.000, 24.771, 248.110, 1.586, 1.026, 1.400, 9.104, 0.000, 38.342, 219.980, 2.017, 1.305, 1.779, 0.871, 0.000, 38.773, 47.882, 1.674, 1.083, 1.477, 6.298, 0.000, 28.573, 253.224, 1.318, 0.853, 1.163, 8.062, 0.000, 24.803, 207.754, 2.003, 1.296, 1.768, 4.791, 0.000, 37.243, 78.120, 1.875, 1.213, 1.654, 4.818, 0.000, 26.189, 66.037, 1.991, 1.289, 1.757)
+placements = PackedFloat32Array(-25.496, 0.000, 13.806, 333.498, 1.830, 1.184, 1.614, -11.072, 0.000, 7.555, 184.697, 2.004, 1.297, 1.768, -22.656, 0.000, 11.083, 197.796, 1.097, 0.710, 0.968, -19.492, 0.000, 9.141, 320.215, 1.138, 0.736, 1.004, -18.608, 0.000, 12.278, 170.981, 1.115, 0.721, 0.984, -16.136, 0.000, 21.351, 236.956, 1.255, 0.812, 1.107, -10.530, 0.000, 10.644, 242.586, 1.740, 1.126, 1.535, -25.990, 0.000, 10.233, 59.432, 1.580, 1.022, 1.394, -9.646, 0.000, 17.802, 99.524, 1.205, 0.780, 1.063, -4.643, 0.000, 21.641, 137.646, 1.238, 0.801, 1.093, 4.462, 0.000, 16.903, 193.083, 1.536, 0.994, 1.355, -6.848, 0.000, 10.707, 302.728, 1.712, 1.108, 1.511, -2.825, 0.000, 13.003, 86.561, 1.259, 0.815, 1.111, -8.407, 0.000, 14.010, 181.786, 1.098, 0.711, 0.969, -28.382, 0.000, -3.818, 206.661, 1.644, 1.064, 1.451, -27.876, 0.000, 6.399, 213.151, 1.203, 0.779, 1.062, -17.975, 0.000, 0.110, 278.984, 1.268, 0.820, 1.119, 6.626, 2.000, -21.854, 62.052, 1.162, 0.752, 1.025, 14.556, 2.000, -23.306, 71.994, 1.816, 1.175, 1.602, 9.988, 2.000, -20.400, 200.211, 1.608, 1.040, 1.419, -5.110, 0.000, -20.778, 143.822, 1.166, 0.754, 1.029, 25.244, 2.000, -5.371, 294.548, 1.476, 0.955, 1.302, 30.942, 2.000, -3.819, 134.972, 1.237, 0.800, 1.092, 27.698, 2.000, -9.539, 83.512, 1.928, 1.248, 1.701, 25.751, 2.000, 12.361, 290.806, 1.609, 1.041, 1.419, 24.736, 2.000, 2.382, 179.661, 1.928, 1.248, 1.701, 27.350, 2.000, 5.627, 109.184, 1.716, 1.110, 1.514, 21.585, 2.000, -12.780, 34.175, 1.151, 0.745, 1.016, 21.401, 2.000, -8.606, 2.925, 1.969, 1.274, 1.737, 25.666, 2.000, -14.437, 95.050, 1.859, 1.203, 1.641, 15.884, 2.000, -14.874, 174.525, 1.095, 0.709, 0.966, 18.859, 2.000, -15.474, 213.657, 1.983, 1.283, 1.750, 20.176, 2.000, -13.733, 345.569, 1.374, 0.889, 1.213, 30.271, 2.000, -15.624, 34.034, 1.345, 0.870, 1.187, -28.288, 0.000, -8.294, 244.729, 1.743, 1.128, 1.538, -30.543, 0.000, 8.482, 116.828, 1.982, 1.282, 1.749, -39.445, 0.000, 7.220, 6.376, 1.024, 0.663, 0.904, -28.818, 0.000, 11.287, 25.713, 1.803, 1.167, 1.591, -38.154, 0.000, 8.250, 233.497, 1.412, 0.913, 1.246, -28.828, 0.000, 4.614, 244.655, 1.689, 1.093, 1.490, -38.072, 0.000, 4.188, 254.038, 1.050, 0.679, 0.927, 39.805, 2.000, -28.567, 344.539, 1.159, 0.750, 1.023, 21.340, 2.000, -31.918, 161.371, 1.321, 0.855, 1.165, 16.087, 2.000, -32.965, 278.359, 1.106, 0.716, 0.976, 24.070, 2.000, -32.649, 23.496, 1.730, 1.119, 1.526, 22.201, 2.000, -29.453, 121.342, 1.348, 0.872, 1.189, 16.110, 2.000, -27.376, 264.742, 1.091, 0.706, 0.963, 20.341, 2.000, -44.151, 182.406, 1.121, 0.726, 0.990, -23.146, 0.000, 33.413, 46.474, 1.769, 1.144, 1.561, -26.981, 0.000, 27.316, 184.201, 1.265, 0.818, 1.116, -22.863, 0.000, 23.776, 227.602, 1.769, 1.144, 1.560, -27.627, 0.000, 17.316, 55.879, 1.253, 0.811, 1.106, -35.468, 0.000, 36.632, 353.304, 1.233, 0.798, 1.088, -28.714, 0.000, 25.881, 208.482, 1.753, 1.134, 1.547, 2.449, 0.000, 28.717, 25.050, 1.258, 0.814, 1.110, 9.169, 0.000, 23.850, 110.744, 1.198, 0.775, 1.057, -2.282, 0.000, 28.057, 89.618, 1.152, 0.745, 1.016, 0.831, 0.000, 24.258, 176.864, 1.308, 0.846, 1.154, 10.168, 0.000, 45.428, 223.791, 1.883, 1.218, 1.661, 2.495, 0.000, 36.208, 153.864, 1.645, 1.064, 1.451)
 
 [node name="GrassField" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("ext_13_GrassField")
@@ -1477,7 +1646,7 @@ river_half = 4.45
 loop_center = Vector2(-7, -2)
 loop_radii = Vector2(9.3, 6.9)
 loop_band = Vector2(0.80, 1.20)
-exclusions = PackedVector3Array(-12.90, -13.20, 5.12, -2.70, -11.10, 4.00, -21.50, -6.50, 4.16, 3.90, -14.40, 2.72, -1.20, 3.60, 6.00, 7.76, -8.00, 8.80, 5.10, -19.50, 1.28, -5.40, -18.00, 1.28, -16.50, -14.00, 1.28, -13.36, 9.82, 0.87, -21.61, 14.15, 0.92, -25.80, 7.86, 0.65, -15.68, 6.43, 1.08, -22.54, 8.81, 0.76, -20.57, 10.95, 0.79, -17.44, 13.11, 0.60, -15.33, 9.35, 0.67, -16.26, 14.90, 1.05, -20.01, 13.94, 0.60, -18.93, 5.97, 0.94, -11.46, 18.59, 0.90, -7.76, 16.28, 0.92, -7.36, 20.00, 0.90, -17.23, 17.45, 1.03, -13.25, 20.89, 1.04, -12.06, 16.57, 0.60, -11.12, 24.50, 0.80, -9.83, 21.29, 0.91, -24.92, -0.97, 0.66, -21.56, 2.26, 0.60, -24.14, 4.99, 1.05, -24.10, 1.11, 1.02, -17.15, 2.37, 0.93, -22.05, 0.16, 0.60, -21.12, -12.45, 0.60, -4.31, 18.48, 0.67, -4.58, 15.19, 0.84, -5.40, 24.45, 0.74, -13.95, 23.55, 0.60, -0.20, 26.11, 0.60, -29.89, 18.07, 0.60, -29.83, 15.73, 0.75, -26.63, 22.86, 0.98, -32.96, 6.60, 0.60, -29.68, 23.61, 0.60, -1.65, -22.48, 0.60, 7.29, 8.17, 0.60, 7.29, 11.17, 0.66, 8.07, 14.50, 0.60, 9.12, 17.13, 0.60, 10.43, 19.27, 0.60, 19.33, -17.95, 0.74, 13.31, -25.29, 1.14, 15.15, -22.10, 0.60, 14.39, -18.71, 0.74, 20.32, 1.26, 0.69, 18.69, -0.08, 0.60, 22.11, 0.81, 0.60, 23.01, -2.18, 1.06, 23.61, 10.77, 0.61, 27.25, 15.32, 0.60, 26.04, 11.26, 1.11, 24.14, 14.10, 0.75, -36.92, 14.31, 0.61, -41.93, 22.24, 0.71, -51.56, 19.39, 0.60, -41.44, 16.07, 0.86, -35.33, 21.82, 1.29, -30.59, 32.69, 1.11, 30.81, -40.43, 0.71, 38.10, -43.36, 0.60, 32.51, -25.78, 0.70, 29.59, -26.73, 1.21, 33.31, -29.52, 1.28, 25.10, -40.17, 1.23, -29.03, -30.56, 0.92, -37.30, -18.06, 0.64, -49.76, -15.66, 1.25, -36.12, -20.08, 0.70, -40.48, -23.82, 0.74, -49.79, -28.54, 1.21, 42.49, 20.11, 1.19, 38.89, 25.29, 1.37, 41.01, 22.35, 0.60, 36.87, 17.66, 1.23, 33.04, 22.01, 0.60, 32.32, 16.39, 1.02, -2.07, 39.02, 1.26, -8.53, 26.13, 1.10, 4.47, 32.26, 1.29, 7.97, 32.70, 1.19, 0.96, 32.99, 1.13, -10.55, 34.36, 1.19, -37.23, -35.06, 0.92, -33.62, -29.10, 1.13, -30.03, -23.53, 0.60, -22.77, -23.37, 0.60, -32.02, -30.55, 0.60, -16.69, -36.12, 1.15, -24.49, 12.19, 0.60, -21.35, 12.36, 0.60, -17.13, 8.65, 0.60, -18.07, 11.18, 0.60, -19.95, 17.79, 0.60, -20.67, 19.80, 0.60, -17.57, 8.22, 0.60, -15.36, 20.16, 0.60, -12.38, 8.58, 0.60, -33.63, 11.96, 0.60, -22.04, 3.21, 0.60, -13.52, 8.00, 0.60, -22.54, 13.09, 0.60, -9.00, 17.42, 0.60, -16.64, 8.22, 0.60, -12.07, 15.95, 0.60, -16.32, 16.33, 0.60, -19.52, 16.25, 0.60, -12.00, 12.93, 0.60, -19.00, 0.08, 0.60, -15.55, 13.43, 0.60, -13.12, 13.92, 0.60, -14.24, 17.91, 0.60, -3.30, 21.40, 0.60, -18.73, 21.68, 0.60, -2.86, 12.66, 0.60, -14.12, 13.17, 0.60, -14.27, 19.36, 0.60, -8.99, 13.76, 0.60, -5.99, 20.41, 0.60, -18.31, 15.09, 0.60, -8.99, 13.26, 0.60, -17.16, 23.03, 0.60, -14.20, 12.31, 0.60, -21.59, 20.08, 0.60, -13.16, 16.13, 0.60, -16.52, 22.44, 0.60, -10.63, 16.59, 0.60, 6.49, 21.17, 0.60, -10.17, 19.70, 0.60, -20.49, 2.69, 0.60, -15.72, 4.23, 0.60, -20.30, -1.07, 0.60, -22.74, 6.05, 0.60, -18.37, -0.35, 0.60, -21.65, 3.07, 0.60, -16.76, 7.59, 0.60, -19.15, 0.74, 0.60, -21.28, -0.82, 0.60, -21.56, 7.89, 0.60, -26.12, -3.20, 0.60, -19.71, 1.68, 0.60, -19.07, 2.14, 0.60, -22.46, 1.73, 0.60, -9.14, 17.98, 0.60, 5.48, 23.22, 0.60, -0.80, 22.02, 0.60, 0.87, 17.57, 0.60, -6.30, 12.54, 0.60, -7.67, 24.05, 0.60, -5.91, 25.53, 0.60, -0.95, 23.28, 0.60, -2.28, 24.81, 0.60, 0.35, 16.61, 0.60, -2.82, 23.03, 0.60, -0.62, 16.11, 0.60, -27.27, 16.19, 0.60, -20.67, 18.85, 0.60, -34.35, 19.77, 0.60, -26.38, 10.98, 0.60, -25.55, 15.45, 0.60, -27.89, 19.27, 0.60, -24.18, 6.51, 0.60, -27.87, 12.97, 0.60, -31.94, 21.03, 0.60, -23.88, 10.46, 0.60, -32.15, 14.38, 0.60, -25.68, 16.37, 0.60, -23.90, -11.31, 0.60, -29.68, -15.74, 0.60, -19.81, -12.72, 0.60, -21.98, -12.09, 0.60, -25.67, -17.31, 0.60, -23.19, -16.90, 0.60, -23.03, -13.72, 0.60, -19.36, -11.61, 0.60, -21.87, -12.49, 0.60, 18.53, 5.91, 0.60, 16.37, 2.60, 0.60, 16.75, -1.35, 0.60, 9.19, 21.37, 0.60, 16.54, 1.01, 0.60, 18.98, 3.15, 0.60, 18.21, -3.43, 0.60, 5.66, 13.62, 0.60, 19.73, 10.18, 0.60, 17.57, 7.77, 0.60, 5.59, 10.13, 0.60, 17.83, -1.61, 0.60, 13.21, -17.99, 0.60, 23.67, -20.33, 0.60, 26.39, -13.07, 0.60, 16.11, -20.97, 0.60, 19.41, -14.78, 0.60, 19.63, -12.44, 0.60, 26.18, -12.04, 0.60, 25.92, -7.88, 0.60, 19.01, -7.89, 0.60, 18.93, -8.73, 0.60, 6.89, 9.60, 0.60, -18.59, -0.51, 0.60, -13.54, 7.41, 0.60, -13.42, 8.65, 0.60, -14.53, 4.68, 0.60, -19.67, 1.03, 0.60, -13.79, 5.01, 0.60, 11.76, 23.76, 0.60, 5.47, 12.19, 0.60, 5.19, 15.05, 0.60, 6.25, 13.11, 0.60, -1.56, 19.04, 0.60, 4.26, 13.53, 0.60, 0.49, 12.10, 0.60, 4.03, 14.08, 0.60, -10.94, 15.91, 0.60, -3.00, 17.00, 2.11, 2.40, 20.00, 1.73, -20.00, -19.00, 2.02, -14.40, -20.70, 1.73, 12.00, 21.00, 1.82, -23.00, 6.00, 1.82, 23.00, -19.00, 2.11, 20.00, 16.00, 1.92, -28.00, -12.00, 1.92, 16.00, 8.00, 1.82, -9.00, 23.00, 1.92, -32.98, 1.05, 1.74, -45.00, 8.60, 2.38, -45.02, -4.43, 2.14, -39.25, -7.28, 2.15, -31.80, -7.41, 2.36, -43.41, 3.06, 2.02, -27.84, 3.56, 1.88, -23.68, -43.44, 2.31, -25.75, -33.59, 2.21, -30.85, -35.50, 1.64, -34.73, -40.09, 1.71, -29.03, -19.01, 2.35, -12.19, -32.79, 1.98, 1.78, -55.77, 2.29, 14.53, -29.75, 2.08, 9.47, -47.01, 1.91, 7.58, -56.40, 2.36, 15.11, -40.06, 1.76, 5.55, -37.85, 2.03, 35.27, -6.39, 2.29, 31.02, -12.64, 2.31, 37.25, -18.49, 2.16, 47.24, -5.81, 1.80, 49.56, -12.77, 1.95, 29.97, -4.62, 2.18, 48.83, 0.37, 2.36, 37.13, 37.06, 2.38, 37.44, 30.75, 2.16, 34.04, 25.72, 2.11, 48.59, 19.83, 1.66, 25.64, 25.54, 1.70, 29.67, 29.12, 1.74, -11.79, 45.00, 2.04, -8.44, 30.47, 2.13, -14.18, 28.29, 1.70, -2.42, 29.70, 2.14, -15.91, 39.02, 1.88, -44.01, 30.44, 2.38, -40.15, 38.07, 2.09, -56.61, 23.72, 2.25, -63.49, 36.34, 1.90, -45.16, 23.95, 2.21, 14.22, 37.10, 2.01, 30.49, 37.86, 2.10, 11.41, 28.90, 1.93, 29.99, 47.02, 2.08, 47.03, 13.93, 2.12, 31.18, 3.39, 1.64, 55.87, 9.00, 2.33, 45.77, 6.08, 2.01, 56.66, 17.99, 1.95, -10.90, 8.50, 0.61, -22.05, 21.93, 0.89, -23.81, 15.42, 0.69, -14.97, 11.15, 0.74, -28.94, 7.95, 0.60, -10.85, 14.25, 0.75, -24.72, 16.96, 0.67, -22.80, 10.89, 0.60, -10.48, 11.82, 0.60, 0.13, 24.47, 0.65, -9.30, 19.28, 0.60, -3.23, 25.54, 0.73, -8.91, 9.42, 0.81, -5.83, 21.97, 0.62, -23.89, -12.53, 0.61, -33.11, -12.34, 0.82, 9.36, -22.72, 1.02, -3.36, -25.28, 0.81, -1.15, -16.68, 0.60, -2.32, -20.60, 1.03, 26.61, 4.00, 0.68, 9.17, 23.05, 0.62, 23.00, 5.34, 0.66, 21.98, 11.11, 0.60, 18.11, 1.35, 0.60, 25.15, -0.86, 0.94, 26.35, 6.04, 0.63, 12.19, -20.08, 0.60, 21.85, -13.17, 0.99, 24.97, -15.17, 0.92, 15.89, -17.15, 0.76, 21.03, -5.86, 0.66, 21.36, -8.56, 1.01, -40.55, 7.46, 0.91, -29.28, -0.37, 0.60, -27.78, 17.73, 0.85, -32.25, 16.92, 0.60, -40.55, 13.36, 0.88, -36.61, 17.12, 0.98, -31.91, 11.84, 0.77, 25.76, -36.94, 0.71, 19.05, -35.78, 0.60, 45.41, -19.84, 0.91, 25.28, -27.99, 1.00, 17.11, -22.60, 0.94, 8.89, -29.44, 0.60, 18.40, -20.27, 0.68, -21.36, 17.07, 0.70, -25.20, 25.94, 0.67, -19.40, 24.72, 0.93, -18.27, 26.69, 0.79, -18.16, 22.97, 0.60, -33.38, 24.77, 0.82, 9.10, 38.34, 1.04, 0.87, 38.77, 0.87, 6.30, 28.57, 0.68, 8.06, 24.80, 1.04, 4.79, 37.24, 0.97, 4.82, 26.19, 1.03)
+exclusions = PackedVector3Array(-12.90, -13.20, 5.12, -2.70, -11.10, 4.00, -21.50, -6.50, 4.16, 3.90, -14.40, 2.72, -1.20, 3.60, 6.00, 6.13, -8.00, 8.80, 5.10, -19.50, 1.28, -5.40, -18.00, 1.28, -16.50, -14.00, 1.28, -13.36, 9.82, 0.87, -21.61, 14.15, 0.92, -25.80, 7.86, 0.65, -15.68, 6.43, 1.08, -22.54, 8.81, 0.76, -20.57, 10.95, 0.79, -17.44, 13.11, 0.60, -15.33, 9.35, 0.67, -16.26, 14.90, 1.05, -20.01, 13.94, 0.60, -18.93, 5.97, 0.94, -11.46, 18.59, 0.90, -7.76, 16.28, 0.92, -7.36, 20.00, 0.90, -17.23, 17.45, 1.03, -13.25, 20.89, 1.04, -12.06, 16.57, 0.60, -11.12, 24.50, 0.80, -9.83, 21.29, 0.91, -24.92, -0.97, 0.66, -21.56, 2.26, 0.60, -24.14, 4.99, 1.05, -24.10, 1.11, 1.02, -17.15, 2.37, 0.93, -22.05, 0.16, 0.60, -21.12, -12.45, 0.60, -4.31, 18.48, 0.67, -4.58, 15.19, 0.84, -5.40, 24.45, 0.74, -13.95, 23.55, 0.60, -0.20, 26.11, 0.60, -29.89, 18.07, 0.60, -29.83, 15.73, 0.75, -26.63, 22.86, 0.98, -32.96, 6.60, 0.60, -29.68, 23.61, 0.60, 15.42, -1.07, 0.60, 16.45, -0.85, 0.60, 18.08, 3.49, 0.64, 7.20, 6.17, 0.60, 18.69, 6.69, 0.60, 7.62, 7.61, 0.68, 20.56, 8.19, 0.61, 9.78, 10.57, 0.62, 21.77, 12.84, 0.60, 10.90, 13.92, 0.60, 12.05, 16.09, 0.63, 13.30, 20.77, 0.60, 12.44, -18.83, 0.99, 19.11, -21.51, 0.89, 15.16, -18.78, 0.98, 9.79, -26.02, 0.90, 20.28, -0.45, 0.84, 18.31, -1.39, 0.67, 20.91, -3.34, 0.67, 18.05, -3.53, 0.60, 26.93, 19.92, 1.10, 25.96, 10.51, 0.63, 23.61, 8.37, 1.03, 28.80, 14.28, 0.63, -51.59, 14.27, 0.75, -37.87, 25.55, 0.87, -40.14, 12.38, 0.72, -31.94, 16.95, 0.79, -45.49, 26.32, 0.60, -44.58, 22.40, 0.99, 17.31, -36.70, 0.86, 44.42, -25.57, 1.05, 27.84, -26.84, 0.73, 21.04, -33.95, 0.82, 36.62, -27.16, 0.91, 31.47, -22.73, 1.24, -35.14, -19.14, 1.33, -43.47, -31.97, 0.60, -39.51, -17.31, 1.19, -50.51, -18.33, 1.24, -34.44, -23.27, 1.20, -47.50, -21.14, 1.32, 37.41, 20.07, 0.74, 36.69, 17.10, 1.29, 45.54, 26.86, 0.91, 38.84, 25.55, 0.60, 42.68, 16.55, 1.36, 34.88, 22.79, 0.66, -6.35, 40.51, 1.00, -8.99, 35.43, 1.24, -5.22, 35.63, 0.72, -0.15, 31.18, 0.96, -1.28, 34.21, 1.27, -3.54, 42.14, 0.97, -33.09, -40.57, 1.19, -25.11, -35.37, 1.01, -30.69, -37.34, 1.02, -28.03, -23.01, 1.35, -49.96, -32.85, 1.34, -36.05, -43.35, 1.02, -14.74, 12.48, 0.60, -13.02, 11.49, 0.60, -17.30, 11.21, 0.60, -9.96, 14.16, 0.60, -25.16, 15.19, 0.60, -15.39, 10.39, 0.60, -17.99, 14.63, 0.60, -17.97, 7.64, 0.60, -22.49, 16.58, 0.60, -13.53, 4.84, 0.60, -15.53, 11.41, 0.60, -12.80, 14.61, 0.60, -15.83, 12.03, 0.60, -12.72, 17.36, 0.60, -26.45, 8.90, 0.60, -16.17, 11.80, 0.60, -18.45, 15.07, 0.60, -21.58, 5.94, 0.60, -23.28, 6.27, 0.60, -14.99, 12.19, 0.60, -9.24, 15.24, 0.60, -20.63, 9.47, 0.60, -14.99, 11.15, 0.60, -6.36, 17.22, 0.60, -9.47, 24.38, 0.60, -13.87, 12.43, 0.60, -17.24, 22.55, 0.60, -14.26, 25.02, 0.60, -14.18, 12.98, 0.60, -10.43, 16.04, 0.60, -13.05, 16.32, 0.60, -6.75, 22.43, 0.60, -9.29, 23.33, 0.60, -17.29, 24.14, 0.60, -1.89, 18.68, 0.60, -6.07, 21.92, 0.60, -2.30, 16.02, 0.60, -15.36, 19.28, 0.60, -3.18, 11.84, 0.60, -1.55, 15.77, 0.60, -17.29, 7.65, 0.60, -26.00, -1.22, 0.60, -25.92, 5.61, 0.60, -25.71, 4.41, 0.60, -22.68, 4.02, 0.60, -23.53, -1.06, 0.60, -20.52, 7.83, 0.60, -19.76, 1.47, 0.60, -27.47, -0.27, 0.60, -23.21, -1.18, 0.60, -20.85, 6.05, 0.60, -22.85, 0.41, 0.60, -23.81, 3.05, 0.60, -24.13, 9.85, 0.60, -1.34, 21.99, 0.60, -0.87, 21.04, 0.60, -2.09, 24.81, 0.60, 2.96, 19.89, 0.60, -6.44, 27.66, 0.60, -3.83, 16.35, 0.60, -8.63, 21.95, 0.60, -0.59, 21.93, 0.60, -1.97, 14.21, 0.60, -0.05, 19.16, 0.60, -3.40, 21.57, 0.60, -5.53, 16.93, 0.60, -30.55, 13.44, 0.60, -24.11, 18.91, 0.60, -24.55, 12.56, 0.60, -30.48, 18.55, 0.60, -23.64, 11.00, 0.60, -26.72, 17.37, 0.60, -24.86, 17.06, 0.60, -24.35, 17.29, 0.60, -30.05, 10.23, 0.60, -33.78, 15.52, 0.60, -24.38, 11.67, 0.60, -28.60, 18.16, 0.60, -16.19, -6.83, 0.60, -21.88, -12.74, 0.60, -26.42, -16.12, 0.60, -25.38, -16.08, 0.60, -22.29, -13.05, 0.60, -20.41, -13.86, 0.60, -22.52, -14.83, 0.60, -19.42, -14.28, 0.60, -20.52, 0.33, 0.60, 10.64, 12.59, 0.60, 17.30, -2.43, 0.60, 7.53, 15.22, 0.60, 27.00, 2.35, 0.60, 23.41, 1.16, 0.60, 18.44, 5.79, 0.60, 9.30, 13.11, 0.60, 16.85, 2.72, 0.60, 20.21, 3.84, 0.60, 9.39, 11.62, 0.60, 18.91, 8.12, 0.60, 5.98, 9.15, 0.60, 19.23, -10.53, 0.60, 13.80, -20.12, 0.60, 17.28, -17.48, 0.60, 19.97, -9.79, 0.60, 20.37, -10.01, 0.60, 16.82, -20.02, 0.60, 24.98, -10.10, 0.60, 15.88, -16.14, 0.60, 12.89, -20.12, 0.60, 19.25, -7.93, 0.60, -13.42, 8.65, 0.60, -14.53, 4.68, 0.60, -19.67, 1.03, 0.60, -13.79, 5.01, 0.60, -3.51, -18.03, 0.60, -19.10, -0.04, 0.60, -17.85, 5.16, 0.60, -2.60, -18.38, 0.60, 3.47, 10.69, 0.60, -4.89, 11.01, 0.60, 5.77, 13.89, 0.60, 3.34, 15.19, 0.60, -6.82, 13.11, 0.60, 2.02, 14.41, 0.60, 5.57, 7.56, 0.60, 6.29, 9.20, 0.60, -1.92, 16.26, 0.60, -3.00, 17.00, 2.11, 2.40, 20.00, 1.73, -20.00, -19.00, 2.02, -14.40, -20.70, 1.73, 12.00, 21.00, 1.82, -23.00, 6.00, 1.82, 23.00, -19.00, 2.11, 20.00, 16.00, 1.92, -28.00, -12.00, 1.92, 16.00, 8.00, 1.82, -9.00, 23.00, 1.92, -32.94, 1.02, 2.03, -40.28, -3.05, 2.31, -51.23, -11.40, 1.95, -46.27, -11.24, 1.76, -61.62, 7.63, 2.37, -52.68, 6.90, 1.93, -42.34, 1.77, 1.83, -24.93, -39.65, 2.03, -32.42, -30.86, 1.83, -27.60, -54.73, 2.11, -16.80, -32.39, 2.16, -24.73, -30.96, 1.86, -22.92, -47.85, 1.88, 9.12, -39.04, 1.93, 11.28, -47.94, 2.25, 16.82, -48.23, 1.72, 11.90, -30.83, 2.00, 7.19, -28.69, 1.95, 4.50, -45.96, 1.69, 33.89, -0.94, 2.19, 42.23, -6.58, 2.09, 38.75, -12.42, 1.81, 38.29, -17.86, 1.73, 49.15, -6.21, 2.12, 33.66, -5.90, 1.69, 47.60, -20.21, 1.89, 29.32, 25.56, 2.28, 34.42, 29.53, 1.76, 36.06, 7.41, 1.75, 31.46, 20.40, 2.15, 40.84, 34.22, 2.01, 29.07, 33.00, 2.20, -10.46, 29.84, 2.15, -24.64, 39.61, 2.12, -19.43, 25.60, 1.89, -14.81, 39.08, 2.17, -19.77, 45.90, 2.15, -41.43, 32.29, 2.24, -35.54, 31.95, 2.30, -32.51, 38.41, 1.80, -54.23, 29.79, 1.86, -20.40, 20.44, 2.25, 8.59, 28.33, 1.70, 33.91, 37.15, 1.95, 14.17, 40.62, 1.90, 29.37, 47.76, 1.86, 28.60, 39.29, 2.28, 56.94, 13.90, 1.82, 44.15, 7.05, 2.02, 54.79, -6.97, 2.09, 42.55, -0.26, 2.32, 46.97, 14.47, 2.10, -25.50, 13.81, 0.95, -11.07, 7.56, 1.04, -22.66, 11.08, 0.60, -19.49, 9.14, 0.60, -18.61, 12.28, 0.60, -16.14, 21.35, 0.65, -10.53, 10.64, 0.90, -25.99, 10.23, 0.82, -9.65, 17.80, 0.62, -4.64, 21.64, 0.64, 4.46, 16.90, 0.80, -6.85, 10.71, 0.89, -2.82, 13.00, 0.65, -8.41, 14.01, 0.60, -28.38, -3.82, 0.85, -27.88, 6.40, 0.62, -17.97, 0.11, 0.66, 6.63, -21.85, 0.60, 14.56, -23.31, 0.94, 9.99, -20.40, 0.83, -5.11, -20.78, 0.60, 25.24, -5.37, 0.76, 30.94, -3.82, 0.64, 27.70, -9.54, 1.00, 25.75, 12.36, 0.83, 24.74, 2.38, 1.00, 27.35, 5.63, 0.89, 21.59, -12.78, 0.60, 21.40, -8.61, 1.02, 25.67, -14.44, 0.96, 15.88, -14.87, 0.60, 18.86, -15.47, 1.03, 20.18, -13.73, 0.71, 30.27, -15.62, 0.70, -28.29, -8.29, 0.90, -30.54, 8.48, 1.03, -39.45, 7.22, 0.60, -28.82, 11.29, 0.93, -38.15, 8.25, 0.73, -28.83, 4.61, 0.87, -38.07, 4.19, 0.60, 39.80, -28.57, 0.60, 21.34, -31.92, 0.68, 16.09, -32.96, 0.60, 24.07, -32.65, 0.90, 22.20, -29.45, 0.70, 16.11, -27.38, 0.60, 20.34, -44.15, 0.60, -23.15, 33.41, 0.92, -26.98, 27.32, 0.65, -22.86, 23.78, 0.92, -27.63, 17.32, 0.65, -35.47, 36.63, 0.64, -28.71, 25.88, 0.91, 2.45, 28.72, 0.65, 9.17, 23.85, 0.62, -2.28, 28.06, 0.60, 0.83, 24.26, 0.68, 10.17, 45.43, 0.97, 2.49, 36.21, 0.85)
 blade_height = 0.42
 rng_seed = 20260820
 
@@ -1538,7 +1707,7 @@ surface_material_override/0 = SubResource("MatMetal")
 
 
 [node name="Enemy0" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.79720, 0.00000, 0.60372, 0.00000, 1.00000, -0.00000, -0.60372, -0.00000, -0.79720, -9.30000, 0.00000, -5.10000)
+transform = Transform3D(-0.98700, 0.00000, 0.16074, 0.00000, 1.00000, -0.00000, -0.16074, -0.00000, -0.98700, -9.30000, 0.00000, -5.10000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy0"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1566,7 +1735,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy1" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.79465, -0.00000, -0.60707, 0.00000, 1.00000, -0.00000, 0.60707, 0.00000, 0.79465, -6.60000, 0.00000, -7.80000)
+transform = Transform3D(0.24881, -0.00000, -0.96855, 0.00000, 1.00000, -0.00000, 0.96855, 0.00000, 0.24881, -6.60000, 0.00000, -7.80000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy1"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1594,7 +1763,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy2" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.93878, 0.00000, 0.34450, 0.00000, 1.00000, -0.00000, -0.34450, -0.00000, -0.93878, -3.00000, 0.00000, -3.90000)
+transform = Transform3D(0.13910, 0.00000, 0.99028, 0.00000, 1.00000, -0.00000, -0.99028, 0.00000, 0.13910, -3.00000, 0.00000, -3.90000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy2"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1622,7 +1791,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy3" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.77204, -0.00000, -0.63557, 0.00000, 1.00000, -0.00000, 0.63557, 0.00000, 0.77204, 0.90000, 0.00000, -1.80000)
+transform = Transform3D(0.96415, -0.00000, -0.26538, 0.00000, 1.00000, -0.00000, 0.26538, 0.00000, 0.96415, 0.90000, 0.00000, -1.80000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy3"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1650,7 +1819,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy4" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.99871, -0.00000, -0.05071, 0.00000, 1.00000, -0.00000, 0.05071, 0.00000, 0.99871, 3.30000, 0.00000, -5.70000)
+transform = Transform3D(-0.94753, -0.00000, -0.31967, 0.00000, 1.00000, -0.00000, 0.31967, -0.00000, -0.94753, 3.30000, 0.00000, -5.70000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy4"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1678,7 +1847,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy5" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.83930, -0.00000, -0.54366, 0.00000, 1.00000, -0.00000, 0.54366, -0.00000, -0.83930, -12.00000, 0.00000, 0.60000)
+transform = Transform3D(-0.47703, 0.00000, 0.87889, 0.00000, 1.00000, -0.00000, -0.87889, -0.00000, -0.47703, -12.00000, 0.00000, 0.60000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy5"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1706,7 +1875,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy6" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.41333, -0.00000, -0.91058, 0.00000, 1.00000, -0.00000, 0.91058, -0.00000, -0.41333, -9.00000, 0.00000, 4.20000)
+transform = Transform3D(-0.47128, -0.00000, -0.88198, 0.00000, 1.00000, -0.00000, 0.88198, -0.00000, -0.47128, -9.00000, 0.00000, 4.20000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy6"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1734,7 +1903,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy7" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.19052, 0.00000, 0.98168, 0.00000, 1.00000, -0.00000, -0.98168, 0.00000, 0.19052, -4.50000, 0.00000, 6.90000)
+transform = Transform3D(0.91957, -0.00000, -0.39294, 0.00000, 1.00000, -0.00000, 0.39294, 0.00000, 0.91957, -4.50000, 0.00000, 6.90000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy7"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1762,7 +1931,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy8" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.65558, -0.00000, -0.75513, 0.00000, 1.00000, -0.00000, 0.75513, 0.00000, 0.65558, 2.10000, 0.00000, 4.80000)
+transform = Transform3D(-0.16866, 0.00000, 0.98568, 0.00000, 1.00000, -0.00000, -0.98568, -0.00000, -0.16866, 2.10000, 0.00000, 4.80000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy8"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1790,7 +1959,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy9" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.81037, 0.00000, 0.58592, 0.00000, 1.00000, -0.00000, -0.58592, 0.00000, 0.81037, 5.40000, 0.00000, 1.50000)
+transform = Transform3D(-0.54123, -0.00000, -0.84087, 0.00000, 1.00000, -0.00000, 0.84087, -0.00000, -0.54123, 5.40000, 0.00000, 1.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy9"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1818,7 +1987,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy10" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.08411, -0.00000, -0.99646, 0.00000, 1.00000, -0.00000, 0.99646, 0.00000, 0.08411, 6.90000, 0.00000, -9.60000)
+transform = Transform3D(0.76747, -0.00000, -0.64109, 0.00000, 1.00000, -0.00000, 0.64109, 0.00000, 0.76747, 6.90000, 0.00000, -9.60000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy10"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1846,7 +2015,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy11" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.99984, -0.00000, -0.01772, 0.00000, 1.00000, -0.00000, 0.01772, 0.00000, 0.99984, -15.60000, 0.00000, -3.00000)
+transform = Transform3D(0.88925, 0.00000, 0.45743, 0.00000, 1.00000, -0.00000, -0.45743, 0.00000, 0.88925, -15.60000, 0.00000, -3.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy11"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1874,7 +2043,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy12" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.68962, 0.00000, 0.72417, 0.00000, 1.00000, -0.00000, -0.72417, 0.00000, 0.68962, -2.40000, 0.00000, 10.50000)
+transform = Transform3D(-0.95434, -0.00000, -0.29873, 0.00000, 1.00000, -0.00000, 0.29873, -0.00000, -0.95434, -2.40000, 0.00000, 10.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy12"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1902,7 +2071,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy13" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.20866, 0.00000, 0.97799, 0.00000, 1.00000, -0.00000, -0.97799, 0.00000, 0.20866, -13.50000, 0.00000, 9.00000)
+transform = Transform3D(0.96340, 0.00000, 0.26806, 0.00000, 1.00000, -0.00000, -0.26806, 0.00000, 0.96340, -13.50000, 0.00000, 9.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy13"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1930,7 +2099,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy14" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.94065, -0.00000, -0.33938, 0.00000, 1.00000, -0.00000, 0.33938, -0.00000, -0.94065, 3.00000, 0.00000, 12.60000)
+transform = Transform3D(0.25773, -0.00000, -0.96622, 0.00000, 1.00000, -0.00000, 0.96622, 0.00000, 0.25773, 3.00000, 0.00000, 12.60000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy14"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1958,7 +2127,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy15" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.09765, -0.00000, -0.99522, 0.00000, 1.00000, -0.00000, 0.99522, 0.00000, 0.09765, 8.10000, 0.00000, 7.50000)
+transform = Transform3D(-0.36065, 0.00000, 0.93270, 0.00000, 1.00000, -0.00000, -0.93270, -0.00000, -0.36065, 8.10000, 0.00000, 7.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy15"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -1986,7 +2155,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy16" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.86607, 0.00000, 0.49992, 0.00000, 1.00000, -0.00000, -0.49992, -0.00000, -0.86607, -18.00000, 0.00000, 2.40000)
+transform = Transform3D(0.02545, 0.00000, 0.99968, 0.00000, 1.00000, -0.00000, -0.99968, 0.00000, 0.02545, -18.00000, 0.00000, 2.40000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy16"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2014,7 +2183,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy17" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.78677, -0.00000, -0.61725, 0.00000, 1.00000, -0.00000, 0.61725, 0.00000, 0.78677, -7.50000, 0.00000, 14.70000)
+transform = Transform3D(-0.76323, 0.00000, 0.64613, 0.00000, 1.00000, -0.00000, -0.64613, -0.00000, -0.76323, -7.50000, 0.00000, 14.70000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy17"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2042,7 +2211,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy18" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.60113, -0.00000, -0.79915, 0.00000, 1.00000, -0.00000, 0.79915, -0.00000, -0.60113, 10.50000, 0.00000, -3.00000)
+transform = Transform3D(0.16228, 0.00000, 0.98675, 0.00000, 1.00000, -0.00000, -0.98675, 0.00000, 0.16228, 10.50000, 0.00000, -3.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy18"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2070,7 +2239,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy19" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.50997, 0.00000, 0.86019, 0.00000, 1.00000, -0.00000, -0.86019, 0.00000, 0.50997, -19.50000, 0.00000, 12.00000)
+transform = Transform3D(-0.84064, 0.00000, 0.54159, 0.00000, 1.00000, -0.00000, -0.54159, -0.00000, -0.84064, -19.50000, 0.00000, 12.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy19"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2098,7 +2267,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy20" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.98920, 0.00000, 0.14654, 0.00000, 1.00000, -0.00000, -0.14654, -0.00000, -0.98920, 1.50000, 0.00000, 17.00000)
+transform = Transform3D(-0.89176, 0.00000, 0.45250, 0.00000, 1.00000, -0.00000, -0.45250, -0.00000, -0.89176, 1.50000, 0.00000, 17.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy20"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2126,7 +2295,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy21" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.90482, -0.00000, -0.42579, 0.00000, 1.00000, -0.00000, 0.42579, 0.00000, 0.90482, -11.00000, 0.00000, 18.00000)
+transform = Transform3D(0.55776, -0.00000, -0.83000, 0.00000, 1.00000, -0.00000, 0.83000, 0.00000, 0.55776, -11.00000, 0.00000, 18.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy21"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2154,7 +2323,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy22" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.76716, 0.00000, 0.64146, 0.00000, 1.00000, -0.00000, -0.64146, 0.00000, 0.76716, 12.50000, 0.00000, 3.00000)
+transform = Transform3D(0.46723, 0.00000, 0.88414, 0.00000, 1.00000, -0.00000, -0.88414, 0.00000, 0.46723, 12.50000, 0.00000, 3.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy22"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2182,7 +2351,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy23" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.38857, 0.00000, 0.92142, 0.00000, 1.00000, -0.00000, -0.92142, 0.00000, 0.38857, -16.00000, 0.00000, 6.50000)
+transform = Transform3D(-0.62011, 0.00000, 0.78452, 0.00000, 1.00000, -0.00000, -0.78452, -0.00000, -0.62011, -16.00000, 0.00000, 6.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy23"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2210,7 +2379,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy24" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.38779, -0.00000, -0.92175, 0.00000, 1.00000, -0.00000, 0.92175, 0.00000, 0.38779, 6.50000, 0.00000, -2.00000)
+transform = Transform3D(-0.92052, -0.00000, -0.39068, 0.00000, 1.00000, -0.00000, 0.39068, -0.00000, -0.92052, 6.50000, 0.00000, -2.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy24"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2238,7 +2407,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy25" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.84410, -0.00000, -0.53619, 0.00000, 1.00000, -0.00000, 0.53619, -0.00000, -0.84410, -5.00000, 0.00000, 20.00000)
+transform = Transform3D(-0.58938, 0.00000, 0.80785, 0.00000, 1.00000, -0.00000, -0.80785, -0.00000, -0.58938, -5.00000, 0.00000, 20.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy25"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -2279,7 +2448,7 @@ rocket_rate = 2.0
 tesla_rate = 1.0
 
 [node name="MidEnemy" type="Node3D" parent="."]
-transform = Transform3D(-0.30902, -0.00000, -0.95106, 0.00000, 1.00000, -0.00000, 0.95106, -0.00000, -0.30902, 12.26000, 2.25000, -8.00000)
+transform = Transform3D(-0.30902, -0.00000, -0.95106, 0.00000, 1.00000, -0.00000, 0.95106, -0.00000, -0.30902, 10.62514, 2.25000, -8.00000)
 
 [node name="Hull" type="MeshInstance3D" parent="MidEnemy"]
 transform = Transform3D(2.60000, 0.00000, 0.00000, 0.00000, 1.50000, -0.00000, -0.00000, 0.00000, 3.20000, 0.00000, 1.10000, 0.00000)
