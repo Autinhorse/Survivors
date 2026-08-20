@@ -1,89 +1,272 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=52 format=3]
 
-[sub_resource type="StandardMaterial3D" id="MatGrass"]
-albedo_color = Color(0.298, 0.337, 0.114, 1)
-roughness = 1.0
-metallic = 0.0
+[ext_resource type="Shader" path="res://shaders/ground.gdshader" id="ext_1_ground"]
+[ext_resource type="Shader" path="res://shaders/ground_patch.gdshader" id="ext_2_ground_patch"]
+[ext_resource type="Shader" path="res://shaders/water.gdshader" id="ext_3_water"]
+[ext_resource type="Shader" path="res://shaders/foliage.gdshader" id="ext_4_foliage"]
+[ext_resource type="Shader" path="res://shaders/grass_tuft.gdshader" id="ext_5_grass_tuft"]
+[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_6_ScatterField"]
+[ext_resource type="Script" path="res://scripts/environment/GrassField.gd" id="ext_7_GrassField"]
 
-[sub_resource type="StandardMaterial3D" id="MatDirt"]
-albedo_color = Color(0.404, 0.302, 0.184, 1)
-roughness = 1.0
-metallic = 0.0
+[sub_resource type="FastNoiseLite" id="NoiseMacroN"]
+frequency = 0.01
+fractal_octaves = 4
 
-[sub_resource type="StandardMaterial3D" id="MatCliff"]
-albedo_color = Color(0.196, 0.161, 0.129, 1)
-roughness = 1.0
-metallic = 0.0
+[sub_resource type="Gradient" id="NoiseMacroG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseMacro"]
+noise = SubResource("NoiseMacroN")
+color_ramp = SubResource("NoiseMacroG")
+seamless = true
+width = 512
+height = 512
+
+[sub_resource type="FastNoiseLite" id="NoiseDetailN"]
+frequency = 0.035
+fractal_octaves = 3
+
+[sub_resource type="Gradient" id="NoiseDetailG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseDetail"]
+noise = SubResource("NoiseDetailN")
+color_ramp = SubResource("NoiseDetailG")
+seamless = true
+width = 256
+height = 256
+
+[sub_resource type="FastNoiseLite" id="NoiseRockN"]
+frequency = 0.055
+fractal_octaves = 4
+
+[sub_resource type="Gradient" id="NoiseRockG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.62, 0.62, 0.62, 1, 1.05, 1.05, 1.05, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseRock"]
+noise = SubResource("NoiseRockN")
+color_ramp = SubResource("NoiseRockG")
+seamless = true
+width = 256
+height = 256
+
+[sub_resource type="FastNoiseLite" id="NoiseWoodN"]
+frequency = 0.09
+fractal_octaves = 2
+
+[sub_resource type="Gradient" id="NoiseWoodG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.7, 0.7, 0.7, 1, 1.08, 1.08, 1.08, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseWood"]
+noise = SubResource("NoiseWoodN")
+color_ramp = SubResource("NoiseWoodG")
+seamless = true
+width = 256
+height = 256
+
+[sub_resource type="FastNoiseLite" id="NoisePlasterN"]
+frequency = 0.03
+fractal_octaves = 3
+
+[sub_resource type="Gradient" id="NoisePlasterG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.8, 0.8, 0.8, 1, 1.06, 1.06, 1.06, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoisePlaster"]
+noise = SubResource("NoisePlasterN")
+color_ramp = SubResource("NoisePlasterG")
+seamless = true
+width = 256
+height = 256
+
+[sub_resource type="FastNoiseLite" id="NoiseWaterN"]
+frequency = 0.014
+fractal_octaves = 2
+
+[sub_resource type="Gradient" id="NoiseWaterG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.38, 0.38, 0.38, 1, 0.62, 0.62, 0.62, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseWater"]
+noise = SubResource("NoiseWaterN")
+color_ramp = SubResource("NoiseWaterG")
+seamless = true
+width = 256
+height = 256
+
+[sub_resource type="FastNoiseLite" id="NoiseGrassN"]
+frequency = 0.02
+fractal_octaves = 3
+fractal_type = 2
+fractal_gain = 0.55
+fractal_lacunarity = 2.4
+
+[sub_resource type="Gradient" id="NoiseGrassG"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseGrass"]
+noise = SubResource("NoiseGrassN")
+color_ramp = SubResource("NoiseGrassG")
+seamless = true
+width = 512
+height = 512
+
+[sub_resource type="ShaderMaterial" id="MatTerrain"]
+shader = ExtResource("ext_1_ground")
+shader_parameter/macro_noise = SubResource("NoiseMacro")
+shader_parameter/detail_noise = SubResource("NoiseDetail")
+shader_parameter/grass_detail = SubResource("NoiseGrass")
+shader_parameter/grass_scale = 0.85
+shader_parameter/grass_contrast = 0.70
+shader_parameter/bump_strength = 3.2
+shader_parameter/bump_epsilon = 0.055
+shader_parameter/grass_dark = Color(0.106, 0.145, 0.055, 1)
+shader_parameter/grass_light = Color(0.31, 0.341, 0.129, 1)
+shader_parameter/dirt_color = Color(0.325, 0.243, 0.145, 1)
+shader_parameter/rock_color = Color(0.235, 0.212, 0.184, 1)
+shader_parameter/macro_scale = 0.022
+shader_parameter/detail_scale = 0.30
+shader_parameter/dirt_threshold = 0.74
+shader_parameter/slope_grass = 0.82
+shader_parameter/slope_rock = 0.48
+
+[sub_resource type="ShaderMaterial" id="MatPatch"]
+shader = ExtResource("ext_2_ground_patch")
+shader_parameter/detail_noise = SubResource("NoiseDetail")
+shader_parameter/dirt_dark = Color(0.208, 0.153, 0.094, 1)
+shader_parameter/dirt_light = Color(0.365, 0.271, 0.161, 1)
+shader_parameter/noise_scale = 0.42
+shader_parameter/edge_softness = 0.42
+shader_parameter/edge_break = 0.60
+shader_parameter/coverage = 0.70
+
+[sub_resource type="ShaderMaterial" id="MatWater"]
+shader = ExtResource("ext_3_water")
+shader_parameter/wave_noise = SubResource("NoiseWater")
+shader_parameter/shallow_color = Color(0.129, 0.278, 0.278, 1)
+shader_parameter/deep_color = Color(0.024, 0.075, 0.114, 1)
+shader_parameter/foam_color = Color(0.769, 0.804, 0.82, 1)
+shader_parameter/wave_scale = 0.22
+shader_parameter/flow_speed = 0.07
+shader_parameter/normal_strength = 0.45
+shader_parameter/base_alpha = 0.93
+shader_parameter/bank_foam = 0.22
+shader_parameter/streak_amount = 0.14
+
+[sub_resource type="ShaderMaterial" id="MatLeafA"]
+shader = ExtResource("ext_4_foliage")
+shader_parameter/detail_noise = SubResource("NoiseDetail")
+shader_parameter/leaf_dark = Color(0.114, 0.176, 0.055, 1)
+shader_parameter/leaf_light = Color(0.349, 0.427, 0.161, 1)
+shader_parameter/noise_scale = 0.55
+shader_parameter/wind_strength = 0.10
+shader_parameter/wind_speed = 1.1
+shader_parameter/ao_strength = 0.45
+shader_parameter/sway_height = 4.4
+
+[sub_resource type="ShaderMaterial" id="MatLeafB"]
+shader = ExtResource("ext_4_foliage")
+shader_parameter/detail_noise = SubResource("NoiseDetail")
+shader_parameter/leaf_dark = Color(0.11, 0.165, 0.055, 1)
+shader_parameter/leaf_light = Color(0.353, 0.4, 0.145, 1)
+shader_parameter/noise_scale = 0.70
+shader_parameter/wind_strength = 0.13
+shader_parameter/wind_speed = 1.35
+shader_parameter/ao_strength = 0.40
+shader_parameter/sway_height = 4.4
+
+[sub_resource type="ShaderMaterial" id="MatBush"]
+shader = ExtResource("ext_4_foliage")
+shader_parameter/detail_noise = SubResource("NoiseDetail")
+shader_parameter/leaf_dark = Color(0.106, 0.145, 0.051, 1)
+shader_parameter/leaf_light = Color(0.318, 0.353, 0.125, 1)
+shader_parameter/noise_scale = 0.95
+shader_parameter/wind_strength = 0.07
+shader_parameter/wind_speed = 1.6
+shader_parameter/ao_strength = 0.35
+shader_parameter/sway_height = 0.7
+
+[sub_resource type="ShaderMaterial" id="MatTuft"]
+shader = ExtResource("ext_5_grass_tuft")
+shader_parameter/base_color = Color(0.216, 0.259, 0.094, 1)
+shader_parameter/tip_color = Color(0.392, 0.427, 0.169, 1)
+shader_parameter/dry_color = Color(0.451, 0.396, 0.18, 1)
+shader_parameter/wind_strength = 0.16
+shader_parameter/wind_speed = 1.6
+shader_parameter/fade_start = 55.0
+shader_parameter/fade_end = 78.0
 
 [sub_resource type="StandardMaterial3D" id="MatRock"]
-albedo_color = Color(0.353, 0.333, 0.302, 1)
-roughness = 0.9
+albedo_color = Color(0.298, 0.278, 0.255, 1)
+roughness = 0.88
 metallic = 0.0
-
-[sub_resource type="StandardMaterial3D" id="MatWater"]
-albedo_color = Color(0.078, 0.196, 0.243, 0.72)
-roughness = 0.12
-metallic = 0.25
-transparency = 1
+albedo_texture = SubResource("NoiseRock")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(0.55, 0.55, 0.55)
 
 [sub_resource type="StandardMaterial3D" id="MatWood"]
-albedo_color = Color(0.31, 0.208, 0.118, 1)
-roughness = 0.95
+albedo_color = Color(0.286, 0.192, 0.11, 1)
+roughness = 0.92
 metallic = 0.0
+albedo_texture = SubResource("NoiseWood")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(0.85, 0.85, 0.85)
 
 [sub_resource type="StandardMaterial3D" id="MatWoodLt"]
-albedo_color = Color(0.451, 0.322, 0.18, 1)
-roughness = 0.95
+albedo_color = Color(0.443, 0.318, 0.18, 1)
+roughness = 0.9
 metallic = 0.0
+albedo_texture = SubResource("NoiseWood")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(0.85, 0.85, 0.85)
 
 [sub_resource type="StandardMaterial3D" id="MatWall"]
-albedo_color = Color(0.596, 0.553, 0.463, 1)
-roughness = 0.95
+albedo_color = Color(0.616, 0.573, 0.478, 1)
+roughness = 0.94
 metallic = 0.0
+albedo_texture = SubResource("NoisePlaster")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(0.4, 0.4, 0.4)
 
 [sub_resource type="StandardMaterial3D" id="MatRoof"]
-albedo_color = Color(0.286, 0.31, 0.18, 1)
-roughness = 0.95
+albedo_color = Color(0.318, 0.31, 0.176, 1)
+roughness = 0.96
 metallic = 0.0
+albedo_texture = SubResource("NoiseWood")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(1.3, 1.3, 1.3)
 
 [sub_resource type="StandardMaterial3D" id="MatMetal"]
-albedo_color = Color(0.31, 0.325, 0.353, 1)
-roughness = 0.45
-metallic = 0.6
+albedo_color = Color(0.298, 0.31, 0.337, 1)
+roughness = 0.42
+metallic = 0.65
+albedo_texture = SubResource("NoiseRock")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(1.2, 1.2, 1.2)
 
 [sub_resource type="StandardMaterial3D" id="MatPlayer"]
 albedo_color = Color(0.706, 0.29, 0.098, 1)
-roughness = 0.5
+roughness = 0.48
 metallic = 0.35
 
 [sub_resource type="StandardMaterial3D" id="MatEnemy"]
 albedo_color = Color(0.502, 0.161, 0.129, 1)
-roughness = 0.6
+roughness = 0.58
 metallic = 0.25
-
-[sub_resource type="StandardMaterial3D" id="MatLeafA"]
-albedo_color = Color(0.18, 0.271, 0.098, 1)
-roughness = 1.0
-metallic = 0.0
-
-[sub_resource type="StandardMaterial3D" id="MatLeafB"]
-albedo_color = Color(0.243, 0.337, 0.129, 1)
-roughness = 1.0
-metallic = 0.0
-
-[sub_resource type="StandardMaterial3D" id="MatBush"]
-albedo_color = Color(0.212, 0.278, 0.102, 1)
-roughness = 1.0
-metallic = 0.0
 
 [sub_resource type="BoxMesh" id="MeshBox"]
 size = Vector3(1, 1, 1)
-
-[sub_resource type="SphereMesh" id="MeshSph"]
-radius = 0.5
-height = 1.0
-radial_segments = 12
-rings = 6
 
 [sub_resource type="CylinderMesh" id="MeshCyl"]
 top_radius = 0.5
@@ -104,12 +287,14 @@ size = Vector3(1, 1, 1)
 size = Vector2(1, 1)
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
-sky_top_color = Color(0.3, 0.44, 0.62, 1)
-sky_horizon_color = Color(0.72, 0.7, 0.6, 1)
-ground_bottom_color = Color(0.28, 0.26, 0.22, 1)
-ground_horizon_color = Color(0.62, 0.58, 0.48, 1)
-sun_angle_max = 12.0
-sun_curve = 0.3
+sky_top_color = Color(0.235, 0.373, 0.576, 1)
+sky_horizon_color = Color(0.847, 0.729, 0.545, 1)
+sky_curve = 0.16
+ground_bottom_color = Color(0.263, 0.22, 0.169, 1)
+ground_horizon_color = Color(0.702, 0.596, 0.451, 1)
+sun_angle_max = 18.0
+sun_curve = 0.18
+energy_multiplier = 1.05
 
 [sub_resource type="Sky" id="Sky"]
 sky_material = SubResource("SkyMat")
@@ -119,18 +304,29 @@ background_mode = 2
 sky = SubResource("Sky")
 ambient_light_source = 3
 ambient_light_sky_contribution = 1.0
-ambient_light_energy = 0.55
+ambient_light_energy = 0.42
 tonemap_mode = 3
 tonemap_exposure = 1.0
-tonemap_white = 4.0
+tonemap_white = 6.0
 glow_enabled = true
-glow_intensity = 0.5
-glow_bloom = 0.05
-glow_hdr_threshold = 1.1
-fog_enabled = false
+glow_intensity = 0.65
+glow_strength = 1.1
+glow_bloom = 0.12
+glow_hdr_threshold = 0.95
+glow_blend_mode = 1
+fog_enabled = true
+fog_mode = 0
+fog_light_color = Color(0.769, 0.686, 0.541, 1)
+fog_light_energy = 0.9
+fog_sun_scatter = 0.25
+fog_density = 0.0016
+fog_sky_affect = 0.0
+fog_height = -6.0
+fog_height_density = 0.02
 adjustment_enabled = true
-adjustment_saturation = 1.12
-adjustment_contrast = 1.05
+adjustment_saturation = 1.06
+adjustment_contrast = 1.12
+adjustment_brightness = 1.0
 
 [node name="VisualBenchmark" type="Node3D"]
 
@@ -139,15 +335,18 @@ environment = SubResource("Env")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.66913, 0.55226, -0.49726, 0.00000, 0.66913, 0.74314, 0.74314, 0.49726, -0.44774, 0.00000, 20.00000, 0.00000)
-light_color = Color(1, 0.898, 0.729, 1)
-light_energy = 1.7
-light_angular_distance = 1.0
+light_color = Color(1, 0.878, 0.706, 1)
+light_energy = 1.8
+light_angular_distance = 1.4
 shadow_enabled = true
-shadow_bias = 0.04
-shadow_normal_bias = 1.5
+shadow_opacity = 0.92
+shadow_bias = 0.035
+shadow_normal_bias = 1.2
+shadow_blur = 1.2
 directional_shadow_max_distance = 130.0
-directional_shadow_split_1 = 0.08
-directional_shadow_split_2 = 0.25
+directional_shadow_split_1 = 0.07
+directional_shadow_split_2 = 0.22
+directional_shadow_blend_splits = true
 
 [node name="GameplayCamera" type="Camera3D" parent="."]
 transform = Transform3D(1.00000, -0.00000, 0.00000, 0.00000, 0.50000, 0.86603, -0.00000, -0.86603, 0.50000, 0.00000, 44.00000, 25.90341)
@@ -162,151 +361,151 @@ use_collision = false
 [node name="GroundBlock" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.00000, -0.00000, 0.00000, 1.00000, 0.00000, -3.00000, 0.00000)
 size = Vector3(160, 6, 160)
-material = SubResource("MatGrass")
+material = SubResource("MatTerrain")
 
 [node name="FarBankPlateau" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 38.16670, -1.00000, -7.88668)
 size = Vector3(50, 6, 190)
-material = SubResource("MatGrass")
+material = SubResource("MatTerrain")
 operation = 0
 
 [node name="RiverCut0" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -14.64000, 0.60000, -88.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut1" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -12.40000, 0.60000, -80.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut2" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -10.16000, 0.60000, -72.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut3" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -7.92000, 0.60000, -64.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut4" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -5.68000, 0.60000, -56.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut5" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -3.44000, 0.60000, -48.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut6" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, -1.20000, 0.60000, -40.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut7" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 1.04000, 0.60000, -32.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut8" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 3.28000, 0.60000, -24.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut9" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 5.52000, 0.60000, -16.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut10" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 7.76000, 0.60000, -8.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut11" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 10.00000, 0.60000, 0.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut12" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 12.24000, 0.60000, 8.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut13" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 14.48000, 0.60000, 16.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut14" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 16.72000, 0.60000, 24.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut15" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 18.96000, 0.60000, 32.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut16" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 21.20000, 0.60000, 40.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut17" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 23.44000, 0.60000, 48.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut18" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 25.68000, 0.60000, 56.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut19" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 27.92000, 0.60000, 64.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut20" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 30.16000, 0.60000, 72.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut21" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 32.40000, 0.60000, 80.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="RiverCut22" type="CSGBox3D" parent="Terrain"]
 transform = Transform3D(0.96296, 0.00000, 0.26963, 0.00000, 1.00000, -0.00000, -0.26963, 0.00000, 0.96296, 34.64000, 0.60000, 88.00000)
 size = Vector3(7.5, 8, 10)
 operation = 2
-material = SubResource("MatCliff")
+material = SubResource("MatTerrain")
 
 [node name="Water" type="Node3D" parent="."]
 
@@ -491,307 +690,307 @@ cast_shadow = 0
 [node name="Path0" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(0.00000, 0.00000, 2.40000, 0.00000, 0.08000, -0.00000, -3.00000, 0.00000, 0.00000, 2.30000, 0.04000, -2.00000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path1" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(0.46930, 0.00000, 2.37045, 0.00000, 0.08000, -0.00000, -2.96307, 0.00000, 0.37544, 2.18550, 0.04000, -0.92060)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path2" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(0.92705, 0.00000, 2.28254, 0.00000, 0.08000, -0.00000, -2.85317, 0.00000, 0.74164, 1.84483, 0.04000, 0.13222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path3" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(1.36197, 0.00000, 2.13842, 0.00000, 0.08000, -0.00000, -2.67302, 0.00000, 1.08958, 1.28636, 0.04000, 1.13253)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path4" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(1.76336, 0.00000, 1.94164, 0.00000, 0.08000, -0.00000, -2.42705, 0.00000, 1.41068, 0.52386, 0.04000, 2.05572)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path5" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.12132, 0.00000, 1.69706, 0.00000, 0.08000, -0.00000, -2.12132, 0.00000, 1.69706, -0.42391, 0.04000, 2.87904)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path6" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.42705, 0.00000, 1.41068, 0.00000, 0.08000, -0.00000, -1.76336, 0.00000, 1.94164, -1.53360, 0.04000, 3.58222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path7" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.67302, 0.00000, 1.08958, 0.00000, 0.08000, -0.00000, -1.36197, 0.00000, 2.13842, -2.77789, 0.04000, 4.14795)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path8" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.85317, 0.00000, 0.74164, 0.00000, 0.08000, -0.00000, -0.92705, 0.00000, 2.28254, -4.12614, 0.04000, 4.56229)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path9" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.96307, 0.00000, 0.37544, 0.00000, 0.08000, -0.00000, -0.46930, 0.00000, 2.37045, -5.54516, 0.04000, 4.81505)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path10" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(3.00000, 0.00000, 0.00000, 0.00000, 0.08000, -0.00000, -0.00000, 0.00000, 2.40000, -7.00000, 0.04000, 4.90000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path11" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.96307, -0.00000, -0.37544, 0.00000, 0.08000, -0.00000, 0.46930, 0.00000, 2.37045, -8.45484, 0.04000, 4.81505)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path12" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.85317, -0.00000, -0.74164, 0.00000, 0.08000, -0.00000, 0.92705, 0.00000, 2.28254, -9.87386, 0.04000, 4.56229)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path13" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.67302, -0.00000, -1.08958, 0.00000, 0.08000, -0.00000, 1.36197, 0.00000, 2.13842, -11.22211, 0.04000, 4.14795)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path14" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.42705, -0.00000, -1.41068, 0.00000, 0.08000, -0.00000, 1.76336, 0.00000, 1.94164, -12.46640, 0.04000, 3.58222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path15" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.12132, -0.00000, -1.69706, 0.00000, 0.08000, -0.00000, 2.12132, 0.00000, 1.69706, -13.57609, 0.04000, 2.87904)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path16" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(1.76336, -0.00000, -1.94164, 0.00000, 0.08000, -0.00000, 2.42705, 0.00000, 1.41068, -14.52386, 0.04000, 2.05572)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path17" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(1.36197, -0.00000, -2.13842, 0.00000, 0.08000, -0.00000, 2.67302, 0.00000, 1.08958, -15.28636, 0.04000, 1.13253)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path18" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(0.92705, -0.00000, -2.28254, 0.00000, 0.08000, -0.00000, 2.85317, 0.00000, 0.74164, -15.84483, 0.04000, 0.13222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path19" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(0.46930, -0.00000, -2.37045, 0.00000, 0.08000, -0.00000, 2.96307, 0.00000, 0.37544, -16.18550, 0.04000, -0.92060)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path20" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(0.00000, -0.00000, -2.40000, 0.00000, 0.08000, -0.00000, 3.00000, 0.00000, 0.00000, -16.30000, 0.04000, -2.00000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path21" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-0.46930, -0.00000, -2.37045, 0.00000, 0.08000, -0.00000, 2.96307, -0.00000, -0.37544, -16.18550, 0.04000, -3.07940)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path22" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-0.92705, -0.00000, -2.28254, 0.00000, 0.08000, -0.00000, 2.85317, -0.00000, -0.74164, -15.84483, 0.04000, -4.13222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path23" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-1.36197, -0.00000, -2.13842, 0.00000, 0.08000, -0.00000, 2.67302, -0.00000, -1.08958, -15.28636, 0.04000, -5.13253)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path24" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-1.76336, -0.00000, -1.94164, 0.00000, 0.08000, -0.00000, 2.42705, -0.00000, -1.41068, -14.52386, 0.04000, -6.05572)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path25" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.12132, -0.00000, -1.69706, 0.00000, 0.08000, -0.00000, 2.12132, -0.00000, -1.69706, -13.57609, 0.04000, -6.87904)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path26" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.42705, -0.00000, -1.41068, 0.00000, 0.08000, -0.00000, 1.76336, -0.00000, -1.94164, -12.46640, 0.04000, -7.58222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path27" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.67302, -0.00000, -1.08958, 0.00000, 0.08000, -0.00000, 1.36197, -0.00000, -2.13842, -11.22211, 0.04000, -8.14795)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path28" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.85317, -0.00000, -0.74164, 0.00000, 0.08000, -0.00000, 0.92705, -0.00000, -2.28254, -9.87386, 0.04000, -8.56229)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path29" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.96307, -0.00000, -0.37544, 0.00000, 0.08000, -0.00000, 0.46930, -0.00000, -2.37045, -8.45484, 0.04000, -8.81505)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path30" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-3.00000, -0.00000, -0.00000, 0.00000, 0.08000, -0.00000, 0.00000, -0.00000, -2.40000, -7.00000, 0.04000, -8.90000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path31" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.96307, 0.00000, 0.37544, 0.00000, 0.08000, -0.00000, -0.46930, -0.00000, -2.37045, -5.54516, 0.04000, -8.81505)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path32" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.85317, 0.00000, 0.74164, 0.00000, 0.08000, -0.00000, -0.92705, -0.00000, -2.28254, -4.12614, 0.04000, -8.56229)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path33" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.67302, 0.00000, 1.08958, 0.00000, 0.08000, -0.00000, -1.36197, -0.00000, -2.13842, -2.77789, 0.04000, -8.14795)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path34" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.42705, 0.00000, 1.41068, 0.00000, 0.08000, -0.00000, -1.76336, -0.00000, -1.94164, -1.53360, 0.04000, -7.58222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path35" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-2.12132, 0.00000, 1.69706, 0.00000, 0.08000, -0.00000, -2.12132, -0.00000, -1.69706, -0.42391, 0.04000, -6.87904)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path36" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-1.76336, 0.00000, 1.94164, 0.00000, 0.08000, -0.00000, -2.42705, -0.00000, -1.41068, 0.52386, 0.04000, -6.05572)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path37" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-1.36197, 0.00000, 2.13842, 0.00000, 0.08000, -0.00000, -2.67302, -0.00000, -1.08958, 1.28636, 0.04000, -5.13253)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path38" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-0.92705, 0.00000, 2.28254, 0.00000, 0.08000, -0.00000, -2.85317, -0.00000, -0.74164, 1.84483, 0.04000, -4.13222)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path39" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(-0.46930, 0.00000, 2.37045, 0.00000, 0.08000, -0.00000, -2.96307, -0.00000, -0.37544, 2.18550, 0.04000, -3.07940)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path40" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, -3.40000, 0.04000, -4.40000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path41" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, -2.66667, 0.04000, -4.93333)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path42" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, -1.93333, 0.04000, -5.46667)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path43" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, -1.20000, 0.04000, -6.00000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path44" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, -0.46667, 0.04000, -6.53333)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path45" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, 0.26667, 0.04000, -7.06667)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Path46" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(2.20493, 0.00000, 1.16582, 0.00000, 0.08000, -0.00000, -1.37779, 0.00000, 1.86571, 1.00000, 0.04000, -7.60000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Yard0" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(6.93188, -0.00000, -0.64020, 0.00000, 0.06000, -0.00000, 0.97421, 0.00000, 4.55523, -10.40000, 0.03000, -12.60000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Yard1" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(4.42180, 0.00000, 0.93717, 0.00000, 0.06000, -0.00000, -1.26793, 0.00000, 3.26829, -2.40000, 0.03000, -8.40000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Yard2" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(4.37590, 0.00000, 0.33449, 0.00000, 0.06000, -0.00000, -0.45993, 0.00000, 3.18247, 3.90000, 0.03000, -14.20000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Yard3" type="MeshInstance3D" parent="Paths"]
 transform = Transform3D(5.39276, -0.00000, -1.31511, 0.00000, 0.06000, -0.00000, 2.63023, 0.00000, 2.69638, 3.40000, 0.03000, -7.40000)
 mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatDirt")
+surface_material_override/0 = SubResource("MatPatch")
 cast_shadow = 0
 
 [node name="Bridge" type="Node3D" parent="."]
@@ -1264,1813 +1463,48 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatWood")
 
 [node name="Rocks" type="Node3D" parent="."]
-
-
-[node name="Rock0" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.86458, -0.00000, -0.05210, 0.00000, 1.31864, -0.00000, 0.06342, -0.00000, -1.53173, -12.75765, 0.48507, 8.46003)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock1" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.33489, 0.00000, 1.41978, 0.00000, 1.20126, -0.00000, -1.95311, 0.00000, 0.24344, -22.37735, 0.51522, 13.50377)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock2" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.89664, 0.00000, 1.06422, 0.00000, 0.91274, -0.00000, -1.08047, -0.00000, -0.88316, -27.26889, 0.36506, 6.17473)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock3" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.64980, -0.00000, -1.78476, 0.00000, 1.35988, -0.00000, 1.63916, 0.00000, 1.79635, -15.46040, 0.60467, 4.50522)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock4" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.49637, -0.00000, -0.61083, 0.00000, 1.09733, -0.00000, 0.67185, -0.00000, -1.36046, -23.46225, 0.42647, 7.27906)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock5" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.63571, -0.00000, -1.43799, 0.00000, 1.29632, -0.00000, 1.57169, 0.00000, 0.58163, -21.16711, 0.44080, 9.77199)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock6" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.00945, 0.00000, 0.82292, 0.00000, 0.57666, -0.00000, -0.82317, -0.00000, -0.00945, -17.51854, 0.21404, 12.29800)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock7" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.66972, -0.00000, -1.56336, 0.00000, 1.30531, -0.00000, 1.51721, -0.00000, -1.72051, -16.13872, 0.58658, 14.38388)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock8" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.45668, -0.00000, -1.86518, 0.00000, 1.36332, -0.00000, 1.97872, 0.00000, 0.43048, -19.25461, 0.52799, 3.96112)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock9" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.87981, -0.00000, -0.42564, 0.00000, 1.52008, -0.00000, 0.42199, 0.00000, 1.89607, -17.57353, 0.50091, 9.87334)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock10" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.25622, 0.00000, 1.33608, 0.00000, 1.53197, -0.00000, -1.46601, -0.00000, -1.14489, -12.50155, 0.50196, 11.61626)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock11" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.09847, -0.00000, -1.40665, 0.00000, 0.93012, -0.00000, 1.33382, -0.00000, -0.10384, -25.31208, 0.34774, 9.82547)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock12" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.46826, 0.00000, 0.59178, 0.00000, 0.52260, -0.00000, -0.58462, 0.00000, 0.47400, -18.31224, 0.19475, 7.38017)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock13" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.20193, 0.00000, 1.24928, 0.00000, 1.55522, -0.00000, -1.75857, -0.00000, -0.85385, -9.07549, 0.55382, 14.85075)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock14" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.86754, -0.00000, -0.01074, 0.00000, 1.10050, -0.00000, 0.01273, 0.00000, 1.57554, -15.25275, 0.48557, 27.69516)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock15" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.41809, 0.00000, 0.12518, 0.00000, 0.88704, -0.00000, -0.11436, 0.00000, 1.55232, -5.88056, 0.36990, 20.33646)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock16" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.19186, 0.00000, 0.60855, 0.00000, 0.90934, -0.00000, -0.79291, 0.00000, 0.91474, -9.26965, 0.37219, 19.81542)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock17" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.01416, -0.00000, -1.64667, 0.00000, 1.81331, -0.00000, 2.24935, -0.00000, -0.01037, -12.85799, 0.58484, 21.65055)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock18" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.76563, 0.00000, 1.00212, 0.00000, 1.52534, -0.00000, -1.29199, 0.00000, 1.36950, -12.79401, 0.56884, 16.48165)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock19" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.11815, -0.00000, -1.65308, 0.00000, 1.28693, -0.00000, 1.66910, 0.00000, 1.10743, -3.53333, 0.52234, 18.16100)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock20" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.70684, -0.00000, -0.43282, 0.00000, 0.58641, -0.00000, 0.48729, -0.00000, -0.62783, -9.11265, 0.22322, 17.45538)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock21" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.67230, 0.00000, 1.84432, 0.00000, 1.35074, -0.00000, -1.69729, -0.00000, -0.73054, -1.92912, 0.47465, 22.09692)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock22" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.05428, 0.00000, 2.00323, 0.00000, 1.36735, -0.00000, -1.75333, -0.00000, -0.06201, -9.63287, 0.45608, 22.38834)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock23" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.72741, 0.00000, 0.04998, 0.00000, 0.51162, -0.00000, -0.04731, 0.00000, 0.76856, -6.98096, 0.18953, 18.44916)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock24" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(2.32848, 0.00000, 0.42255, 0.00000, 1.83575, -0.00000, -0.47482, 0.00000, 2.07217, -7.64326, 0.61786, 26.62505)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock25" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.17057, 0.00000, 0.70590, 0.00000, 0.84122, -0.00000, -0.72310, 0.00000, 1.14272, -28.32719, 0.35773, 2.12297)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock26" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.09363, -0.00000, -1.05961, 0.00000, 1.09948, -0.00000, 0.97922, -0.00000, -1.18342, -23.48127, 0.38167, 1.46117)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock27" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.74032, 0.00000, 0.72434, 0.00000, 0.92583, -0.00000, -0.93539, 0.00000, 0.57328, -17.97881, 0.31016, 0.40159)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock28" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(2.05411, 0.00000, 0.21507, 0.00000, 1.48663, -0.00000, -0.29390, 0.00000, 1.50315, -26.28197, 0.53951, -0.54614)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock29" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.48735, -0.00000, -0.52528, 0.00000, 0.65627, -0.00000, 0.60235, -0.00000, -0.42500, -26.95780, 0.20145, 3.39796)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock30" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.80684, -0.00000, -0.30674, 0.00000, 0.56007, -0.00000, 0.28068, -0.00000, -0.88176, -19.87786, 0.22211, 6.62995)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock31" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.09398, 0.00000, 0.77897, 0.00000, 0.66962, -0.00000, -0.90866, -0.00000, -0.08057, -21.24257, 0.23751, 0.10971)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock32" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.88493, 0.00000, 0.23325, 0.00000, 0.64750, -0.00000, -0.25582, -0.00000, -0.80686, -22.04568, 0.23950, 3.95051)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock33" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.74916, 0.00000, 0.32552, 0.00000, 0.66916, -0.00000, -0.30847, -0.00000, -0.79057, -27.88928, 0.21065, -6.54704)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock34" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.89478, -0.00000, -0.86824, 0.00000, 0.95995, -0.00000, 0.76026, -0.00000, -1.02186, -23.87414, 0.30528, -16.29698)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock35" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.32567, 0.00000, 0.56341, 0.00000, 0.42369, -0.00000, -0.66956, -0.00000, -0.27404, -21.33918, 0.19358, -12.34105)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock36" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.41674, -0.00000, -1.09612, 0.00000, 0.72530, -0.00000, 0.91629, 0.00000, 0.49853, 0.14994, 0.26172, 23.09171)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock37" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.10512, 0.00000, 0.14235, 0.00000, 0.74120, -0.00000, -0.12221, -0.00000, -1.28726, -5.15664, 0.28908, 22.34443)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock38" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.87958, 0.00000, 0.12369, 0.00000, 1.36469, -0.00000, -0.16242, -0.00000, -1.43131, 1.64819, 0.49051, 28.61519)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock39" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.71230, -0.00000, -0.17772, 0.00000, 0.49273, -0.00000, 0.20465, 0.00000, 0.61857, 0.85830, 0.19269, 15.38520)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock40" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.03546, 0.00000, 0.24772, 0.00000, 0.81380, -0.00000, -0.32030, 0.00000, 0.80081, -2.49415, 0.28181, 25.93013)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock41" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.33477, -0.00000, -1.70916, 0.00000, 1.25857, -0.00000, 1.48296, 0.00000, 0.38584, 3.78323, 0.39527, 15.86130)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock42" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.25456, 0.00000, 1.44965, 0.00000, 1.73359, -0.00000, -1.61597, 0.00000, 1.12545, 0.78311, 0.53191, 20.22269)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock43" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.54895, 0.00000, 0.65825, 0.00000, 0.68287, -0.00000, -0.61685, -0.00000, -0.58580, -4.01517, 0.21469, 27.28183)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock44" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.14450, 0.00000, 0.68572, 0.00000, 0.68363, -0.00000, -0.82365, 0.00000, 0.12030, -22.18185, 0.21742, 23.08384)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock45" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.40182, -0.00000, -0.68825, 0.00000, 0.48719, -0.00000, 0.67935, -0.00000, -0.40709, -28.34830, 0.20521, 18.30228)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock46" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.45726, -0.00000, -1.35295, 0.00000, 0.74650, -0.00000, 1.14571, 0.00000, 0.53997, -24.91728, 0.32073, 12.09570)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock47" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.98806, 0.00000, 0.24357, 0.00000, 0.85711, -0.00000, -0.34516, 0.00000, 0.69725, -33.19878, 0.27212, 16.38005)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock48" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.64729, 0.00000, 1.59939, 0.00000, 1.34466, -0.00000, -1.37688, 0.00000, 1.91351, -30.11310, 0.55821, 20.65642)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock49" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.55615, -0.00000, -0.12168, 0.00000, 1.13928, -0.00000, 0.12619, -0.00000, -1.50061, -29.76655, 0.40593, 15.02205)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock50" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.33598, 0.00000, 0.55783, 0.00000, 0.96418, -0.00000, -0.59733, 0.00000, 1.24764, -27.80714, 0.38049, 12.54768)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock51" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.26024, 0.00000, 1.03752, 0.00000, 0.95872, -0.00000, -1.12565, 0.00000, 1.16156, -20.03516, 0.43934, 17.19348)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock52" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.01467, -0.00000, -0.50781, 0.00000, 0.49776, -0.00000, 0.65442, 0.00000, 0.01139, -0.69823, 0.17019, -19.43885)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock53" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.77625, 0.00000, 0.06516, 0.00000, 0.44486, -0.00000, -0.07066, 0.00000, 0.71581, 6.56535, 0.20266, 7.28069)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock54" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.85505, 0.00000, 0.32545, 0.00000, 1.48787, -0.00000, -0.45581, 0.00000, 1.32451, 15.02079, 2.49666, -18.83435)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock55" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.47449, 0.00000, 1.36668, 0.00000, 1.04563, -0.00000, -1.66829, -0.00000, -0.38871, 21.68893, 2.45096, -21.51298)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock56" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.45269, 0.00000, 0.80184, 0.00000, 1.12353, -0.00000, -0.96924, -0.00000, -1.20178, 12.36629, 2.45405, -26.02339)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock57" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.54409, -0.00000, -1.31856, 0.00000, 1.28595, -0.00000, 1.31211, 0.00000, 1.55169, 11.88977, 2.52683, -20.11146)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock58" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.74261, -0.00000, -1.10807, 0.00000, 0.73374, -0.00000, 1.01188, -0.00000, -0.81320, 18.07920, 2.32633, -15.72160)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock59" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.06212, 0.00000, 0.66042, 0.00000, 0.79086, -0.00000, -0.60788, -0.00000, -1.15393, 14.14793, 2.31818, -22.07835)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock60" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.14274, -0.00000, -0.62741, 0.00000, 0.96167, -0.00000, 0.67173, -0.00000, -1.06735, 23.81286, 2.34464, -4.03656)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock61" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.68275, 0.00000, 0.43490, 0.00000, 1.41915, -0.00000, -0.39441, 0.00000, 1.85553, 28.05325, 2.44937, 3.61744)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock62" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.31701, -0.00000, -0.89471, 0.00000, 0.87733, -0.00000, 1.19159, -0.00000, -0.23803, 16.99823, 2.32059, 2.77151)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock63" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.39825, -0.00000, -1.11305, 0.00000, 0.93384, -0.00000, 1.45999, -0.00000, -0.30361, 22.85088, 2.39347, 2.56089)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock64" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.91585, 0.00000, 0.43183, 0.00000, 1.25272, -0.00000, -0.61202, 0.00000, 1.35178, 19.41689, 2.52292, 5.51229)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock65" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.58397, -0.00000, -1.17166, 0.00000, 1.40446, -0.00000, 1.11439, 0.00000, 1.66536, 20.09674, 2.50354, 1.12442)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock66" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.99057, 0.00000, 1.43621, 0.00000, 1.44217, -0.00000, -1.66856, -0.00000, -0.85264, 27.68285, 2.50452, 12.15317)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock67" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.32935, -0.00000, -0.94371, 0.00000, 1.00995, -0.00000, 1.21054, -0.00000, -0.25675, 22.24534, 2.32618, 11.71594)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock68" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.90680, -0.00000, -0.94734, 0.00000, 1.15552, -0.00000, 1.21208, -0.00000, -0.70874, 27.66556, 2.39357, 16.24150)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock69" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.71279, 0.00000, 0.47094, 0.00000, 0.62949, -0.00000, -0.59228, -0.00000, -0.56676, 23.19959, 2.24095, 15.36924)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock70" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.85346, 0.00000, 1.68458, 0.00000, 1.50357, -0.00000, -2.02226, -0.00000, -0.71095, 25.75983, 2.57069, 9.36650)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock71" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.91381, 0.00000, 0.56649, 0.00000, 0.72996, -0.00000, -0.68185, 0.00000, 0.75921, 20.56100, 2.29644, 13.52591)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock72" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.78856, 0.00000, 1.45210, 0.00000, 1.25771, -0.00000, -1.75001, 0.00000, 0.65432, -46.35239, 0.49906, 26.50676)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock73" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.71778, 0.00000, 1.93981, 0.00000, 1.83225, -0.00000, -1.62674, -0.00000, -2.04838, -48.99203, 0.61511, 21.42975)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock74" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.98081, -0.00000, -1.14813, 0.00000, 1.02184, -0.00000, 0.99027, 0.00000, 1.13717, -45.22459, 0.36238, 21.63005)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock75" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.92738, 0.00000, 1.38498, 0.00000, 1.08962, -0.00000, -1.60348, 0.00000, 0.80101, -40.15089, 0.48161, 17.17951)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock76" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.05573, -0.00000, -1.50622, 0.00000, 1.34450, -0.00000, 1.52547, 0.00000, 1.04241, -43.54439, 0.48234, 28.14334)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock77" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.28896, 0.00000, 1.88698, 0.00000, 1.43796, -0.00000, -2.24971, -0.00000, -0.24237, -43.09039, 0.58973, 13.42754)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock78" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.76168, 0.00000, 0.81875, 0.00000, 1.16308, -0.00000, -0.79513, -0.00000, -1.81401, -35.11100, 0.50253, 18.62881)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock79" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.12752, -0.00000, -2.43791, 0.00000, 1.41883, -0.00000, 2.55693, 0.00000, 0.12159, -38.03123, 0.66563, 30.98632)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock80" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.64517, -0.00000, -1.70620, 0.00000, 1.48869, -0.00000, 1.69930, 0.00000, 0.64778, 35.54647, 2.47259, -36.90504)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock81" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-2.54058, 0.00000, 0.15206, 0.00000, 1.63692, -0.00000, -0.13740, -0.00000, -2.81158, 10.03820, 2.66152, -32.85240)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock82" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.57232, -0.00000, -1.86531, 0.00000, 1.25555, -0.00000, 1.87160, -0.00000, -0.57040, 23.95122, 2.50886, -43.35181)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock83" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.41035, 0.00000, 0.82257, 0.00000, 0.99593, -0.00000, -0.92416, 0.00000, 1.25531, 26.07227, 2.43840, -30.94298)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock84" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(2.49298, 0.00000, 0.30408, 0.00000, 1.58888, -0.00000, -0.30889, 0.00000, 2.45418, 31.23648, 2.65313, -38.88341)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock85" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.14289, 0.00000, 0.68800, 0.00000, 0.76579, -0.00000, -0.79180, -0.00000, -0.99306, 27.04622, 2.36150, -39.66616)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock86" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.64586, 0.00000, 0.81275, 0.00000, 1.36929, -0.00000, -0.74025, 0.00000, 1.80703, 28.50469, 2.46921, -44.73849)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock87" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-2.02266, 0.00000, 1.01772, 0.00000, 1.80626, -0.00000, -1.03925, -0.00000, -1.98075, 31.69069, 2.59125, -30.29352)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock88" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.19810, -0.00000, -1.73341, 0.00000, 1.11572, -0.00000, 1.60318, 0.00000, 0.21419, -37.81961, 0.42000, -25.60305)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock89" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.55043, -0.00000, -0.50456, 0.00000, 0.94080, -0.00000, 0.58836, 0.00000, 1.32961, -41.48323, 0.43116, -28.70353)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock90" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.62965, 0.00000, 2.34805, 0.00000, 1.49323, -0.00000, -2.30866, -0.00000, -0.64039, -29.96396, 0.62218, -28.10693)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock91" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.36726, -0.00000, -1.46343, 0.00000, 1.06137, -0.00000, 1.23578, 0.00000, 0.43492, -48.64902, 0.33519, -19.49548)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock92" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.68890, -0.00000, -2.72703, 0.00000, 1.53270, -0.00000, 2.39416, -0.00000, -0.78468, -32.39764, 0.64774, -14.29057)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock93" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.62250, 0.00000, 1.62849, 0.00000, 1.76335, -0.00000, -1.64981, -0.00000, -1.60153, -41.19827, 0.60163, -16.03538)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock94" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.94674, -0.00000, -1.77934, 0.00000, 1.42775, -0.00000, 1.68261, 0.00000, 1.00116, -41.56827, 0.50197, -25.33813)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock95" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-2.42523, -0.00000, -0.78589, 0.00000, 1.78975, -0.00000, 0.76343, -0.00000, -2.49659, -36.08192, 0.66106, -16.06018)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock96" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.28965, 0.00000, 0.35288, 0.00000, 0.75533, -0.00000, -0.36459, 0.00000, 1.24820, 38.81834, 2.34845, 28.39596)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock97" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.84008, 0.00000, 0.83133, 0.00000, 0.76125, -0.00000, -0.72134, 0.00000, 0.96817, 34.97496, 2.28789, 28.30459)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock98" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.01009, 0.00000, 0.97744, 0.00000, 0.75847, -0.00000, -0.88717, 0.00000, 1.11287, 43.99439, 2.34954, 24.31422)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock99" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.42114, 0.00000, 1.63481, 0.00000, 1.92842, -0.00000, -2.11311, 0.00000, 1.09946, 35.59926, 2.66210, 8.89673)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock100" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-2.48362, -0.00000, -0.45773, 0.00000, 2.04531, -0.00000, 0.55163, -0.00000, -2.06082, 39.73763, 2.66148, 24.91748)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock101" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.83718, 0.00000, 0.86618, 0.00000, 0.64946, -0.00000, -0.80916, 0.00000, 0.89617, 34.41096, 2.30272, 25.37454)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock102" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.33569, 0.00000, 0.96093, 0.00000, 0.64475, -0.00000, -0.94418, -0.00000, -0.34164, 28.83796, 2.26054, 37.59027)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock103" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.70233, 0.00000, 1.02504, 0.00000, 0.91666, -0.00000, -0.87448, 0.00000, 0.82325, 31.87966, 2.29162, 27.06764)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock104" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.08594, -0.00000, -1.42017, 0.00000, 1.18444, -0.00000, 1.20003, -0.00000, -1.28515, 2.65076, 0.42079, 40.87255)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock105" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.89929, -0.00000, -0.59218, 0.00000, 0.85874, -0.00000, 0.67689, -0.00000, -0.78675, -4.96044, 0.29265, 41.28250)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock106" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.91194, 0.00000, 0.47732, 0.00000, 0.61554, -0.00000, -0.53933, 0.00000, 0.80710, -6.36941, 0.27547, 35.70636)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock107" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.20276, -0.00000, -1.32686, 0.00000, 0.71786, -0.00000, 1.14034, 0.00000, 0.23593, 9.74187, 0.30114, 40.54555)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock108" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.15530, 0.00000, 0.68466, 0.00000, 1.03656, -0.00000, -0.63172, 0.00000, 1.25212, 5.23997, 0.34235, 43.32947)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock109" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-2.10982, -0.00000, -1.03937, 0.00000, 1.44341, -0.00000, 0.89180, -0.00000, -2.45893, -7.94120, 0.59554, 31.36239)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock110" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.03860, 0.00000, 2.24841, 0.00000, 1.53825, -0.00000, -2.52525, 0.00000, 0.03437, -0.45751, 0.65664, 44.18294)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock111" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(1.63656, -0.00000, -0.72764, 0.00000, 1.06134, -0.00000, 0.80852, 0.00000, 1.47285, 5.56509, 0.47460, 38.36186)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock112" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.50012, 0.00000, 1.42506, 0.00000, 1.13699, -0.00000, -1.79574, 0.00000, 0.39688, -24.61390, 0.48466, -45.93722)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock113" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.85262, 0.00000, 0.79156, 0.00000, 0.67369, -0.00000, -0.67532, -0.00000, -0.99937, -34.71738, 0.28279, -29.42021)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock114" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-2.07776, -0.00000, -0.96574, 0.00000, 1.62363, -0.00000, 1.28485, -0.00000, -1.56173, -32.25367, 0.63516, -43.81760)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock115" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.98960, -0.00000, -1.45081, 0.00000, 1.11739, -0.00000, 1.41177, 0.00000, 1.01697, -29.86121, 0.44826, -21.17183)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock116" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(2.36629, -0.00000, -0.50713, 0.00000, 1.73607, -0.00000, 0.48326, 0.00000, 2.48318, -22.42261, 0.62793, -41.81979)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock117" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-0.40238, -0.00000, -1.51945, 0.00000, 1.14989, -0.00000, 2.00342, -0.00000, -0.30517, -27.54995, 0.53129, -35.90324)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock118" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(-1.46103, -0.00000, -0.57677, 0.00000, 0.89147, -0.00000, 0.58241, -0.00000, -1.44687, -31.28239, 0.40894, -39.86931)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
-
-[node name="Rock119" type="MeshInstance3D" parent="Rocks"]
-transform = Transform3D(0.04175, 0.00000, 1.90919, 0.00000, 1.33228, -0.00000, -2.24803, 0.00000, 0.03545, -32.32463, 0.58459, -31.35778)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatRock")
+script = ExtResource("ext_6_ScatterField")
+kind = "rock"
+variants = 6
+material = SubResource("MatRock")
+placements = PackedFloat32Array(-12.758, 0.288, 8.460, 188.154, 1.866, 1.309, 1.533, -22.377, 0.269, 13.504, 67.443, 1.982, 1.222, 1.441, -27.269, 0.203, 6.175, 120.085, 1.404, 0.924, 1.383, -15.460, 0.416, 4.505, 41.675, 2.326, 1.890, 2.532, -23.462, 0.260, 7.279, 142.787, 1.640, 1.181, 1.491, -21.167, 0.296, 9.772, 257.540, 1.695, 1.345, 1.551, -17.519, 0.113, 12.298, 180.589, 0.823, 0.515, 0.823, -16.139, 0.365, 14.384, 34.291, 2.256, 1.659, 2.325, -19.255, 0.351, 3.961, 145.615, 2.031, 1.596, 1.914, -17.574, 0.356, 9.873, 286.803, 1.927, 1.617, 1.943, -12.502, 0.280, 11.616, 292.220, 1.931, 1.272, 1.760, -25.312, 0.227, 9.825, 174.530, 1.337, 1.032, 1.410, -18.312, 0.098, 7.380, 177.249, 0.749, 0.444, 0.758, -9.075, 0.306, 14.851, 216.154, 2.130, 1.392, 1.513, -15.253, 0.349, 27.695, 47.116, 1.868, 1.587, 1.576, -5.881, 0.173, 20.336, 88.195, 1.423, 0.788, 1.557, -9.270, 0.182, 19.815, 102.276, 1.432, 0.827, 1.099, -12.858, 0.383, 21.651, 307.359, 2.249, 1.743, 1.647, -12.794, 0.279, 16.482, 176.624, 2.188, 1.269, 1.697, -3.533, 0.355, 18.161, 108.692, 2.009, 1.614, 1.990, -9.113, 0.138, 17.455, 159.650, 0.859, 0.626, 0.763, -1.929, 0.258, 22.097, 227.871, 1.826, 1.174, 1.984, -9.633, 0.242, 22.388, 275.388, 1.754, 1.099, 2.004, -6.981, 0.089, 18.449, 182.233, 0.729, 0.403, 0.770, -7.643, 0.293, 26.625, 266.993, 2.376, 1.330, 2.115, -28.327, 0.174, 2.123, 73.679, 1.376, 0.793, 1.343, -23.481, 0.237, 1.461, 238.781, 1.468, 1.079, 1.588, -17.979, 0.156, 0.402, 271.337, 1.193, 0.707, 0.924, -26.282, 0.254, -0.546, 199.722, 2.075, 1.155, 1.518, -26.958, 0.127, 3.398, 356.408, 0.775, 0.575, 0.676, -19.878, 0.135, 6.630, 126.737, 0.854, 0.612, 0.934, -21.243, 0.127, 0.110, 219.618, 0.914, 0.575, 0.783, -22.046, 0.139, 3.951, 183.505, 0.921, 0.632, 0.840, -27.889, 0.121, -6.547, 331.126, 0.810, 0.552, 0.855, -23.874, 0.190, -16.297, 321.086, 1.174, 0.861, 1.341, -21.339, 0.106, -12.341, 22.866, 0.745, 0.481, 0.627, 0.150, 0.176, 23.092, 204.639, 1.007, 0.801, 1.204, -5.157, 0.170, 22.344, 139.959, 1.112, 0.772, 1.295, 1.648, 0.289, 28.615, 208.040, 1.887, 1.313, 1.437, 0.858, 0.136, 15.385, 137.820, 0.741, 0.620, 0.644, -2.494, 0.135, 25.930, 240.991, 1.084, 0.612, 0.838, 3.783, 0.263, 15.861, 333.423, 1.520, 1.194, 1.752, 0.783, 0.267, 20.223, 356.869, 2.046, 1.214, 1.835, -4.015, 0.120, 27.282, 332.377, 0.826, 0.545, 0.881, -22.182, 0.113, 23.084, 321.019, 0.836, 0.516, 0.696, -28.348, 0.130, 18.302, 80.702, 0.789, 0.592, 0.800, -24.917, 0.215, 12.096, 66.169, 1.234, 0.978, 1.457, -33.199, 0.130, 16.380, 322.718, 1.047, 0.592, 0.739, -30.113, 0.275, 20.656, 91.576, 2.147, 1.252, 2.494, -29.767, 0.242, 15.022, 215.664, 1.561, 1.099, 1.506, -27.807, 0.184, 12.548, 130.615, 1.463, 0.834, 1.367, -20.035, 0.217, 17.193, 20.843, 1.690, 0.988, 1.557, -0.698, 0.112, -19.439, 252.497, 0.655, 0.508, 0.508, 6.565, 0.095, 7.281, 24.876, 0.779, 0.432, 0.719, 15.021, 2.236, -18.834, 274.676, 1.910, 1.073, 1.364, 21.689, 2.244, -21.513, 63.430, 1.734, 1.107, 1.421, 12.366, 2.258, -26.023, 112.032, 1.746, 1.173, 1.445, 11.890, 2.364, -20.111, 101.559, 2.026, 1.654, 2.036, 18.079, 2.206, -15.722, 41.511, 1.255, 0.935, 1.374, 14.148, 2.182, -22.078, 115.500, 1.224, 0.826, 1.330, 23.813, 2.212, -4.037, 210.583, 1.326, 0.962, 1.238, 28.053, 2.213, 3.617, 325.319, 1.728, 0.970, 1.906, 16.998, 2.207, 2.772, 193.818, 1.233, 0.940, 0.926, 22.851, 2.254, 2.561, 80.491, 1.513, 1.154, 1.154, 19.417, 2.250, 5.512, 87.436, 2.011, 1.136, 1.419, 20.097, 2.350, 1.124, 210.214, 1.937, 1.590, 2.036, 27.683, 2.278, 12.153, 231.856, 1.940, 1.262, 1.670, 22.245, 2.210, 11.716, 306.046, 1.255, 0.956, 0.978, 27.666, 2.248, 16.242, 256.025, 1.514, 1.127, 1.183, 23.200, 2.136, 15.369, 155.092, 0.927, 0.618, 0.737, 25.760, 2.311, 9.366, 162.006, 2.195, 1.414, 1.828, 20.561, 2.146, 13.526, 108.266, 1.140, 0.662, 0.947, -46.352, 0.255, 26.507, 126.284, 1.919, 1.161, 1.593, -48.992, 0.345, 21.430, 269.362, 2.366, 1.570, 2.821, -45.225, 0.249, 21.630, 219.772, 1.394, 1.132, 1.616, -40.151, 0.244, 17.180, 45.889, 1.852, 1.111, 1.600, -43.544, 0.328, 28.143, 209.682, 1.855, 1.491, 1.832, -43.090, 0.315, 13.428, 100.760, 2.268, 1.431, 1.902, -35.111, 0.289, 18.629, 62.112, 1.933, 1.314, 1.990, -38.031, 0.438, 30.986, 5.049, 2.560, 1.990, 2.441, 35.546, 2.317, -36.905, 322.822, 1.818, 1.440, 1.825, 10.038, 2.390, -32.852, 112.042, 2.544, 1.774, 2.816, 23.951, 2.328, -43.352, 109.824, 1.957, 1.489, 1.951, 26.072, 2.214, -30.943, 48.775, 1.686, 0.974, 1.501, 31.236, 2.307, -38.883, 99.006, 2.512, 1.396, 2.473, 27.046, 2.205, -39.666, 0.938, 1.390, 0.933, 1.208, 28.505, 2.226, -44.738, 250.502, 1.805, 1.029, 1.981, 31.691, 2.339, -30.294, 293.161, 2.274, 1.540, 2.227, -37.820, 0.278, -25.603, 168.829, 1.615, 1.261, 1.747, -41.483, 0.304, -28.704, 20.792, 1.658, 1.381, 1.422, -29.964, 0.336, -28.107, 88.803, 2.393, 1.526, 2.434, -48.649, 0.224, -19.495, 327.930, 1.289, 1.017, 1.527, -32.398, 0.417, -14.291, 78.264, 2.491, 1.897, 2.838, -41.198, 0.337, -16.035, 254.465, 2.314, 1.532, 2.284, -41.568, 0.340, -25.338, 227.412, 1.931, 1.544, 2.042, -36.082, 0.400, -16.060, 184.704, 2.543, 1.817, 2.617, 38.818, 2.166, 28.396, 16.318, 1.340, 0.755, 1.297, 34.975, 2.142, 28.305, 164.990, 1.107, 0.647, 1.276, 43.994, 2.173, 24.314, 17.015, 1.344, 0.786, 1.481, 35.599, 2.334, 8.897, 248.726, 2.547, 1.520, 1.970, 39.738, 2.398, 24.917, 304.716, 2.544, 1.807, 2.111, 34.411, 2.150, 25.375, 9.369, 1.164, 0.683, 1.246, 28.838, 2.141, 37.590, 112.095, 1.002, 0.643, 1.020, 31.880, 2.146, 27.068, 320.736, 1.122, 0.665, 1.315, 2.651, 0.263, 40.873, 218.206, 1.618, 1.197, 1.915, -4.960, 0.181, 41.283, 255.522, 1.126, 0.823, 0.985, -6.369, 0.134, 35.706, 37.175, 1.059, 0.610, 0.938, 9.742, 0.200, 40.546, 83.751, 1.158, 0.907, 1.348, 5.240, 0.166, 43.329, 284.663, 1.317, 0.756, 1.427, -7.941, 0.362, 31.362, 96.187, 2.291, 1.647, 2.670, -0.458, 0.347, 44.183, 70.891, 2.526, 1.577, 2.249, 5.565, 0.333, 38.362, 37.721, 1.825, 1.512, 1.643, -24.614, 0.251, -45.937, 71.933, 1.864, 1.141, 1.479, -34.717, 0.160, -29.420, 83.262, 1.088, 0.727, 1.275, -32.254, 0.390, -43.818, 137.545, 2.443, 1.775, 1.836, -29.861, 0.305, -21.172, 117.733, 1.724, 1.386, 1.772, -22.423, 0.447, -41.820, 202.595, 2.415, 2.030, 2.534, -27.550, 0.344, -35.903, 15.270, 2.043, 1.564, 1.550, -31.282, 0.248, -39.869, 20.153, 1.573, 1.129, 1.558, -32.325, 0.309, -31.358, 51.047, 2.248, 1.403, 1.910)
 
 [node name="Trees" type="Node3D" parent="."]
-
-
-[node name="Trunk0" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 3.30000, -0.00000, -0.00000, 0.00000, 0.55000, -3.00000, 1.65000, 17.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA0" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.96000, 0.00000, 0.00000, 0.00000, 3.30000, -0.00000, -0.00000, 0.00000, 3.96000, -3.00000, 4.29000, 17.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB0" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.64000, 0.00000, 0.00000, 0.00000, 2.20000, -0.00000, -0.00000, 0.00000, 2.64000, -2.01000, 3.41000, 17.77000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk1" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.45000, 0.00000, 0.00000, 0.00000, 2.70000, -0.00000, -0.00000, 0.00000, 0.45000, 2.40000, 1.35000, 20.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA1" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.24000, 0.00000, 0.00000, 0.00000, 2.70000, -0.00000, -0.00000, 0.00000, 3.24000, 2.40000, 3.51000, 20.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB1" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.16000, 0.00000, 0.00000, 0.00000, 1.80000, -0.00000, -0.00000, 0.00000, 2.16000, 3.21000, 2.79000, 20.63000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk2" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.52500, 0.00000, 0.00000, 0.00000, 3.15000, -0.00000, -0.00000, 0.00000, 0.52500, -20.00000, 1.57500, -19.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA2" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.78000, 0.00000, 0.00000, 0.00000, 3.15000, -0.00000, -0.00000, 0.00000, 3.78000, -20.00000, 4.09500, -19.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB2" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.52000, 0.00000, 0.00000, 0.00000, 2.10000, -0.00000, -0.00000, 0.00000, 2.52000, -19.05500, 3.25500, -18.26500)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk3" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.45000, 0.00000, 0.00000, 0.00000, 2.70000, -0.00000, -0.00000, 0.00000, 0.45000, -14.40000, 1.35000, -20.70000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA3" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.24000, 0.00000, 0.00000, 0.00000, 2.70000, -0.00000, -0.00000, 0.00000, 3.24000, -14.40000, 3.51000, -20.70000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB3" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.16000, 0.00000, 0.00000, 0.00000, 1.80000, -0.00000, -0.00000, 0.00000, 2.16000, -13.59000, 2.79000, -20.07000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk4" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.47500, 0.00000, 0.00000, 0.00000, 2.85000, -0.00000, -0.00000, 0.00000, 0.47500, 12.00000, 1.42500, 21.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA4" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.42000, 0.00000, 0.00000, 0.00000, 2.85000, -0.00000, -0.00000, 0.00000, 3.42000, 12.00000, 3.70500, 21.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB4" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.28000, 0.00000, 0.00000, 0.00000, 1.90000, -0.00000, -0.00000, 0.00000, 2.28000, 12.85500, 2.94500, 21.66500)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk5" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.47500, 0.00000, 0.00000, 0.00000, 2.85000, -0.00000, -0.00000, 0.00000, 0.47500, -23.00000, 1.42500, 6.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA5" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.42000, 0.00000, 0.00000, 0.00000, 2.85000, -0.00000, -0.00000, 0.00000, 3.42000, -23.00000, 3.70500, 6.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB5" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.28000, 0.00000, 0.00000, 0.00000, 1.90000, -0.00000, -0.00000, 0.00000, 2.28000, -22.14500, 2.94500, 6.66500)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk6" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 3.30000, -0.00000, -0.00000, 0.00000, 0.55000, 23.00000, 3.65000, -19.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA6" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.96000, 0.00000, 0.00000, 0.00000, 3.30000, -0.00000, -0.00000, 0.00000, 3.96000, 23.00000, 6.29000, -19.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB6" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.64000, 0.00000, 0.00000, 0.00000, 2.20000, -0.00000, -0.00000, 0.00000, 2.64000, 23.99000, 5.41000, -18.23000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk7" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50000, 0.00000, 0.00000, 0.00000, 3.00000, -0.00000, -0.00000, 0.00000, 0.50000, 20.00000, 3.50000, 16.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA7" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.60000, 0.00000, 0.00000, 0.00000, 3.00000, -0.00000, -0.00000, 0.00000, 3.60000, 20.00000, 5.90000, 16.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB7" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.40000, 0.00000, 0.00000, 0.00000, 2.00000, -0.00000, -0.00000, 0.00000, 2.40000, 20.90000, 5.10000, 16.70000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk8" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50000, 0.00000, 0.00000, 0.00000, 3.00000, -0.00000, -0.00000, 0.00000, 0.50000, -28.00000, 1.50000, -12.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA8" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.60000, 0.00000, 0.00000, 0.00000, 3.00000, -0.00000, -0.00000, 0.00000, 3.60000, -28.00000, 3.90000, -12.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB8" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.40000, 0.00000, 0.00000, 0.00000, 2.00000, -0.00000, -0.00000, 0.00000, 2.40000, -27.10000, 3.10000, -11.30000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk9" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.47500, 0.00000, 0.00000, 0.00000, 2.85000, -0.00000, -0.00000, 0.00000, 0.47500, 16.00000, 3.42500, 8.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA9" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.42000, 0.00000, 0.00000, 0.00000, 2.85000, -0.00000, -0.00000, 0.00000, 3.42000, 16.00000, 5.70500, 8.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB9" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.28000, 0.00000, 0.00000, 0.00000, 1.90000, -0.00000, -0.00000, 0.00000, 2.28000, 16.85500, 4.94500, 8.66500)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk10" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50000, 0.00000, 0.00000, 0.00000, 3.00000, -0.00000, -0.00000, 0.00000, 0.50000, -9.00000, 1.50000, 23.00000)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA10" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.60000, 0.00000, 0.00000, 0.00000, 3.00000, -0.00000, -0.00000, 0.00000, 3.60000, -9.00000, 3.90000, 23.00000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB10" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.40000, 0.00000, 0.00000, 0.00000, 2.00000, -0.00000, -0.00000, 0.00000, 2.40000, -8.10000, 3.10000, 23.70000)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk11" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.57727, 0.00000, 0.00000, 0.00000, 3.46362, -0.00000, -0.00000, 0.00000, 0.57727, -33.32023, 1.73181, -5.06369)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA11" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.15635, 0.00000, 0.00000, 0.00000, 3.46362, -0.00000, -0.00000, 0.00000, 4.15635, -33.32023, 4.50271, -5.06369)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB11" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.77090, 0.00000, 0.00000, 0.00000, 2.30908, -0.00000, -0.00000, 0.00000, 2.77090, -32.28114, 3.57908, -4.25551)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk12" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.53813, 0.00000, 0.00000, 0.00000, 3.22879, -0.00000, -0.00000, 0.00000, 0.53813, -60.36657, 1.61439, -18.48221)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA12" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.87455, 0.00000, 0.00000, 0.00000, 3.22879, -0.00000, -0.00000, 0.00000, 3.87455, -60.36657, 4.19742, -18.48221)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB12" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.58303, 0.00000, 0.00000, 0.00000, 2.15253, -0.00000, -0.00000, 0.00000, 2.58303, -59.39793, 3.33641, -17.72882)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk13" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.44227, 0.00000, 0.00000, 0.00000, 2.65365, -0.00000, -0.00000, 0.00000, 0.44227, -34.89555, 1.32682, 1.05356)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA13" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.18438, 0.00000, 0.00000, 0.00000, 2.65365, -0.00000, -0.00000, 0.00000, 3.18438, -34.89555, 3.44974, 1.05356)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB13" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.12292, 0.00000, 0.00000, 0.00000, 1.76910, -0.00000, -0.00000, 0.00000, 2.12292, -34.09945, 2.74210, 1.67275)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk14" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55697, 0.00000, 0.00000, 0.00000, 3.34183, -0.00000, -0.00000, 0.00000, 0.55697, -41.07716, 1.67091, -6.93573)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA14" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.01019, 0.00000, 0.00000, 0.00000, 3.34183, -0.00000, -0.00000, 0.00000, 4.01019, -41.07716, 4.34438, -6.93573)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB14" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.67346, 0.00000, 0.00000, 0.00000, 2.22788, -0.00000, -0.00000, 0.00000, 2.67346, -40.07461, 3.45322, -6.15597)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk15" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.47189, 0.00000, 0.00000, 0.00000, 2.83135, -0.00000, -0.00000, 0.00000, 0.47189, -45.68980, 1.41568, 6.90482)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA15" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.39762, 0.00000, 0.00000, 0.00000, 2.83135, -0.00000, -0.00000, 0.00000, 3.39762, -45.68980, 3.68076, 6.90482)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB15" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.26508, 0.00000, 0.00000, 0.00000, 1.88757, -0.00000, -0.00000, 0.00000, 2.26508, -44.84039, 2.92573, 7.56547)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk16" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55807, 0.00000, 0.00000, 0.00000, 3.34843, -0.00000, -0.00000, 0.00000, 0.55807, -50.76466, 1.67421, -3.97522)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA16" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.01812, 0.00000, 0.00000, 0.00000, 3.34843, -0.00000, -0.00000, 0.00000, 4.01812, -50.76466, 4.35296, -3.97522)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB16" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.67874, 0.00000, 0.00000, 0.00000, 2.23229, -0.00000, -0.00000, 0.00000, 2.67874, -49.76013, 3.46004, -3.19391)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk17" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.46985, 0.00000, 0.00000, 0.00000, 2.81911, -0.00000, -0.00000, 0.00000, 0.46985, -44.41779, 1.40956, -0.73313)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA17" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.38294, 0.00000, 0.00000, 0.00000, 2.81911, -0.00000, -0.00000, 0.00000, 3.38294, -44.41779, 3.66485, -0.73313)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB17" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.25529, 0.00000, 0.00000, 0.00000, 1.87941, -0.00000, -0.00000, 0.00000, 2.25529, -43.57205, 2.91308, -0.07533)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk18" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.53373, 0.00000, 0.00000, 0.00000, 3.20239, -0.00000, -0.00000, 0.00000, 0.53373, -25.24943, 1.60120, -26.44897)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA18" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.84287, 0.00000, 0.00000, 0.00000, 3.20239, -0.00000, -0.00000, 0.00000, 3.84287, -25.24943, 4.16311, -26.44897)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB18" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.56191, 0.00000, 0.00000, 0.00000, 2.13493, -0.00000, -0.00000, 0.00000, 2.56191, -24.28871, 3.30914, -25.70174)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk19" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55108, 0.00000, 0.00000, 0.00000, 3.30647, -0.00000, -0.00000, 0.00000, 0.55108, -21.88907, 1.65323, -30.79500)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA19" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.96776, 0.00000, 0.00000, 0.00000, 3.30647, -0.00000, -0.00000, 0.00000, 3.96776, -21.88907, 4.29841, -30.79500)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB19" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.64517, 0.00000, 0.00000, 0.00000, 2.20431, -0.00000, -0.00000, 0.00000, 2.64517, -20.89713, 3.41668, -30.02349)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk20" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.46754, 0.00000, 0.00000, 0.00000, 2.80523, -0.00000, -0.00000, 0.00000, 0.46754, -40.33739, 1.40262, -50.62292)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA20" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.36628, 0.00000, 0.00000, 0.00000, 2.80523, -0.00000, -0.00000, 0.00000, 3.36628, -40.33739, 3.64680, -50.62292)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB20" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.24418, 0.00000, 0.00000, 0.00000, 1.87015, -0.00000, -0.00000, 0.00000, 2.24418, -39.49582, 2.89874, -49.96837)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk21" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.45650, 0.00000, 0.00000, 0.00000, 2.73898, -0.00000, -0.00000, 0.00000, 0.45650, -19.41953, 1.36949, -24.95859)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA21" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.28678, 0.00000, 0.00000, 0.00000, 2.73898, -0.00000, -0.00000, 0.00000, 3.28678, -19.41953, 3.56068, -24.95859)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB21" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.19119, 0.00000, 0.00000, 0.00000, 1.82599, -0.00000, -0.00000, 0.00000, 2.19119, -18.59783, 2.83028, -24.31949)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk22" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50996, 0.00000, 0.00000, 0.00000, 3.05973, -0.00000, -0.00000, 0.00000, 0.50996, -35.37478, 1.52987, -49.80347)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA22" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.67168, 0.00000, 0.00000, 0.00000, 3.05973, -0.00000, -0.00000, 0.00000, 3.67168, -35.37478, 3.97765, -49.80347)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB22" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.44779, 0.00000, 0.00000, 0.00000, 2.03982, -0.00000, -0.00000, 0.00000, 2.44779, -34.45686, 3.16172, -49.08953)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk23" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.52192, 0.00000, 0.00000, 0.00000, 3.13154, -0.00000, -0.00000, 0.00000, 0.52192, -22.78910, 1.56577, -36.16833)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA23" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.75785, 0.00000, 0.00000, 0.00000, 3.13154, -0.00000, -0.00000, 0.00000, 3.75785, -22.78910, 4.07101, -36.16833)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB23" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.50524, 0.00000, 0.00000, 0.00000, 2.08770, -0.00000, -0.00000, 0.00000, 2.50524, -21.84963, 3.23593, -35.43764)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk24" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.60794, 0.00000, 0.00000, 0.00000, 3.64761, -0.00000, -0.00000, 0.00000, 0.60794, 19.18972, 3.82381, -29.07236)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA24" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.37713, 0.00000, 0.00000, 0.00000, 3.64761, -0.00000, -0.00000, 0.00000, 4.37713, 19.18972, 6.74190, -29.07236)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB24" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.91809, 0.00000, 0.00000, 0.00000, 2.43174, -0.00000, -0.00000, 0.00000, 2.91809, 20.28401, 5.76920, -28.22125)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk25" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.44873, 0.00000, 0.00000, 0.00000, 2.69237, -0.00000, -0.00000, 0.00000, 0.44873, 24.79057, 3.34618, -36.58762)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA25" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.23084, 0.00000, 0.00000, 0.00000, 2.69237, -0.00000, -0.00000, 0.00000, 3.23084, 24.79057, 5.50008, -36.58762)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB25" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.15390, 0.00000, 0.00000, 0.00000, 1.79491, -0.00000, -0.00000, 0.00000, 2.15390, 25.59828, 4.78212, -35.95940)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk26" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.44540, 0.00000, 0.00000, 0.00000, 2.67239, -0.00000, -0.00000, 0.00000, 0.44540, 18.03979, 3.33619, -42.31406)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA26" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.20687, 0.00000, 0.00000, 0.00000, 2.67239, -0.00000, -0.00000, 0.00000, 3.20687, 18.03979, 5.47411, -42.31406)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB26" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.13791, 0.00000, 0.00000, 0.00000, 1.78159, -0.00000, -0.00000, 0.00000, 2.13791, 18.84150, 4.76147, -41.69050)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk27" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.47553, 0.00000, 0.00000, 0.00000, 2.85317, -0.00000, -0.00000, 0.00000, 0.47553, 8.50091, 3.42658, -38.41729)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA27" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.42380, 0.00000, 0.00000, 0.00000, 2.85317, -0.00000, -0.00000, 0.00000, 3.42380, 8.50091, 5.70912, -38.41729)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB27" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.28253, 0.00000, 0.00000, 0.00000, 1.90211, -0.00000, -0.00000, 0.00000, 2.28253, 9.35686, 4.94827, -37.75155)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk28" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.53725, 0.00000, 0.00000, 0.00000, 3.22350, -0.00000, -0.00000, 0.00000, 0.53725, 11.68666, 3.61175, -44.47403)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA28" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.86820, 0.00000, 0.00000, 0.00000, 3.22350, -0.00000, -0.00000, 0.00000, 3.86820, 11.68666, 6.19055, -44.47403)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB28" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.57880, 0.00000, 0.00000, 0.00000, 2.14900, -0.00000, -0.00000, 0.00000, 2.57880, 12.65371, 5.33095, -43.72188)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk29" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.43536, 0.00000, 0.00000, 0.00000, 2.61217, -0.00000, -0.00000, 0.00000, 0.43536, 13.14013, 3.30608, -36.45639)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA29" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.13460, 0.00000, 0.00000, 0.00000, 2.61217, -0.00000, -0.00000, 0.00000, 3.13460, 13.14013, 5.39582, -36.45639)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB29" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.08974, 0.00000, 0.00000, 0.00000, 1.74145, -0.00000, -0.00000, 0.00000, 2.08974, 13.92378, 4.69924, -35.84688)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk30" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.61189, 0.00000, 0.00000, 0.00000, 3.67135, -0.00000, -0.00000, 0.00000, 0.61189, 44.86985, 3.83568, -8.93834)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA30" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.40562, 0.00000, 0.00000, 0.00000, 3.67135, -0.00000, -0.00000, 0.00000, 4.40562, 44.86985, 6.77276, -8.93834)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB30" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.93708, 0.00000, 0.00000, 0.00000, 2.44757, -0.00000, -0.00000, 0.00000, 2.93708, 45.97125, 5.79373, -8.08169)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk31" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.46342, 0.00000, 0.00000, 0.00000, 2.78051, -0.00000, -0.00000, 0.00000, 0.46342, 42.96570, 3.39026, -3.08100)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA31" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.33661, 0.00000, 0.00000, 0.00000, 2.78051, -0.00000, -0.00000, 0.00000, 3.33661, 42.96570, 5.61466, -3.08100)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB31" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.22441, 0.00000, 0.00000, 0.00000, 1.85367, -0.00000, -0.00000, 0.00000, 2.22441, 43.79985, 4.87319, -2.43221)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk32" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50509, 0.00000, 0.00000, 0.00000, 3.03056, -0.00000, -0.00000, 0.00000, 0.50509, 50.82151, 3.51528, -10.73076)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA32" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.63668, 0.00000, 0.00000, 0.00000, 3.03056, -0.00000, -0.00000, 0.00000, 3.63668, 50.82151, 5.93973, -10.73076)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB32" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.42445, 0.00000, 0.00000, 0.00000, 2.02038, -0.00000, -0.00000, 0.00000, 2.42445, 51.73068, 5.13158, -10.02363)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk33" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.52581, 0.00000, 0.00000, 0.00000, 3.15485, -0.00000, -0.00000, 0.00000, 0.52581, 36.20618, 3.57742, 1.35445)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA33" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.78582, 0.00000, 0.00000, 0.00000, 3.15485, -0.00000, -0.00000, 0.00000, 3.78582, 36.20618, 6.10130, 1.35445)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB33" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.52388, 0.00000, 0.00000, 0.00000, 2.10323, -0.00000, -0.00000, 0.00000, 2.52388, 37.15264, 5.26001, 2.09058)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk34" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.42804, 0.00000, 0.00000, 0.00000, 2.56824, -0.00000, -0.00000, 0.00000, 0.42804, 40.27089, 3.28412, -16.22935)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA34" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.08189, 0.00000, 0.00000, 0.00000, 2.56824, -0.00000, -0.00000, 0.00000, 3.08189, 40.27089, 5.33872, -16.22935)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB34" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.05460, 0.00000, 0.00000, 0.00000, 1.71216, -0.00000, -0.00000, 0.00000, 2.05460, 41.04136, 4.65385, -15.63009)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk35" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.42805, 0.00000, 0.00000, 0.00000, 2.56830, -0.00000, -0.00000, 0.00000, 0.42805, 32.79354, 3.28415, -7.52250)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA35" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.08196, 0.00000, 0.00000, 0.00000, 2.56830, -0.00000, -0.00000, 0.00000, 3.08196, 32.79354, 5.33879, -7.52250)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB35" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.05464, 0.00000, 0.00000, 0.00000, 1.71220, -0.00000, -0.00000, 0.00000, 2.05464, 33.56403, 4.65391, -6.92323)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk36" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.57809, 0.00000, 0.00000, 0.00000, 3.46853, -0.00000, -0.00000, 0.00000, 0.57809, 51.79841, 3.73427, -21.99146)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA36" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.16224, 0.00000, 0.00000, 0.00000, 3.46853, -0.00000, -0.00000, 0.00000, 4.16224, 51.79841, 6.50909, -21.99146)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB36" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.77483, 0.00000, 0.00000, 0.00000, 2.31235, -0.00000, -0.00000, 0.00000, 2.77483, 52.83897, 5.58415, -21.18214)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk37" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.45456, 0.00000, 0.00000, 0.00000, 2.72738, -0.00000, -0.00000, 0.00000, 0.45456, 31.81302, 3.36369, 20.35221)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA37" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.27286, 0.00000, 0.00000, 0.00000, 2.72738, -0.00000, -0.00000, 0.00000, 3.27286, 31.81302, 5.54560, 20.35221)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB37" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.18191, 0.00000, 0.00000, 0.00000, 1.81826, -0.00000, -0.00000, 0.00000, 2.18191, 32.63124, 4.81830, 20.98860)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk38" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.43952, 0.00000, 0.00000, 0.00000, 2.63713, -0.00000, -0.00000, 0.00000, 0.43952, 36.14783, 3.31856, 31.47799)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA38" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.16455, 0.00000, 0.00000, 0.00000, 2.63713, -0.00000, -0.00000, 0.00000, 3.16455, 36.14783, 5.42827, 31.47799)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB38" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.10970, 0.00000, 0.00000, 0.00000, 1.75809, -0.00000, -0.00000, 0.00000, 2.10970, 36.93897, 4.72503, 32.09331)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk39" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55751, 0.00000, 0.00000, 0.00000, 3.34507, -0.00000, -0.00000, 0.00000, 0.55751, 44.21960, 3.67254, 30.27095)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA39" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.01409, 0.00000, 0.00000, 0.00000, 3.34507, -0.00000, -0.00000, 0.00000, 4.01409, 44.21960, 6.34859, 30.27095)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB39" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.67606, 0.00000, 0.00000, 0.00000, 2.23005, -0.00000, -0.00000, 0.00000, 2.67606, 45.22312, 5.45657, 31.05146)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk40" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.46199, 0.00000, 0.00000, 0.00000, 2.77192, -0.00000, -0.00000, 0.00000, 0.46199, 37.47263, 3.38596, 19.27772)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA40" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.32630, 0.00000, 0.00000, 0.00000, 2.77192, -0.00000, -0.00000, 0.00000, 3.32630, 37.47263, 5.60349, 19.27772)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB40" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.21754, 0.00000, 0.00000, 0.00000, 1.84795, -0.00000, -0.00000, 0.00000, 2.21754, 38.30420, 4.86432, 19.92450)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk41" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.43468, 0.00000, 0.00000, 0.00000, 2.60810, -0.00000, -0.00000, 0.00000, 0.43468, 28.59334, 3.30405, 28.97134)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA41" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.12972, 0.00000, 0.00000, 0.00000, 2.60810, -0.00000, -0.00000, 0.00000, 3.12972, 28.59334, 5.39053, 28.97134)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB41" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.08648, 0.00000, 0.00000, 0.00000, 1.73873, -0.00000, -0.00000, 0.00000, 2.08648, 29.37577, 4.69503, 29.57990)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk42" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55949, 0.00000, 0.00000, 0.00000, 3.35693, -0.00000, -0.00000, 0.00000, 0.55949, 23.45880, 3.67847, 24.24623)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA42" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.02832, 0.00000, 0.00000, 0.00000, 3.35693, -0.00000, -0.00000, 0.00000, 4.02832, 23.45880, 6.36401, 24.24623)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB42" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.68555, 0.00000, 0.00000, 0.00000, 2.23795, -0.00000, -0.00000, 0.00000, 2.68555, 24.46588, 5.46883, 25.02951)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk43" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.53282, 0.00000, 0.00000, 0.00000, 3.19693, -0.00000, -0.00000, 0.00000, 0.53282, -16.87930, 1.59847, 34.93142)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA43" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.83632, 0.00000, 0.00000, 0.00000, 3.19693, -0.00000, -0.00000, 0.00000, 3.83632, -16.87930, 4.15601, 34.93142)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB43" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.55754, 0.00000, 0.00000, 0.00000, 2.13129, -0.00000, -0.00000, 0.00000, 2.55754, -15.92023, 3.30349, 35.67737)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk44" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55854, 0.00000, 0.00000, 0.00000, 3.35123, -0.00000, -0.00000, 0.00000, 0.55854, -10.21291, 1.67561, 39.11480)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA44" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.02148, 0.00000, 0.00000, 0.00000, 3.35123, -0.00000, -0.00000, 0.00000, 4.02148, -10.21291, 4.35660, 39.11480)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB44" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.68098, 0.00000, 0.00000, 0.00000, 2.23415, -0.00000, -0.00000, 0.00000, 2.68098, -9.20754, 3.46294, 39.89676)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk45" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.52660, 0.00000, 0.00000, 0.00000, 3.15960, -0.00000, -0.00000, 0.00000, 0.52660, -16.65003, 1.57980, 42.46623)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA45" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.79152, 0.00000, 0.00000, 0.00000, 3.15960, -0.00000, -0.00000, 0.00000, 3.79152, -16.65003, 4.10748, 42.46623)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB45" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.52768, 0.00000, 0.00000, 0.00000, 2.10640, -0.00000, -0.00000, 0.00000, 2.52768, -15.70215, 3.26492, 43.20347)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk46" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.42706, 0.00000, 0.00000, 0.00000, 2.56239, -0.00000, -0.00000, 0.00000, 0.42706, -20.63422, 1.28119, 29.63887)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA46" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.07487, 0.00000, 0.00000, 0.00000, 2.56239, -0.00000, -0.00000, 0.00000, 3.07487, -20.63422, 3.33111, 29.63887)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB46" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.04991, 0.00000, 0.00000, 0.00000, 1.70826, -0.00000, -0.00000, 0.00000, 2.04991, -19.86550, 2.64780, 30.23676)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk47" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.45075, 0.00000, 0.00000, 0.00000, 2.70449, -0.00000, -0.00000, 0.00000, 0.45075, -2.86140, 1.35224, 31.86845)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA47" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.24538, 0.00000, 0.00000, 0.00000, 2.70449, -0.00000, -0.00000, 0.00000, 3.24538, -2.86140, 3.51583, 31.86845)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB47" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.16359, 0.00000, 0.00000, 0.00000, 1.80299, -0.00000, -0.00000, 0.00000, 2.16359, -2.05005, 2.79464, 32.49949)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk48" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.46240, 0.00000, 0.00000, 0.00000, 2.77441, -0.00000, -0.00000, 0.00000, 0.46240, -37.34563, 1.38720, 14.71440)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA48" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.32929, 0.00000, 0.00000, 0.00000, 2.77441, -0.00000, -0.00000, 0.00000, 3.32929, -37.34563, 3.60673, 14.71440)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB48" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.21952, 0.00000, 0.00000, 0.00000, 1.84960, -0.00000, -0.00000, 0.00000, 2.21952, -36.51331, 2.86689, 15.36177)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk49" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50722, 0.00000, 0.00000, 0.00000, 3.04335, -0.00000, -0.00000, 0.00000, 0.50722, -47.93719, 1.52167, 46.51280)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA49" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.65202, 0.00000, 0.00000, 0.00000, 3.04335, -0.00000, -0.00000, 0.00000, 3.65202, -47.93719, 3.95635, 46.51280)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB49" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.43468, 0.00000, 0.00000, 0.00000, 2.02890, -0.00000, -0.00000, 0.00000, 2.43468, -47.02418, 3.14479, 47.22291)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk50" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.57974, 0.00000, 0.00000, 0.00000, 3.47842, -0.00000, -0.00000, 0.00000, 0.57974, -41.32282, 1.73921, 22.06166)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA50" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.17411, 0.00000, 0.00000, 0.00000, 3.47842, -0.00000, -0.00000, 0.00000, 4.17411, -41.32282, 4.52195, 22.06166)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB50" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.78274, 0.00000, 0.00000, 0.00000, 2.31895, -0.00000, -0.00000, 0.00000, 2.78274, -40.27930, 3.59437, 22.87329)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk51" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.56596, 0.00000, 0.00000, 0.00000, 3.39576, -0.00000, -0.00000, 0.00000, 0.56596, -54.78691, 1.69788, 25.31106)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA51" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.07491, 0.00000, 0.00000, 0.00000, 3.39576, -0.00000, -0.00000, 0.00000, 4.07491, -54.78691, 4.41449, 25.31106)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB51" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.71661, 0.00000, 0.00000, 0.00000, 2.26384, -0.00000, -0.00000, 0.00000, 2.71661, -53.76818, 3.50895, 26.10340)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk52" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.47704, 0.00000, 0.00000, 0.00000, 2.86223, -0.00000, -0.00000, 0.00000, 0.47704, -43.85844, 1.43112, 32.82247)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA52" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.43468, 0.00000, 0.00000, 0.00000, 2.86223, -0.00000, -0.00000, 0.00000, 3.43468, -43.85844, 3.72090, 32.82247)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB52" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.28979, 0.00000, 0.00000, 0.00000, 1.90816, -0.00000, -0.00000, 0.00000, 2.28979, -42.99977, 2.95764, 33.49032)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk53" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.42577, 0.00000, 0.00000, 0.00000, 2.55463, -0.00000, -0.00000, 0.00000, 0.42577, 31.19560, 3.27731, 35.39256)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA53" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.06555, 0.00000, 0.00000, 0.00000, 2.55463, -0.00000, -0.00000, 0.00000, 3.06555, 31.19560, 5.32102, 35.39256)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB53" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.04370, 0.00000, 0.00000, 0.00000, 1.70309, -0.00000, -0.00000, 0.00000, 2.04370, 31.96199, 4.63978, 35.98864)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk54" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.42530, 0.00000, 0.00000, 0.00000, 2.55182, -0.00000, -0.00000, 0.00000, 0.42530, 23.98707, 3.27591, 30.70109)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA54" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.06218, 0.00000, 0.00000, 0.00000, 2.55182, -0.00000, -0.00000, 0.00000, 3.06218, 23.98707, 5.31736, 30.70109)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB54" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.04145, 0.00000, 0.00000, 0.00000, 1.70121, -0.00000, -0.00000, 0.00000, 2.04145, 24.75261, 4.63688, 31.29652)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk55" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.62102, 0.00000, 0.00000, 0.00000, 3.72612, -0.00000, -0.00000, 0.00000, 0.62102, 29.78170, 3.86306, 45.39004)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA55" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.47134, 0.00000, 0.00000, 0.00000, 3.72612, -0.00000, -0.00000, 0.00000, 4.47134, 29.78170, 6.84395, 45.39004)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB55" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.98089, 0.00000, 0.00000, 0.00000, 2.48408, -0.00000, -0.00000, 0.00000, 2.98089, 30.89953, 5.85032, 46.25947)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk56" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.55591, 0.00000, 0.00000, 0.00000, 3.33547, -0.00000, -0.00000, 0.00000, 0.55591, 36.82302, 3.66774, 39.85283)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA56" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.00257, 0.00000, 0.00000, 0.00000, 3.33547, -0.00000, -0.00000, 0.00000, 4.00257, 36.82302, 6.33611, 39.85283)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB56" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.66838, 0.00000, 0.00000, 0.00000, 2.22365, -0.00000, -0.00000, 0.00000, 2.66838, 37.82366, 5.44665, 40.63111)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk57" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50803, 0.00000, 0.00000, 0.00000, 3.04818, -0.00000, -0.00000, 0.00000, 0.50803, 49.13494, 3.52409, 4.22363)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA57" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.65781, 0.00000, 0.00000, 0.00000, 3.04818, -0.00000, -0.00000, 0.00000, 3.65781, 49.13494, 5.96263, 4.22363)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB57" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.43854, 0.00000, 0.00000, 0.00000, 2.03212, -0.00000, -0.00000, 0.00000, 2.43854, 50.04940, 5.14978, 4.93487)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk58" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.52581, 0.00000, 0.00000, 0.00000, 3.15488, -0.00000, -0.00000, 0.00000, 0.52581, 49.17132, 3.57744, 10.48666)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA58" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.78586, 0.00000, 0.00000, 0.00000, 3.15488, -0.00000, -0.00000, 0.00000, 3.78586, 49.17132, 6.10134, 10.48666)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB58" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.52390, 0.00000, 0.00000, 0.00000, 2.10325, -0.00000, -0.00000, 0.00000, 2.52390, 50.11778, 5.26004, 11.22280)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk59" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.50580, 0.00000, 0.00000, 0.00000, 3.03482, -0.00000, -0.00000, 0.00000, 0.50580, 53.50723, 3.51741, 20.68921)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA59" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.64179, 0.00000, 0.00000, 0.00000, 3.03482, -0.00000, -0.00000, 0.00000, 3.64179, 53.50723, 5.94527, 20.68921)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB59" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.42786, 0.00000, 0.00000, 0.00000, 2.02322, -0.00000, -0.00000, 0.00000, 2.42786, 54.41768, 5.13599, 21.39734)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk60" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.53751, 0.00000, 0.00000, 0.00000, 3.22503, -0.00000, -0.00000, 0.00000, 0.53751, 54.74175, 3.61252, -5.65513)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA60" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(3.87004, 0.00000, 0.00000, 0.00000, 3.22503, -0.00000, -0.00000, 0.00000, 3.87004, 54.74175, 6.19254, -5.65513)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB60" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.58003, 0.00000, 0.00000, 0.00000, 2.15002, -0.00000, -0.00000, 0.00000, 2.58003, 55.70926, 5.33253, -4.90262)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
-
-[node name="Trunk61" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(0.62227, 0.00000, 0.00000, 0.00000, 3.73363, -0.00000, -0.00000, 0.00000, 0.62227, 58.54182, 3.86681, 4.50317)
-mesh = SubResource("MeshCyl")
-surface_material_override/0 = SubResource("MatWood")
-
-[node name="CanopyA61" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(4.48035, 0.00000, 0.00000, 0.00000, 3.73363, -0.00000, -0.00000, 0.00000, 4.48035, 58.54182, 6.85372, 4.50317)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafA")
-
-[node name="CanopyB61" type="MeshInstance3D" parent="Trees"]
-transform = Transform3D(2.98690, 0.00000, 0.00000, 0.00000, 2.48908, -0.00000, -0.00000, 0.00000, 2.98690, 59.66191, 5.85808, 5.37435)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatLeafB")
+script = ExtResource("ext_6_ScatterField")
+kind = "tree"
+variants = 4
+material = SubResource("MatWood")
+material_secondary = SubResource("MatLeafA")
+trunk_height = 3.6
+trunk_radius = 0.28
+canopy_radius = 2.5
+canopy_blobs = 4
+placements = PackedFloat32Array(-3.000, 0.000, 17.000, 90.028, 1.100, 1.100, 1.100, 2.400, 0.000, 20.000, 267.166, 0.900, 0.900, 0.900, -20.000, 0.000, -19.000, 266.078, 1.050, 1.050, 1.050, -14.400, 0.000, -20.700, 270.713, 0.900, 0.900, 0.900, 12.000, 0.000, 21.000, 287.889, 0.950, 0.950, 0.950, -23.000, 0.000, 6.000, 161.686, 0.950, 0.950, 0.950, 23.000, 2.000, -19.000, 216.269, 1.100, 1.100, 1.100, 20.000, 2.000, 16.000, 238.249, 1.000, 1.000, 1.000, -28.000, 0.000, -12.000, 299.235, 1.000, 1.000, 1.000, 16.000, 2.000, 8.000, 320.849, 0.950, 0.950, 0.950, -9.000, 0.000, 23.000, 115.458, 1.000, 1.000, 1.000, -33.320, 0.000, -5.064, 93.217, 1.155, 1.155, 1.155, -60.367, 0.000, -18.482, 96.975, 1.076, 1.076, 1.076, -34.896, 0.000, 1.054, 339.625, 0.885, 0.885, 0.885, -41.077, 0.000, -6.936, 312.056, 1.114, 1.114, 1.114, -45.690, 0.000, 6.905, 353.157, 0.944, 0.944, 0.944, -50.765, 0.000, -3.975, 84.476, 1.116, 1.116, 1.116, -44.418, 0.000, -0.733, 266.487, 0.940, 0.940, 0.940, -25.249, 0.000, -26.449, 138.499, 1.067, 1.067, 1.067, -21.889, 0.000, -30.795, 55.664, 1.102, 1.102, 1.102, -40.337, 0.000, -50.623, 160.355, 0.935, 0.935, 0.935, -19.420, 0.000, -24.959, 72.250, 0.913, 0.913, 0.913, -35.375, 0.000, -49.803, 79.953, 1.020, 1.020, 1.020, -22.789, 0.000, -36.168, 120.394, 1.044, 1.044, 1.044, 19.190, 2.000, -29.072, 359.781, 1.216, 1.216, 1.216, 24.791, 2.000, -36.588, 314.764, 0.897, 0.897, 0.897, 18.040, 2.000, -42.314, 55.626, 0.891, 0.891, 0.891, 8.501, 2.000, -38.417, 22.533, 0.951, 0.951, 0.951, 11.687, 2.000, -44.474, 324.130, 1.075, 1.075, 1.075, 13.140, 2.000, -36.456, 178.751, 0.871, 0.871, 0.871, 44.870, 2.000, -8.938, 183.472, 1.224, 1.224, 1.224, 42.966, 2.000, -3.081, 338.342, 0.927, 0.927, 0.927, 50.822, 2.000, -10.731, 335.608, 1.010, 1.010, 1.010, 36.206, 2.000, 1.354, 53.769, 1.052, 1.052, 1.052, 40.271, 2.000, -16.229, 145.722, 0.856, 0.856, 0.856, 32.794, 2.000, -7.523, 79.938, 0.856, 0.856, 0.856, 51.798, 2.000, -21.991, 55.683, 1.156, 1.156, 1.156, 31.813, 2.000, 20.352, 50.120, 0.909, 0.909, 0.909, 36.148, 2.000, 31.478, 70.224, 0.879, 0.879, 0.879, 44.220, 2.000, 30.271, 48.120, 1.115, 1.115, 1.115, 37.473, 2.000, 19.278, 115.419, 0.924, 0.924, 0.924, 28.593, 2.000, 28.971, 247.037, 0.869, 0.869, 0.869, 23.459, 2.000, 24.246, 101.682, 1.119, 1.119, 1.119, -16.879, 0.000, 34.931, 214.580, 1.066, 1.066, 1.066, -10.213, 0.000, 39.115, 87.614, 1.117, 1.117, 1.117, -16.650, 0.000, 42.466, 85.308, 1.053, 1.053, 1.053, -20.634, 0.000, 29.639, 327.208, 0.854, 0.854, 0.854, -2.861, 0.000, 31.868, 207.051, 0.901, 0.901, 0.901, -37.346, 0.000, 14.714, 166.657, 0.925, 0.925, 0.925, -47.937, 0.000, 46.513, 66.765, 1.014, 1.014, 1.014, -41.323, 0.000, 22.062, 163.907, 1.159, 1.159, 1.159, -54.787, 0.000, 25.311, 319.824, 1.132, 1.132, 1.132, -43.858, 0.000, 32.822, 45.751, 0.954, 0.954, 0.954, 31.196, 2.000, 35.393, 35.695, 0.852, 0.852, 0.852, 23.987, 2.000, 30.701, 317.844, 0.851, 0.851, 0.851, 29.782, 2.000, 45.390, 67.296, 1.242, 1.242, 1.242, 36.823, 2.000, 39.853, 25.781, 1.112, 1.112, 1.112, 49.135, 2.000, 4.224, 302.135, 1.016, 1.016, 1.016, 49.171, 2.000, 10.487, 310.495, 1.052, 1.052, 1.052, 53.507, 2.000, 20.689, 37.768, 1.012, 1.012, 1.012, 54.742, 2.000, -5.655, 237.908, 1.075, 1.075, 1.075, 58.542, 2.000, 4.503, 127.882, 1.245, 1.245, 1.245)
 
 [node name="Bushes" type="Node3D" parent="."]
+script = ExtResource("ext_6_ScatterField")
+kind = "bush"
+variants = 4
+material = SubResource("MatBush")
+placements = PackedFloat32Array(-27.821, 0.000, 8.940, 126.822, 1.993, 1.289, 1.758, -16.866, 0.000, 16.943, 223.696, 1.182, 0.765, 1.043, -25.323, 0.000, 14.078, 104.408, 1.346, 0.871, 1.188, -21.120, 0.000, 20.675, 41.615, 1.064, 0.689, 0.939, -17.927, 0.000, 18.826, 172.495, 1.746, 1.129, 1.540, -16.263, 0.000, 7.622, 31.123, 1.567, 1.014, 1.382, -9.968, 0.000, 6.143, 33.493, 1.263, 0.817, 1.114, -19.587, 0.000, 11.563, 194.553, 1.382, 0.894, 1.220, -5.775, 0.000, 24.528, 3.346, 1.295, 0.838, 1.142, -15.676, 0.000, 18.560, 28.643, 1.499, 0.970, 1.323, -13.572, 0.000, 24.617, 142.660, 1.390, 0.899, 1.226, -6.733, 0.000, 12.285, 97.292, 1.659, 1.073, 1.464, -3.631, 0.000, 11.713, 265.179, 1.194, 0.773, 1.054, -11.975, 0.000, 28.045, 180.957, 1.145, 0.741, 1.010, -27.778, 0.000, -3.315, 52.196, 1.202, 0.778, 1.061, -29.214, 0.000, -8.631, 222.303, 1.337, 0.865, 1.180, 8.029, 2.000, -26.020, 99.794, 1.432, 0.926, 1.263, -2.445, 0.000, -22.572, 261.174, 1.162, 0.752, 1.025, -1.136, 0.000, -17.244, 231.274, 1.563, 1.011, 1.379, 9.908, 2.000, -22.297, 88.898, 1.050, 0.679, 0.927, 22.644, 2.000, 7.393, 117.883, 1.998, 1.293, 1.763, 22.457, 2.000, 4.789, 163.586, 1.276, 0.826, 1.126, 29.160, 2.000, -2.269, 294.816, 1.080, 0.699, 0.953, 30.952, 2.000, 15.565, 324.745, 2.037, 1.318, 1.798, 26.262, 2.000, 1.302, 45.710, 1.802, 1.166, 1.590, 26.701, 2.000, -2.137, 155.172, 1.231, 0.797, 1.086, 19.635, 2.000, 10.398, 72.385, 1.434, 0.928, 1.266, 19.894, 2.000, -8.238, 17.477, 1.512, 0.978, 1.334, 26.170, 2.000, -15.044, 32.552, 1.835, 1.187, 1.619, 20.710, 2.000, -11.294, 205.811, 1.325, 0.857, 1.169, 18.914, 2.000, -21.250, 72.409, 1.851, 1.197, 1.633, 28.294, 2.000, -21.386, 215.435, 1.166, 0.755, 1.029, 21.748, 2.000, -12.883, 160.465, 1.592, 1.030, 1.404, -38.363, 0.000, 4.324, 35.403, 1.821, 1.178, 1.607, -52.286, 0.000, 8.578, 159.830, 1.465, 0.948, 1.293, -30.346, 0.000, 3.039, 21.756, 1.348, 0.872, 1.189, -30.055, 0.000, 11.556, 109.883, 1.819, 1.177, 1.605, -37.551, 0.000, 8.017, 157.824, 1.699, 1.100, 1.499, -29.658, 0.000, 7.250, 135.247, 1.268, 0.821, 1.119, -25.691, 0.000, 21.521, 297.606, 1.595, 1.032, 1.407, 29.781, 2.000, -19.056, 173.376, 1.488, 0.963, 1.313, 34.680, 2.000, -20.258, 179.307, 1.968, 1.274, 1.737, 18.875, 2.000, -24.829, 347.026, 1.281, 0.829, 1.130, 27.285, 2.000, -24.640, 79.649, 1.904, 1.232, 1.680, 32.533, 2.000, -35.492, 291.717, 1.779, 1.151, 1.570, 19.795, 2.000, -34.350, 29.898, 1.332, 0.862, 1.175, 10.197, 2.000, -28.368, 104.889, 1.298, 0.840, 1.145, -27.253, 0.000, 26.769, 332.724, 1.509, 0.977, 1.332, -30.022, 0.000, 28.594, 232.385, 1.030, 0.666, 0.909, -22.899, 0.000, 16.265, 25.348, 1.360, 0.880, 1.200, -25.860, 0.000, 32.939, 197.470, 1.424, 0.921, 1.256, -27.780, 0.000, 31.880, 232.770, 1.641, 1.062, 1.448, -32.731, 0.000, 26.923, 212.974, 1.535, 0.993, 1.355, 7.111, 0.000, 22.932, 309.800, 1.791, 1.159, 1.580, 9.113, 0.000, 26.605, 72.967, 1.445, 0.935, 1.275, 2.966, 0.000, 34.646, 182.250, 1.570, 1.016, 1.385, 11.285, 0.000, 27.652, 181.556, 1.501, 0.971, 1.324, -10.464, 0.000, 35.035, 260.096, 1.392, 0.900, 1.228, 4.569, 0.000, 32.240, 127.818, 1.754, 1.135, 1.548)
 
-
-[node name="Bush0" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.66307, 0.00000, 0.12847, 0.00000, 0.93912, -0.00000, -0.14682, 0.00000, 1.45519, -16.50401, 0.31304, 20.23191)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush1" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.66066, 0.00000, 0.58958, 0.00000, 1.00808, -0.00000, -0.67380, -0.00000, -1.45308, -17.95518, 0.33603, 23.89421)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush2" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.77439, 0.00000, 0.69381, 0.00000, 0.62344, -0.00000, -0.79292, 0.00000, 0.67759, -6.31624, 0.20781, 11.96101)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush3" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.74103, -0.00000, -1.07696, 0.00000, 0.80813, -0.00000, 1.23081, 0.00000, 0.64840, -6.58151, 0.26938, 16.11507)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush4" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.78972, 0.00000, 0.78316, 0.00000, 0.67142, -0.00000, -0.89505, 0.00000, 0.69101, -17.86312, 0.22381, 18.59287)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush5" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.39038, 0.00000, 0.52016, 0.00000, 0.85058, -0.00000, -0.59446, 0.00000, 1.21659, -15.60477, 0.28353, 22.90846)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush6" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.39086, -0.00000, -0.11528, 0.00000, 0.78586, -0.00000, 0.13175, 0.00000, 1.21700, -19.61612, 0.26195, 12.73910)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush7" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.73803, 0.00000, 0.65987, 0.00000, 0.59354, -0.00000, -0.75414, -0.00000, -0.64578, -14.50815, 0.19785, 10.31821)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush8" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.31024, 0.00000, 0.88754, 0.00000, 0.59665, -0.00000, -1.01433, 0.00000, 0.27146, -3.33783, 0.19888, 12.07801)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush9" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.12704, -0.00000, -0.14558, 0.00000, 0.64083, -0.00000, 0.16638, 0.00000, 0.98616, -11.93075, 0.21361, 27.61630)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush10" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.79767, 0.00000, 1.31681, 0.00000, 0.95808, -0.00000, -1.50492, -0.00000, -0.69796, -4.63983, 0.31936, 24.54598)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush11" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.59424, -0.00000, -1.08669, 0.00000, 0.77444, -0.00000, 1.24194, 0.00000, 0.51996, -23.88152, 0.25815, -12.87226)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush12" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.13119, -0.00000, -0.47871, 0.00000, 0.70681, -0.00000, 0.54710, -0.00000, -0.98979, -0.56158, 0.23560, -17.91656)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush13" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.73089, -0.00000, -0.01264, 0.00000, 0.97366, -0.00000, 0.01445, 0.00000, 1.51453, 17.98482, 2.32455, -19.10347)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush14" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.46052, -0.00000, -0.39876, 0.00000, 0.86061, -0.00000, 0.45573, -0.00000, -1.27796, 10.66775, 2.28687, -23.91272)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush15" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.01081, 0.00000, 0.47786, 0.00000, 0.64626, -0.00000, -0.54613, -0.00000, -0.88446, 22.95364, 2.21542, 5.19537)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush16" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.27600, 0.00000, 0.59025, 0.00000, 0.81188, -0.00000, -0.67458, -0.00000, -1.11650, 18.07757, 2.27063, -1.07193)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush17" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.57068, -0.00000, -0.47763, 0.00000, 0.93534, -0.00000, 0.54586, 0.00000, 1.37435, 25.83078, 2.31178, 5.17268)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush18" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.23300, -0.00000, -1.55561, 0.00000, 1.00858, -0.00000, 1.77784, 0.00000, 0.20387, 29.94239, 2.33619, 1.17774)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush19" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.95956, -0.00000, -0.90760, 0.00000, 0.79483, -0.00000, 1.03725, 0.00000, 0.83961, 22.59148, 2.26494, 13.72118)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush20" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.48379, -0.00000, -0.88315, 0.00000, 0.62959, -0.00000, 1.00931, -0.00000, -0.42332, 22.71285, 2.20986, 9.08381)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush21" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.37244, -0.00000, -0.10082, 0.00000, 0.77471, -0.00000, 0.11522, 0.00000, 1.20089, 25.24885, 2.25824, 1.24800)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush22" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.20630, -0.00000, -1.18914, 0.00000, 0.77320, -0.00000, 1.35901, 0.00000, 0.18051, 22.31067, 2.25773, -24.37726)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush23" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.00254, -0.00000, -0.71218, 0.00000, 0.72638, -0.00000, 0.81392, -0.00000, -0.87723, 16.18844, 2.24213, -22.60507)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush24" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.30984, 0.00000, 0.37674, 0.00000, 0.77557, -0.00000, -0.43056, -0.00000, -1.14611, 21.50031, 2.25852, -15.69264)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush25" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.00209, 0.00000, 0.69312, 0.00000, 0.71852, -0.00000, -0.79214, -0.00000, -0.87683, 20.22734, 2.23951, -24.64666)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush26" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.99467, 0.00000, 0.74576, 0.00000, 0.73680, -0.00000, -0.85230, -0.00000, -0.87033, 22.65711, 2.24560, -9.57705)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush27" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.51752, 0.00000, 0.94502, 0.00000, 0.67366, -0.00000, -1.08003, 0.00000, 0.45283, 20.24269, 2.22455, -13.23941)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush28" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.36174, 0.00000, 0.18129, 0.00000, 0.77479, -0.00000, -0.20719, 0.00000, 1.19152, -40.89939, 0.25826, 3.55773)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush29" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.57237, 0.00000, 1.41271, 0.00000, 0.96355, -0.00000, -1.61452, -0.00000, -0.50083, -41.18770, 0.32118, 7.61545)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush30" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.63646, 0.00000, 1.57569, 0.00000, 1.07435, -0.00000, -1.80079, -0.00000, -0.55690, -30.53971, 0.35812, 4.54699)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush31" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.24548, 0.00000, 0.09002, 0.00000, 0.70297, -0.00000, -0.10288, 0.00000, 1.08980, -38.37055, 0.23432, 7.22707)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush32" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.28389, 0.00000, 0.90358, 0.00000, 0.60242, -0.00000, -1.03266, 0.00000, 0.24840, -37.18896, 0.20081, 4.99755)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush33" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.94397, -0.00000, -0.40095, 0.00000, 0.59024, -0.00000, 0.45823, -0.00000, -0.82598, -35.95128, 0.19675, 9.38882)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush34" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.37703, 0.00000, 0.84470, 0.00000, 0.58296, -0.00000, -0.96537, 0.00000, 0.32990, -33.92595, 0.19432, 8.75961)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush35" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.11518, 0.00000, 1.00391, 0.00000, 0.64861, -0.00000, -1.14732, -0.00000, -0.10078, 31.68372, 2.21620, -22.09520)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush36" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.18234, -0.00000, -0.36303, 0.00000, 0.70482, -0.00000, 0.41489, -0.00000, -1.03455, 21.67993, 2.23494, -26.14775)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush37" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.04770, 0.00000, 1.53385, 0.00000, 0.98641, -0.00000, -1.75297, -0.00000, -0.04173, 17.70792, 2.32880, -24.43534)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush38" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.39348, 0.00000, 0.84210, 0.00000, 0.58485, -0.00000, -0.96240, -0.00000, -0.34430, 26.29338, 2.19495, -14.44374)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush39" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.81084, 0.00000, 0.12683, 0.00000, 1.02186, -0.00000, -0.14495, -0.00000, -1.58449, 38.31103, 2.34062, -40.03072)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush40" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.05995, 0.00000, 0.45519, 0.00000, 0.66416, -0.00000, -0.52022, -0.00000, -0.92746, 24.50941, 2.22139, -13.90925)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush41" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.86479, -0.00000, -0.76152, 0.00000, 0.69013, -0.00000, 0.87031, -0.00000, -0.75669, 29.18155, 2.23004, -20.15761)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush42" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.83632, -0.00000, -0.91865, 0.00000, 0.75503, -0.00000, 1.04988, 0.00000, 0.73178, -33.90294, 0.25168, 23.38993)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush43" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.73121, -0.00000, -1.13556, 0.00000, 0.83790, -0.00000, 1.29779, 0.00000, 0.63981, -21.46934, 0.27930, 24.74732)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush44" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.14069, 0.00000, 1.26356, 0.00000, 0.81613, -0.00000, -1.44407, 0.00000, 0.12310, -31.11096, 0.27204, 26.02076)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush45" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.13820, -0.00000, -0.08629, 0.00000, 0.64264, -0.00000, 0.09862, 0.00000, 0.99592, -25.79593, 0.21421, 15.36978)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush46" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.05361, -0.00000, -0.91800, 0.00000, 0.83636, -0.00000, 1.04914, -0.00000, -0.92191, -37.38839, 0.27879, 21.87975)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush47" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.03682, 0.00000, 0.60970, 0.00000, 0.70268, -0.00000, -0.69680, -0.00000, -0.90722, -24.17930, 0.23423, 33.97312)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush48" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.27665, -0.00000, -0.96219, 0.00000, 0.63783, -0.00000, 1.09965, -0.00000, -0.24207, 3.75546, 0.21261, 25.68473)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush49" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.11246, 0.00000, 1.01505, 0.00000, 0.65559, -0.00000, -1.16006, -0.00000, -0.09840, 10.57714, 0.21853, 30.91946)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush50" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(1.38913, -0.00000, -0.75154, 0.00000, 0.91869, -0.00000, 0.85891, 0.00000, 1.21549, 4.92221, 0.30623, 34.77632)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush51" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-0.91203, 0.00000, 1.06139, 0.00000, 0.85367, -0.00000, -1.21302, -0.00000, -0.79802, 8.19339, 0.28456, 18.65593)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush52" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(-1.27579, 0.00000, 0.05456, 0.00000, 0.71849, -0.00000, -0.06235, -0.00000, -1.11632, 7.87776, 0.23950, 28.58659)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
-
-[node name="Bush53" type="MeshInstance3D" parent="Bushes"]
-transform = Transform3D(0.37449, -0.00000, -1.29603, 0.00000, 0.85938, -0.00000, 1.48118, 0.00000, 0.32768, 5.79952, 0.28646, 28.93270)
-mesh = SubResource("MeshSph")
-surface_material_override/0 = SubResource("MatBush")
+[node name="GrassField" type="MultiMeshInstance3D" parent="."]
+script = ExtResource("ext_7_GrassField")
+material_override = SubResource("MatTuft")
+cast_shadow = 0
+tuft_count = 2600
+area_min = Vector2(-36, -32)
+area_max = Vector2(32, 24)
+far_bank_y = 2
+river_x0 = 10
+river_slope = 0.28
+river_half = 4.45
+loop_center = Vector2(-7, -2)
+loop_radii = Vector2(9.3, 6.9)
+loop_band = Vector2(0.80, 1.20)
+exclusions = PackedVector3Array(-12.90, -13.20, 5.12, -2.70, -11.10, 4.00, -21.50, -6.50, 4.16, 3.90, -14.40, 2.72, -1.20, 3.60, 6.00, 7.76, -8.00, 8.80, 5.10, -19.50, 1.28, -5.40, -18.00, 1.28, -16.50, -14.00, 1.28, -12.76, 8.46, 1.19, -22.38, 13.50, 1.27, -27.27, 6.17, 0.90, -15.46, 4.51, 1.49, -23.46, 7.28, 1.05, -21.17, 9.77, 1.09, -17.52, 12.30, 0.60, -16.14, 14.38, 1.44, -19.25, 3.96, 1.30, -17.57, 9.87, 1.23, -12.50, 11.62, 1.24, -25.31, 9.83, 0.86, -18.31, 7.38, 0.60, -9.08, 14.85, 1.36, -15.25, 27.70, 1.20, -5.88, 20.34, 0.91, -9.27, 19.82, 0.92, -12.86, 21.65, 1.44, -12.79, 16.48, 1.40, -3.53, 18.16, 1.29, -9.11, 17.46, 0.60, -1.93, 22.10, 1.17, -9.63, 22.39, 1.12, -6.98, 18.45, 0.60, -7.64, 26.63, 1.52, -28.33, 2.12, 0.88, -23.48, 1.46, 0.94, -17.98, 0.40, 0.76, -26.28, -0.55, 1.33, -26.96, 3.40, 0.60, -19.88, 6.63, 0.60, -21.24, 0.11, 0.60, -22.05, 3.95, 0.60, -27.89, -6.55, 0.60, -23.87, -16.30, 0.75, -21.34, -12.34, 0.60, 0.15, 23.09, 0.64, -5.16, 22.34, 0.71, 1.65, 28.62, 1.21, 0.86, 15.39, 0.60, -2.49, 25.93, 0.69, 3.78, 15.86, 0.97, 0.78, 20.22, 1.31, -4.02, 27.28, 0.60, -22.18, 23.08, 0.60, -28.35, 18.30, 0.60, -24.92, 12.10, 0.79, -33.20, 16.38, 0.67, -30.11, 20.66, 1.37, -29.77, 15.02, 1.00, -27.81, 12.55, 0.94, -20.04, 17.19, 1.08, -0.70, -19.44, 0.60, 6.57, 7.28, 0.60, 15.02, -18.83, 1.22, 21.69, -21.51, 1.11, 12.37, -26.02, 1.12, 11.89, -20.11, 1.30, 18.08, -15.72, 0.80, 14.15, -22.08, 0.78, 23.81, -4.04, 0.85, 28.05, 3.62, 1.11, 17.00, 2.77, 0.79, 22.85, 2.56, 0.97, 19.42, 5.51, 1.29, 20.10, 1.12, 1.24, 27.68, 12.15, 1.24, 22.25, 11.72, 0.80, 27.67, 16.24, 0.97, 23.20, 15.37, 0.60, 25.76, 9.37, 1.40, 20.56, 13.53, 0.73, -46.35, 26.51, 1.23, -48.99, 21.43, 1.51, -45.22, 21.63, 0.89, -40.15, 17.18, 1.19, -43.54, 28.14, 1.19, -43.09, 13.43, 1.45, -35.11, 18.63, 1.24, -38.03, 30.99, 1.64, 35.55, -36.91, 1.16, 10.04, -32.85, 1.63, 23.95, -43.35, 1.25, 26.07, -30.94, 1.08, 31.24, -38.88, 1.61, 27.05, -39.67, 0.89, 28.50, -44.74, 1.15, 31.69, -30.29, 1.46, -37.82, -25.60, 1.03, -41.48, -28.70, 1.06, -29.96, -28.11, 1.53, -48.65, -19.50, 0.83, -32.40, -14.29, 1.59, -41.20, -16.04, 1.48, -41.57, -25.34, 1.24, -36.08, -16.06, 1.63, 38.82, 28.40, 0.86, 34.97, 28.30, 0.71, 43.99, 24.31, 0.86, 35.60, 8.90, 1.63, 39.74, 24.92, 1.63, 34.41, 25.37, 0.75, 28.84, 37.59, 0.64, 31.88, 27.07, 0.72, 2.65, 40.87, 1.04, -4.96, 41.28, 0.72, -6.37, 35.71, 0.68, 9.74, 40.55, 0.74, 5.24, 43.33, 0.84, -7.94, 31.36, 1.47, -0.46, 44.18, 1.62, 5.57, 38.36, 1.17, -24.61, -45.94, 1.19, -34.72, -29.42, 0.70, -32.25, -43.82, 1.56, -29.86, -21.17, 1.10, -22.42, -41.82, 1.55, -27.55, -35.90, 1.31, -31.28, -39.87, 1.01, -32.32, -31.36, 1.44, -3.00, 17.00, 2.11, 2.40, 20.00, 1.73, -20.00, -19.00, 2.02, -14.40, -20.70, 1.73, 12.00, 21.00, 1.82, -23.00, 6.00, 1.82, 23.00, -19.00, 2.11, 20.00, 16.00, 1.92, -28.00, -12.00, 1.92, 16.00, 8.00, 1.82, -9.00, 23.00, 1.92, -33.32, -5.06, 2.22, -60.37, -18.48, 2.07, -34.90, 1.05, 1.70, -41.08, -6.94, 2.14, -45.69, 6.90, 1.81, -50.76, -3.98, 2.14, -44.42, -0.73, 1.80, -25.25, -26.45, 2.05, -21.89, -30.79, 2.12, -40.34, -50.62, 1.80, -19.42, -24.96, 1.75, -35.37, -49.80, 1.96, -22.79, -36.17, 2.00, 19.19, -29.07, 2.33, 24.79, -36.59, 1.72, 18.04, -42.31, 1.71, 8.50, -38.42, 1.83, 11.69, -44.47, 2.06, 13.14, -36.46, 1.67, 44.87, -8.94, 2.35, 42.97, -3.08, 1.78, 50.82, -10.73, 1.94, 36.21, 1.35, 2.02, 40.27, -16.23, 1.64, 32.79, -7.52, 1.64, 51.80, -21.99, 2.22, 31.81, 20.35, 1.75, 36.15, 31.48, 1.69, 44.22, 30.27, 2.14, 37.47, 19.28, 1.77, 28.59, 28.97, 1.67, 23.46, 24.25, 2.15, -16.88, 34.93, 2.05, -10.21, 39.11, 2.14, -16.65, 42.47, 2.02, -20.63, 29.64, 1.64, -2.86, 31.87, 1.73, -37.35, 14.71, 1.78, -47.94, 46.51, 1.95, -41.32, 22.06, 2.23, -54.79, 25.31, 2.17, -43.86, 32.82, 1.83, 31.20, 35.39, 1.63, 23.99, 30.70, 1.63, 29.78, 45.39, 2.38, 36.82, 39.85, 2.13, 49.13, 4.22, 1.95, 49.17, 10.49, 2.02, 53.51, 20.69, 1.94, 54.74, -5.66, 2.06, 58.54, 4.50, 2.39, -27.82, 8.94, 1.03, -16.87, 16.94, 0.61, -25.32, 14.08, 0.70, -21.12, 20.67, 0.60, -17.93, 18.83, 0.90, -16.26, 7.62, 0.81, -9.97, 6.14, 0.65, -19.59, 11.56, 0.72, -5.77, 24.53, 0.67, -15.68, 18.56, 0.78, -13.57, 24.62, 0.72, -6.73, 12.29, 0.86, -3.63, 11.71, 0.62, -11.97, 28.05, 0.60, -27.78, -3.31, 0.62, -29.21, -8.63, 0.69, 8.03, -26.02, 0.74, -2.45, -22.57, 0.60, -1.14, -17.24, 0.81, 9.91, -22.30, 0.60, 22.64, 7.39, 1.03, 22.46, 4.79, 0.66, 29.16, -2.27, 0.60, 30.95, 15.57, 1.05, 26.26, 1.30, 0.93, 26.70, -2.14, 0.64, 19.63, 10.40, 0.74, 19.89, -8.24, 0.78, 26.17, -15.04, 0.95, 20.71, -11.29, 0.69, 18.91, -21.25, 0.96, 28.29, -21.39, 0.60, 21.75, -12.88, 0.82, -38.36, 4.32, 0.94, -52.29, 8.58, 0.76, -30.35, 3.04, 0.70, -30.06, 11.56, 0.94, -37.55, 8.02, 0.88, -29.66, 7.25, 0.66, -25.69, 21.52, 0.83, 29.78, -19.06, 0.77, 34.68, -20.26, 1.02, 18.87, -24.83, 0.66, 27.28, -24.64, 0.99, 32.53, -35.49, 0.92, 19.79, -34.35, 0.69, 10.20, -28.37, 0.67, -27.25, 26.77, 0.78, -30.02, 28.59, 0.60, -22.90, 16.27, 0.70, -25.86, 32.94, 0.74, -27.78, 31.88, 0.85, -32.73, 26.92, 0.79, 7.11, 22.93, 0.93, 9.11, 26.60, 0.75, 2.97, 34.65, 0.81, 11.29, 27.65, 0.78, -10.46, 35.03, 0.72, 4.57, 32.24, 0.91)
+blade_height = 0.42
+rng_seed = 20260820
 
 [node name="Player" type="Node3D" parent="."]
 transform = Transform3D(0.88295, 0.00000, 0.46947, 0.00000, 1.00000, -0.00000, -0.46947, 0.00000, 0.88295, -1.20000, 0.00000, 3.60000)
@@ -3129,7 +1563,7 @@ surface_material_override/0 = SubResource("MatMetal")
 
 
 [node name="Enemy0" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.16498, 0.00000, 0.98630, 0.00000, 1.00000, -0.00000, -0.98630, 0.00000, 0.16498, -9.30000, 0.00000, -5.10000)
+transform = Transform3D(0.99911, -0.00000, -0.04223, 0.00000, 1.00000, -0.00000, 0.04223, 0.00000, 0.99911, -9.30000, 0.00000, -5.10000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy0"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3157,7 +1591,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy1" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.08507, 0.00000, 0.99637, 0.00000, 1.00000, -0.00000, -0.99637, 0.00000, 0.08507, -6.60000, 0.00000, -7.80000)
+transform = Transform3D(0.40500, -0.00000, -0.91432, 0.00000, 1.00000, -0.00000, 0.91432, 0.00000, 0.40500, -6.60000, 0.00000, -7.80000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy1"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3185,7 +1619,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy2" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.97414, 0.00000, 0.22593, 0.00000, 1.00000, -0.00000, -0.22593, 0.00000, 0.97414, -3.00000, 0.00000, -3.90000)
+transform = Transform3D(-0.30736, 0.00000, 0.95159, 0.00000, 1.00000, -0.00000, -0.95159, -0.00000, -0.30736, -3.00000, 0.00000, -3.90000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy2"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3213,7 +1647,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy3" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.70656, 0.00000, 0.70766, 0.00000, 1.00000, -0.00000, -0.70766, -0.00000, -0.70656, 0.90000, 0.00000, -1.80000)
+transform = Transform3D(-0.82210, 0.00000, 0.56934, 0.00000, 1.00000, -0.00000, -0.56934, -0.00000, -0.82210, 0.90000, 0.00000, -1.80000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy3"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3241,7 +1675,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy4" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.87041, 0.00000, 0.49233, 0.00000, 1.00000, -0.00000, -0.49233, 0.00000, 0.87041, 3.30000, 0.00000, -5.70000)
+transform = Transform3D(-0.71003, -0.00000, -0.70417, 0.00000, 1.00000, -0.00000, 0.70417, -0.00000, -0.71003, 3.30000, 0.00000, -5.70000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy4"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3269,7 +1703,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy5" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.97302, 0.00000, 0.23073, 0.00000, 1.00000, -0.00000, -0.23073, -0.00000, -0.97302, -12.00000, 0.00000, 0.60000)
+transform = Transform3D(0.73941, -0.00000, -0.67326, 0.00000, 1.00000, -0.00000, 0.67326, 0.00000, 0.73941, -12.00000, 0.00000, 0.60000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy5"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3297,7 +1731,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy6" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.01581, -0.00000, -0.99988, 0.00000, 1.00000, -0.00000, 0.99988, 0.00000, 0.01581, -9.00000, 0.00000, 4.20000)
+transform = Transform3D(0.99057, -0.00000, -0.13700, 0.00000, 1.00000, -0.00000, 0.13700, 0.00000, 0.99057, -9.00000, 0.00000, 4.20000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy6"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3325,7 +1759,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy7" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.98921, -0.00000, -0.14650, 0.00000, 1.00000, -0.00000, 0.14650, -0.00000, -0.98921, -4.50000, 0.00000, 6.90000)
+transform = Transform3D(0.77976, -0.00000, -0.62608, 0.00000, 1.00000, -0.00000, 0.62608, 0.00000, 0.77976, -4.50000, 0.00000, 6.90000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy7"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3353,7 +1787,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy8" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.99326, -0.00000, -0.11592, 0.00000, 1.00000, -0.00000, 0.11592, -0.00000, -0.99326, 2.10000, 0.00000, 4.80000)
+transform = Transform3D(0.03888, 0.00000, 0.99924, 0.00000, 1.00000, -0.00000, -0.99924, 0.00000, 0.03888, 2.10000, 0.00000, 4.80000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy8"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3381,7 +1815,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy9" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.37906, 0.00000, 0.92537, 0.00000, 1.00000, -0.00000, -0.92537, -0.00000, -0.37906, 5.40000, 0.00000, 1.50000)
+transform = Transform3D(0.46210, -0.00000, -0.88683, 0.00000, 1.00000, -0.00000, 0.88683, 0.00000, 0.46210, 5.40000, 0.00000, 1.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy9"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3409,7 +1843,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy10" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.35446, 0.00000, 0.93507, 0.00000, 1.00000, -0.00000, -0.93507, -0.00000, -0.35446, 6.90000, 0.00000, -9.60000)
+transform = Transform3D(0.12581, 0.00000, 0.99205, 0.00000, 1.00000, -0.00000, -0.99205, 0.00000, 0.12581, 6.90000, 0.00000, -9.60000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy10"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3437,7 +1871,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy11" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.06679, 0.00000, 0.99777, 0.00000, 1.00000, -0.00000, -0.99777, 0.00000, 0.06679, -15.60000, 0.00000, -3.00000)
+transform = Transform3D(0.60370, 0.00000, 0.79721, 0.00000, 1.00000, -0.00000, -0.79721, 0.00000, 0.60370, -15.60000, 0.00000, -3.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy11"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3465,7 +1899,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy12" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.99155, 0.00000, 0.12975, 0.00000, 1.00000, -0.00000, -0.12975, 0.00000, 0.99155, -2.40000, 0.00000, 10.50000)
+transform = Transform3D(-0.98408, -0.00000, -0.17772, 0.00000, 1.00000, -0.00000, 0.17772, -0.00000, -0.98408, -2.40000, 0.00000, 10.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy12"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3493,7 +1927,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy13" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.29972, -0.00000, -0.95403, 0.00000, 1.00000, -0.00000, 0.95403, -0.00000, -0.29972, -13.50000, 0.00000, 9.00000)
+transform = Transform3D(-0.17516, 0.00000, 0.98454, 0.00000, 1.00000, -0.00000, -0.98454, -0.00000, -0.17516, -13.50000, 0.00000, 9.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy13"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3521,7 +1955,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy14" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.98928, -0.00000, -0.14601, 0.00000, 1.00000, -0.00000, 0.14601, 0.00000, 0.98928, 3.00000, 0.00000, 12.60000)
+transform = Transform3D(0.97515, -0.00000, -0.22154, 0.00000, 1.00000, -0.00000, 0.22154, 0.00000, 0.97515, 3.00000, 0.00000, 12.60000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy14"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3549,7 +1983,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy15" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.41429, -0.00000, -0.91014, 0.00000, 1.00000, -0.00000, 0.91014, -0.00000, -0.41429, 8.10000, 0.00000, 7.50000)
+transform = Transform3D(-0.98515, -0.00000, -0.17171, 0.00000, 1.00000, -0.00000, 0.17171, -0.00000, -0.98515, 8.10000, 0.00000, 7.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy15"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3577,7 +2011,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy16" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.50999, 0.00000, 0.86018, 0.00000, 1.00000, -0.00000, -0.86018, 0.00000, 0.50999, -18.00000, 0.00000, 2.40000)
+transform = Transform3D(-0.27304, -0.00000, -0.96200, 0.00000, 1.00000, -0.00000, 0.96200, -0.00000, -0.27304, -18.00000, 0.00000, 2.40000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy16"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3605,7 +2039,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy17" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.87011, -0.00000, -0.49286, 0.00000, 1.00000, -0.00000, 0.49286, 0.00000, 0.87011, -7.50000, 0.00000, 14.70000)
+transform = Transform3D(-0.99703, -0.00000, -0.07697, 0.00000, 1.00000, -0.00000, 0.07697, -0.00000, -0.99703, -7.50000, 0.00000, 14.70000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy17"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3633,7 +2067,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy18" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.45824, 0.00000, 0.88883, 0.00000, 1.00000, -0.00000, -0.88883, -0.00000, -0.45824, 10.50000, 0.00000, -3.00000)
+transform = Transform3D(-0.86974, -0.00000, -0.49352, 0.00000, 1.00000, -0.00000, 0.49352, -0.00000, -0.86974, 10.50000, 0.00000, -3.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy18"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3661,7 +2095,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy19" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.89604, 0.00000, 0.44397, 0.00000, 1.00000, -0.00000, -0.44397, 0.00000, 0.89604, -19.50000, 0.00000, 12.00000)
+transform = Transform3D(-0.80230, 0.00000, 0.59692, 0.00000, 1.00000, -0.00000, -0.59692, -0.00000, -0.80230, -19.50000, 0.00000, 12.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy19"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3689,7 +2123,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy20" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.53160, 0.00000, 0.84700, 0.00000, 1.00000, -0.00000, -0.84700, -0.00000, -0.53160, 1.50000, 0.00000, 17.00000)
+transform = Transform3D(0.98667, 0.00000, 0.16275, 0.00000, 1.00000, -0.00000, -0.16275, 0.00000, 0.98667, 1.50000, 0.00000, 17.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy20"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3717,7 +2151,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy21" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.17941, 0.00000, 0.98377, 0.00000, 1.00000, -0.00000, -0.98377, -0.00000, -0.17941, -11.00000, 0.00000, 18.00000)
+transform = Transform3D(-0.02430, 0.00000, 0.99970, 0.00000, 1.00000, -0.00000, -0.99970, -0.00000, -0.02430, -11.00000, 0.00000, 18.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy21"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3745,7 +2179,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy22" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.96706, -0.00000, -0.25453, 0.00000, 1.00000, -0.00000, 0.25453, 0.00000, 0.96706, 12.50000, 0.00000, 3.00000)
+transform = Transform3D(-0.94776, -0.00000, -0.31898, 0.00000, 1.00000, -0.00000, 0.31898, -0.00000, -0.94776, 12.50000, 0.00000, 3.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy22"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3773,7 +2207,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy23" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.84182, 0.00000, 0.53975, 0.00000, 1.00000, -0.00000, -0.53975, -0.00000, -0.84182, -16.00000, 0.00000, 6.50000)
+transform = Transform3D(-0.81273, -0.00000, -0.58264, 0.00000, 1.00000, -0.00000, 0.58264, -0.00000, -0.81273, -16.00000, 0.00000, 6.50000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy23"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3801,7 +2235,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy24" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.07389, -0.00000, -0.99727, 0.00000, 1.00000, -0.00000, 0.99727, -0.00000, -0.07389, 6.50000, 0.00000, -2.00000)
+transform = Transform3D(0.76726, 0.00000, 0.64133, 0.00000, 1.00000, -0.00000, -0.64133, 0.00000, 0.76726, 6.50000, 0.00000, -2.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy24"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
@@ -3829,7 +2263,7 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatMetal")
 
 [node name="Enemy25" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.96402, -0.00000, -0.26583, 0.00000, 1.00000, -0.00000, 0.26583, -0.00000, -0.96402, -5.00000, 0.00000, 20.00000)
+transform = Transform3D(0.95492, -0.00000, -0.29687, 0.00000, 1.00000, -0.00000, 0.29687, 0.00000, 0.95492, -5.00000, 0.00000, 20.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Enemies/Enemy25"]
 transform = Transform3D(0.78000, 0.00000, 0.00000, 0.00000, 0.62000, -0.00000, -0.00000, 0.00000, 0.78000, 0.00000, 0.92000, 0.00000)
