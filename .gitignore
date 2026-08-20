@@ -1,0 +1,10 @@
+# Godot 4 generated
+.godot/
+/android/
+*.translation
+
+# Editor / OS
+.import/
+export_presets.cfg
+*.tmp
+Thumbs.db
