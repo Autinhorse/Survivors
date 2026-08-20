@@ -1,4 +1,4 @@
-[gd_scene load_steps=55 format=3]
+[gd_scene load_steps=57 format=3]
 
 [ext_resource type="Shader" path="res://shaders/ground.gdshader" id="ext_1_ground"]
 [ext_resource type="Shader" path="res://shaders/ground_patch.gdshader" id="ext_2_ground_patch"]
@@ -9,7 +9,9 @@
 [ext_resource type="Script" path="res://scripts/environment/GrassField.gd" id="ext_7_GrassField"]
 [ext_resource type="Script" path="res://scripts/units/EnemyCrowd.gd" id="ext_8_EnemyCrowd"]
 [ext_resource type="Script" path="res://scripts/units/EnemyCrowdMM.gd" id="ext_9_EnemyCrowdMM"]
-[ext_resource type="Script" path="res://benchmark/BenchmarkManager.gd" id="ext_10_BenchmarkManager"]
+[ext_resource type="Script" path="res://scripts/vfx/VfxManager.gd" id="ext_10_VfxManager"]
+[ext_resource type="Script" path="res://scripts/vfx/VfxStress.gd" id="ext_11_VfxStress"]
+[ext_resource type="Script" path="res://benchmark/BenchmarkManager.gd" id="ext_12_BenchmarkManager"]
 
 [sub_resource type="FastNoiseLite" id="NoiseMacroN"]
 frequency = 0.01
@@ -1583,10 +1585,23 @@ stop_radius = 6.0
 churn_per_sec = 10.0
 shadow_mode = "B"
 
+[node name="Vfx" type="Node3D" parent="."]
+script = ExtResource("ext_10_VfxManager")
+explosion_light = false
+
+[node name="VfxStress" type="Node3D" parent="."]
+script = ExtResource("ext_11_VfxStress")
+vfx_path = NodePath("../Vfx")
+center_path = NodePath("../Player")
+target_projectiles = 0
+explosions_per_sec = 0.0
+radius = 22.0
+
 [node name="Benchmark" type="Node" parent="."]
-script = ExtResource("ext_10_BenchmarkManager")
+script = ExtResource("ext_12_BenchmarkManager")
 crowd_path = NodePath("../Crowd")
 crowd_mm_path = NodePath("../CrowdMM")
+stress_path = NodePath("../VfxStress")
 warmup_sec = 5.0
 measure_sec = 20.0
 label = "M4-node"

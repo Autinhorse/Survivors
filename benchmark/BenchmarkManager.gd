@@ -16,6 +16,10 @@ extends Node
 ## Architectures to run.  "node" = section 6 方案 A, "mm-parts"/"mm-merged" =
 ## the two 方案 B variants (CPU transform per part vs shader animation).
 @export var architectures: PackedStringArray = PackedStringArray(["node"])
+## Section 23 VFX levels: 0 off, 1..4 = 100/300/500/1000 projectiles and
+## 10/30/50/100 explosions per second.
+@export var vfx_levels: PackedInt32Array = PackedInt32Array([0])
+@export var stress_path: NodePath
 @export var counts: PackedInt32Array = PackedInt32Array(
 		[100, 250, 500, 750, 1000, 1500, 2000])
 @export var shadow_modes: PackedStringArray = PackedStringArray(["A", "B"])
@@ -40,12 +44,14 @@ const HEADERS := [
 var _crowd: Node                 ## currently selected crowd
 var _crowd_node: Node
 var _crowd_mm: Node
+var _stress: Node
 var _rows: Array[PackedStringArray] = []
 
 
 func _ready() -> void:
 	_crowd_node = get_node_or_null(crowd_path)
 	_crowd_mm = get_node_or_null(crowd_mm_path)
+	_stress = get_node_or_null(stress_path)
 	_crowd = _crowd_node
 	if _crowd_node == null and _crowd_mm == null:
 		push_error("BenchmarkManager: no crowd node found")
@@ -83,6 +89,20 @@ func _apply_cli() -> void:
 				freeze_override = kv[1] == "1"
 			"move":
 				move_override = float(kv[1])
+			"light":
+				var v := get_node_or_null(stress_path)
+				if v:
+					var mgr := v.get_node_or_null(v.get("vfx_path"))
+					if mgr:
+						mgr.set("explosion_light", kv[1] == "1")
+			"noproj":
+				if _stress:
+					_stress.set("projectiles_disabled", kv[1] == "1")
+			"vfx":
+				var vs := PackedInt32Array()
+				for t in kv[1].split(","):
+					vs.append(int(t))
+				vfx_levels = vs
 			"archs":
 				var az := PackedStringArray()
 				for t in kv[1].split(","):
@@ -99,7 +119,7 @@ func modes_from(csv: String) -> void:
 
 func _run() -> void:
 	var started := Time.get_datetime_string_from_system()
-	var n_rows := counts.size() * shadow_modes.size() * architectures.size()
+	var n_rows := counts.size() * shadow_modes.size() * architectures.size() 			* vfx_levels.size()
 	print("[bench] plan: %d rows (%s), %.0fs warmup + %.0fs measure each"
 			% [n_rows, ",".join(architectures), warmup_sec, measure_sec])
 	print("[bench] estimated wall clock: %.1f min"
@@ -108,7 +128,8 @@ func _run() -> void:
 	for arch in architectures:
 		for mode in shadow_modes:
 			for c in counts:
-				await _measure_row(String(arch), int(c), String(mode))
+				for v in vfx_levels:
+					await _measure_row(String(arch), int(c), String(mode), int(v))
 
 	_write_csv(started)
 	if auto_quit:
@@ -132,7 +153,7 @@ func _select(arch: String) -> void:
 			other.set("count", 0)
 
 
-func _measure_row(arch: String, c: int, mode: String) -> void:
+func _measure_row(arch: String, c: int, mode: String, vfx_level: int) -> void:
 	_select(arch)
 	if _crowd == null:
 		return
@@ -141,6 +162,8 @@ func _measure_row(arch: String, c: int, mode: String) -> void:
 	_crowd.set("freeze_logic", freeze_override)
 	_crowd.set("shadow_mode", mode)
 	_crowd.set("count", c)
+	if _stress:
+		_stress.call("level", vfx_level)
 	# node creation for 2000 units is not free; let it settle before warm-up
 	await get_tree().process_frame
 	await get_tree().create_timer(warmup_sec).timeout
@@ -186,7 +209,8 @@ func _measure_row(arch: String, c: int, mode: String) -> void:
 		String(_crowd.call("arch_name")),
 		str(c),
 		"%.1f" % (alive_sum / n),
-		"0", "0",
+		str(_stress.call("live_projectiles")) if _stress else "0",
+		("%.0f" % float(_stress.call("explosion_rate"))) if _stress else "0",
 		mode,
 		"%.2f" % float(_crowd.get("move_speed")),
 		"1" if bool(_crowd.get("freeze_logic")) else "0",
@@ -203,8 +227,9 @@ func _measure_row(arch: String, c: int, mode: String) -> void:
 		str(get_tree().get_node_count()),
 	])
 	_rows.append(row)
-	print("[bench] %-11s count=%5d shadow=%s  avg=%6.1f fps (%6.2f ms)  1%%low=%6.1f fps  gpu=%.2f ms  dc=%s"
-			% [row[4], c, mode, 1000.0 / avg, avg, 1000.0 / p99, gpu_ms / n, row[19]])
+	print("[bench] %-11s n=%5d sh=%s vfx=%d(%s proj,%s expl/s)  avg=%6.1f fps (%6.2f ms)  1%%low=%6.1f fps  gpu=%5.2f ms  dc=%s"
+			% [row[4], c, mode, vfx_level, row[7], row[8],
+			1000.0 / avg, avg, 1000.0 / p99, gpu_ms / n, row[19]])
 
 
 func _renderer_name() -> String:

@@ -19,12 +19,12 @@ extends Node3D
 
 const VFX = preload("res://scripts/vfx/VfxCommon.gd")
 
-const MAX_TRACERS := 768
-const MAX_PUFFS := 256
+const MAX_TRACERS := 2048
+const MAX_PUFFS := 1024
 const SPARK_EMITTERS := 14
 const SMOKE_EMITTERS := 10
 const DEBRIS_EMITTERS := 8
-const MAX_ROCKETS := 24
+const MAX_ROCKETS := 96
 const MAX_ARCS := 12
 
 @export var explosion_light: bool = false   ## section 17/23 A-B switch
@@ -179,6 +179,37 @@ func explosion(pos: Vector3, scale := 1.0) -> void:
 		_flash_light(pos, scale)
 
 
+func explosion_mass(pos: Vector3, scale := 1.0) -> void:
+	## Same look as explosion(), but the particles go through the manual-emission
+	## emitters so hundreds of bursts can overlap without truncating each other.
+	var f := Puff.new()
+	f.pos = pos + Vector3(0.0, 0.6 * scale, 0.0)
+	f.basis = Basis()
+	f.max_life = 0.38
+	f.s0 = 1.1 * scale
+	f.s1 = 5.2 * scale
+	f.c0 = Color(3.4, 1.25, 0.28, 1.0)
+	f.c1 = Color(0.8, 0.16, 0.02, 0.0)
+	_add_puff("flash", f)
+
+	var r := Puff.new()
+	r.pos = pos + Vector3(0.0, 0.12, 0.0)
+	r.basis = Basis()
+	r.max_life = 0.42
+	r.s0 = 1.2 * scale
+	r.s1 = 9.0 * scale
+	r.c0 = Color(1.7, 0.85, 0.3, 1.0)
+	r.c1 = Color(0.35, 0.13, 0.03, 0.0)
+	_add_puff("ring", r)
+
+	mass_burst("smoke", pos + Vector3(0, 0.5 * scale, 0), 18)
+	mass_burst("debris", pos, 12)
+	mass_burst("spark", pos, 20)
+
+	if explosion_light:
+		_flash_light(pos, scale)
+
+
 func launch_rocket(from: Vector3, to: Vector3, speed := 26.0) -> void:
 	for r in _rockets:
 		if r.alive:
@@ -257,6 +288,65 @@ func _build_puff_layer(nm: String, mesh: Mesh, tint: Color,
 	_puffs[nm] = []
 
 
+## Manual-emission burst emitters.
+##
+## The M3 ring buffer of one-shot emitters is fine at gameplay rates, but the
+## section 23 stress test asks for up to 100 explosions/sec.  With a 2 s smoke
+## lifetime that needs ~200 concurrent bursts; recycling 10 emitters would cut
+## every plume short and under-report exactly the smoke overdraw section 15
+## warns about.  Growing the pool instead would measure emitter-node overhead.
+##
+## So the stress path uses ONE emitter per effect type with a large `amount`,
+## `amount_ratio = 0` (no automatic emission, system still processing) and
+## `emit_particle()` placing every particle by hand.  One draw call, no ceiling
+## on concurrent bursts.
+var _mass_spark: GPUParticles3D
+var _mass_smoke: GPUParticles3D
+var _mass_debris: GPUParticles3D
+
+
+func _make_mass_emitter(amount: int, lifetime: float, mesh: Mesh,
+		pm: ParticleProcessMaterial) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = amount
+	p.lifetime = lifetime
+	p.one_shot = false
+	# `amount_ratio = 0` also zeroes the particle POOL, so emit_particle() has no
+	# free slots and silently emits nothing.  `emitting = false` is the correct
+	# way to stop automatic emission while keeping the pool and the simulation.
+	p.emitting = false
+	p.local_coords = false
+	p.draw_pass_1 = mesh
+	p.process_material = pm
+	p.visibility_aabb = AABB(Vector3(-60, -20, -60), Vector3(120, 40, 120))
+	add_child(p)
+	return p
+
+
+func mass_burst(kind: String, pos: Vector3, n: int) -> void:
+	var e: GPUParticles3D = null
+	var speed := 6.0
+	match kind:
+		"spark":
+			e = _mass_spark
+			speed = 9.0
+		"smoke":
+			e = _mass_smoke
+			speed = 3.0
+		"debris":
+			e = _mass_debris
+			speed = 10.0
+	if e == null:
+		return
+	var flags := 1 | 4          # EMIT_FLAG_POSITION | EMIT_FLAG_VELOCITY
+	for i in n:
+		var dir := Vector3(_rng.randf_range(-1.0, 1.0), _rng.randf_range(0.1, 1.0),
+				_rng.randf_range(-1.0, 1.0)).normalized()
+		var xf := Transform3D(Basis(), pos + dir * 0.3)
+		e.emit_particle(xf, dir * speed * _rng.randf_range(0.5, 1.0),
+				Color.WHITE, Color.WHITE, flags)
+
+
 func _build_particles() -> void:
 	var dot := VFX.soft_sprite(32, 2.4)
 	var puff := VFX.soft_sprite(64, 1.5, true)
@@ -282,6 +372,10 @@ func _build_particles() -> void:
 		var p := VFX.make_burst(14, 1.1, debris_mesh, VFX.debris_process())
 		add_child(p)
 		_debris.append(p)
+
+	_mass_spark = _make_mass_emitter(8192, 0.55, spark_mesh, VFX.spark_process())
+	_mass_smoke = _make_mass_emitter(8192, 2.1, smoke_mesh, VFX.smoke_process(1.7, 3.6))
+	_mass_debris = _make_mass_emitter(4096, 1.1, debris_mesh, VFX.debris_process())
 
 
 func _build_rockets() -> void:

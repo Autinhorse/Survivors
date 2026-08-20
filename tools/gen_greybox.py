@@ -729,10 +729,23 @@ def build():
             "churn_per_sec": "10.0",
             "shadow_mode": '"B"',
         })
+        node("Vfx", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/vfx/VfxManager.gd"),
+            "explosion_light": "false",
+        })
+        node("VfxStress", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/vfx/VfxStress.gd"),
+            "vfx_path": 'NodePath("../Vfx")',
+            "center_path": 'NodePath("../Player")',
+            "target_projectiles": "0",
+            "explosions_per_sec": "0.0",
+            "radius": "22.0",
+        })
         node("Benchmark", "Node", ".", {
             "script": ext("Script", "res://benchmark/BenchmarkManager.gd"),
             "crowd_path": 'NodePath("../Crowd")',
             "crowd_mm_path": 'NodePath("../CrowdMM")',
+            "stress_path": 'NodePath("../VfxStress")',
             "warmup_sec": "5.0",
             "measure_sec": "20.0",
             "label": '"M4-node"',
