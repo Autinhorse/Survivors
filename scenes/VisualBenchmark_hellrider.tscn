@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Shader" path="res://shaders/hr_ground.gdshader" id="ext_1_hr_ground"]
 [ext_resource type="Shader" path="res://shaders/hr_lava.gdshader" id="ext_2_hr_lava"]
@@ -7,20 +7,14 @@
 [ext_resource type="Shader" path="res://shaders/hr_blob.gdshader" id="ext_5_hr_blob"]
 [ext_resource type="Script" path="res://scripts/environment/GameplayCameraPolicy.gd" id="ext_6_GameplayCameraPolicy"]
 [ext_resource type="Script" path="res://scripts/environment/HellField.gd" id="ext_7_HellField"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/rocks.glb" id="ext_8_rocks"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/bridge.glb" id="ext_9_bridge"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_c.glb" id="ext_10_house_c"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_b.glb" id="ext_11_house_b"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_a.glb" id="ext_12_house_a"]
-[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_13_ScatterField"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/trees.glb" id="ext_14_trees"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/bushes.glb" id="ext_15_bushes"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/pebbles.glb" id="ext_16_pebbles"]
+[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_8_ScatterField"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/rocks.glb" id="ext_9_rocks"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/trees.glb" id="ext_10_trees"]
 
 [sub_resource type="ShaderMaterial" id="MatHrGround"]
 shader = ExtResource("ext_1_hr_ground")
 shader_parameter/tile_a = Color(0.545, 0.392, 0.282, 1)
-shader_parameter/tile_b = Color(0.573, 0.413, 0.297, 1)
+shader_parameter/tile_b = Color(0.563, 0.406, 0.292, 1)
 shader_parameter/tile_size = 2.6
 shader_parameter/tile_steps = 4.0
 shader_parameter/tile_bias = 0.55
@@ -122,6 +116,9 @@ adjustment_enabled = true
 adjustment_saturation = 0.90
 adjustment_contrast = 1.0
 adjustment_brightness = 1.0
+
+[sub_resource type="BoxMesh" id="MeshBoxP"]
+size = Vector3(1, 1, 1)
 
 [node name="HellRiderBenchmark" type="Node3D"]
 
@@ -443,624 +440,65 @@ mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
-[node name="River" type="Node3D" parent="."]
+[node name="Tune" type="Node3D" parent="."]
 
 
-[node name="Water" type="MeshInstance3D" parent="River"]
-transform = Transform3D(7.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 82.00000, 9.50000, 0.03000, -5.00000)
-mesh = SubResource("MeshPlane")
-surface_material_override/0 = SubResource("MatHrWater")
-cast_shadow = 0
-
-[node name="BankL" type="MeshInstance3D" parent="River"]
-transform = Transform3D(0.70000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 82.00000, 5.65000, 0.04000, -5.00000)
-mesh = SubResource("MeshPlane")
-surface_material_override/0 = SubResource("MatHrWaterDeep")
-cast_shadow = 0
-
-[node name="BankR" type="MeshInstance3D" parent="River"]
-transform = Transform3D(0.70000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 82.00000, 13.35000, 0.04000, -5.00000)
-mesh = SubResource("MeshPlane")
-surface_material_override/0 = SubResource("MatHrWaterDeep")
-cast_shadow = 0
-
-[node name="WaterRock0" parent="River" instance=ExtResource("ext_8_rocks")]
-transform = Transform3D(1.10000, 0.00000, 0.00000, 0.00000, 0.88000, 0.00000, 0.00000, 0.00000, 1.10000, 7.90000, 0.05000, -30.00000)
-
-[node name="rock_block_0" parent="River/WaterRock0" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="WaterRock1" parent="River" instance=ExtResource("ext_8_rocks")]
-transform = Transform3D(0.63891, 0.00000, 0.48145, 0.00000, 0.64000, 0.00000, -0.48145, 0.00000, 0.63891, 11.40000, 0.05000, -14.00000)
-
-[node name="rock_block_0" parent="River/WaterRock1" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="WaterRock2" parent="River" instance=ExtResource("ext_8_rocks")]
-transform = Transform3D(0.24807, 0.00000, 0.86514, 0.00000, 0.72000, 0.00000, -0.86514, 0.00000, 0.24807, 8.30000, 0.05000, 4.00000)
-
-[node name="rock_block_0" parent="River/WaterRock2" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="WaterRock3" parent="River" instance=ExtResource("ext_8_rocks")]
-transform = Transform3D(-0.43004, 0.00000, 1.12030, 0.00000, 0.96000, 0.00000, -1.12030, 0.00000, -0.43004, 11.50000, 0.05000, 18.00000)
-
-[node name="rock_block_0" parent="River/WaterRock3" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="WaterRock4" parent="River" instance=ExtResource("ext_8_rocks")]
-transform = Transform3D(-0.59363, 0.00000, 0.37094, 0.00000, 0.56000, 0.00000, -0.37094, 0.00000, -0.59363, 7.50000, 0.05000, 28.00000)
-
-[node name="rock_block_0" parent="River/WaterRock4" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="Bridge" type="Node3D" parent="."]
-
-
-[node name="Deck" parent="Bridge" instance=ExtResource("ext_9_bridge")]
-transform = Transform3D(0.00000, 0.00000, 1.00000, 0.00000, 1.00000, 0.00000, -1.00000, 0.00000, 0.00000, 9.50000, 0.16000, -6.00000)
-
-[node name="bridge" parent="Bridge/Deck" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="Buildings" type="Node3D" parent="."]
-
-
-[node name="HouseA" parent="Buildings" instance=ExtResource("ext_10_house_c")]
-transform = Transform3D(0.97815, 0.00000, 0.20791, 0.00000, 1.00000, 0.00000, -0.20791, 0.00000, 0.97815, -11.00000, 0.00000, -8.00000)
-
-[node name="house_c" parent="Buildings/HouseA" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="HouseB" parent="Buildings" instance=ExtResource("ext_11_house_b")]
-transform = Transform3D(0.99027, 0.00000, -0.13917, 0.00000, 1.00000, 0.00000, 0.13917, 0.00000, 0.99027, -4.00000, 0.00000, -16.00000)
-
-[node name="house_b" parent="Buildings/HouseB" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="HouseC" parent="Buildings" instance=ExtResource("ext_10_house_c")]
-transform = Transform3D(0.99452, 0.00000, -0.10453, 0.00000, 1.00000, 0.00000, 0.10453, 0.00000, 0.99452, -13.50000, 0.00000, 4.00000)
-
-[node name="house_c" parent="Buildings/HouseC" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="HouseD" parent="Buildings" instance=ExtResource("ext_12_house_a")]
-transform = Transform3D(0.96126, 0.00000, 0.27564, 0.00000, 1.00000, 0.00000, -0.27564, 0.00000, 0.96126, -3.00000, 0.00000, 2.00000)
-
-[node name="house_a" parent="Buildings/HouseD" index="0"]
-material_override = SubResource("MatHrFlat")
-
-[node name="BlobHouseA" type="MeshInstance3D" parent="Buildings"]
-transform = Transform3D(8.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 6.80000, -11.00000, 0.03000, -8.00000)
+[node name="Blob_Rocks_7" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(4.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.00000, -11.00000, 0.03000, -12.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="BlobHouseB" type="MeshInstance3D" parent="Buildings"]
-transform = Transform3D(6.60000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 5.61000, -4.00000, 0.03000, -16.00000)
+[node name="Blob_Rocks_14" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(3.20000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.20000, -1.00000, 0.03000, 3.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="BlobHouseC" type="MeshInstance3D" parent="Buildings"]
-transform = Transform3D(8.60000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 7.31000, -13.50000, 0.03000, 4.00000)
+[node name="Blob_Rocks_21" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(2.72000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 2.72000, 10.00000, 0.03000, -14.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="BlobHouseD" type="MeshInstance3D" parent="Buildings"]
-transform = Transform3D(7.60000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 6.46000, -3.00000, 0.03000, 2.00000)
-mesh = SubResource("MeshPlane")
-surface_material_override/0 = SubResource("MatHrBlob")
-cast_shadow = 0
-
-[node name="Scatter" type="Node3D" parent="."]
-
-
-[node name="Rocks" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_13_ScatterField")
+[node name="Rocks" type="Node3D" parent="Tune"]
+script = ExtResource("ext_8_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_8_rocks")
-variants = 8
-material = SubResource("MatHrFlat")
-blob_material = SubResource("MatHrBlob")
-blob_scale = 2.1
-placements = PackedFloat32Array(-14.946, 0.000, -33.754, 47.339, 1.822, 1.822, 1.822, -15.878, 0.000, -30.070, 91.680, 1.962, 1.962, 1.962, -12.135, 0.000, -31.251, 230.639, 0.985, 0.985, 0.985, 15.187, 0.000, -33.980, 191.180, 0.961, 0.961, 0.961, 15.016, 0.000, -37.512, 219.822, 1.616, 1.616, 1.616, -13.064, 0.000, 19.591, 57.708, 1.775, 1.775, 1.775, -16.206, 0.000, 19.036, 234.746, 0.926, 0.926, 0.926, -17.205, 0.000, 21.704, 198.615, 0.896, 0.896, 0.896, -7.176, 0.000, -24.945, 155.102, 1.094, 1.094, 1.094, -4.944, 0.000, -25.919, 68.462, 1.314, 1.314, 1.314, 15.541, 0.000, 8.159, 355.371, 1.167, 1.167, 1.167)
-
-[node name="Trees" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_13_ScatterField")
-kind = "rock"
-source_scene = ExtResource("ext_14_trees")
-variants = 4
-material = SubResource("MatHrFlat")
-blob_material = SubResource("MatHrBlob")
-blob_scale = 2.6
-placements = PackedFloat32Array(-13.106, 0.000, -19.343, 305.397, 1.191, 1.191, 1.191, -15.279, 0.000, -15.064, 171.509, 0.911, 0.911, 0.911, -17.080, 0.000, -18.766, 4.588, 0.851, 0.851, 0.851, -14.149, 0.000, -16.296, 203.060, 0.887, 0.887, 0.887, -16.122, 0.000, 12.876, 338.618, 0.934, 0.934, 0.934, -16.119, 0.000, 9.389, 94.049, 1.096, 1.096, 1.096, -13.578, 0.000, 12.872, 290.805, 0.916, 0.916, 0.916, -8.074, 0.000, 21.166, 346.996, 1.045, 1.045, 1.045, -6.527, 0.000, 22.083, 191.402, 1.033, 1.033, 1.033, -4.512, 0.000, 24.445, 145.384, 1.247, 1.247, 1.247, -7.373, 0.000, 24.852, 148.858, 1.026, 1.026, 1.026, 15.194, 0.000, -10.161, 54.771, 1.116, 1.116, 1.116)
-
-[node name="Bushes" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_13_ScatterField")
-kind = "rock"
-source_scene = ExtResource("ext_15_bushes")
+source_scene = ExtResource("ext_9_rocks")
 variants = 6
 material = SubResource("MatHrFlat")
-blob_material = SubResource("MatHrBlob")
-blob_scale = 2.1
-placements = PackedFloat32Array(-10.601, 0.000, -14.012, 162.210, 0.963, 0.963, 0.963, -1.958, 0.000, -8.445, 104.392, 0.924, 0.924, 0.924, -4.093, 0.000, -7.073, 338.669, 1.036, 1.036, 1.036, -16.510, 0.000, 16.210, 165.039, 1.072, 1.072, 1.072, -13.729, 0.000, 16.822, 20.353, 1.086, 1.086, 1.086, 2.104, 0.000, -23.794, 249.866, 0.879, 0.879, 0.879, -1.713, 0.000, -23.772, 16.577, 0.776, 0.776, 0.776, 16.919, 0.000, -2.578, 209.099, 0.737, 0.737, 0.737, 17.284, 0.000, -3.873, 73.919, 0.779, 0.779, 0.779)
+placements = PackedFloat32Array(-11.000, 0.000, -12.000, 0.000, 1.250, 1.250, 1.250, -1.000, 0.000, 3.000, 40.000, 1.000, 1.000, 1.000, 10.000, 0.000, -14.000, -25.000, 0.850, 0.850, 0.850)
 
-[node name="Pebbles" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_13_ScatterField")
+[node name="Blob_Trees_7" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(4.40000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.40000, -12.00000, 0.03000, 9.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="Blob_Trees_14" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(5.06000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 5.06000, 2.00000, 0.03000, -22.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="Blob_Trees_21" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(3.96000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.96000, 12.00000, 0.03000, 7.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="Trees" type="Node3D" parent="Tune"]
+script = ExtResource("ext_8_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_16_pebbles")
+source_scene = ExtResource("ext_10_trees")
 variants = 4
 material = SubResource("MatHrFlat")
-blob_material = SubResource("MatHrBlob")
-blob_scale = 1.5
-placements = PackedFloat32Array(-15.078, 0.000, -25.703, 103.266, 0.792, 0.792, 0.792, -14.840, 0.000, -27.819, 359.544, 0.925, 0.925, 0.925, -14.905, 0.000, 22.460, 31.561, 0.843, 0.843, 0.843, -14.460, 0.000, 14.586, 186.967, 0.693, 0.693, 0.693, 15.751, 0.000, 23.293, 37.276, 1.075, 1.075, 1.075)
+placements = PackedFloat32Array(-12.000, 0.000, 9.000, 0.000, 1.000, 1.000, 1.000, 2.000, 0.000, -22.000, 30.000, 1.150, 1.150, 1.150, 12.000, 0.000, 7.000, -15.000, 0.900, 0.900, 0.900)
 
 [node name="Player" type="Node3D" parent="."]
-transform = Transform3D(0.91355, 0.00000, 0.40674, 0.00000, 1.00000, 0.00000, -0.40674, 0.00000, 0.91355, -6.00000, 0.00000, -2.00000)
+transform = Transform3D(0.93969, 0.00000, 0.34202, 0.00000, 1.00000, 0.00000, -0.34202, 0.00000, 0.93969, 0.00000, 0.00000, -6.00000)
 
 [node name="Body" type="MeshInstance3D" parent="Player"]
 transform = Transform3D(1.50000, 0.00000, 0.00000, 0.00000, 1.60000, 0.00000, 0.00000, 0.00000, 2.10000, 0.00000, 1.00000, 0.00000)
-mesh = SubResource("MeshBox")
+mesh = SubResource("MeshBoxP")
 surface_material_override/0 = SubResource("MatHrPlayer")
-
-[node name="Head" type="MeshInstance3D" parent="Player"]
-transform = Transform3D(0.90000, 0.00000, 0.00000, 0.00000, 0.70000, 0.00000, 0.00000, 0.00000, 0.90000, 0.00000, 2.10000, 0.15000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrPlayer")
-
-[node name="GunL" type="MeshInstance3D" parent="Player"]
-transform = Transform3D(0.28000, 0.00000, 0.00000, 0.00000, 0.28000, 0.00000, 0.00000, 0.00000, 2.20000, -0.95000, 1.35000, -1.10000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="GunR" type="MeshInstance3D" parent="Player"]
-transform = Transform3D(0.28000, 0.00000, 0.00000, 0.00000, 0.28000, 0.00000, 0.00000, 0.00000, 2.20000, 0.95000, 1.35000, -1.10000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="Leg0" type="MeshInstance3D" parent="Player"]
-transform = Transform3D(0.45000, 0.00000, 0.00000, 0.00000, 0.60000, 0.00000, 0.00000, 0.00000, 0.60000, -0.55000, 0.30000, 0.10000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="Leg1" type="MeshInstance3D" parent="Player"]
-transform = Transform3D(0.45000, 0.00000, 0.00000, 0.00000, 0.60000, 0.00000, 0.00000, 0.00000, 0.60000, 0.55000, 0.30000, 0.10000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="Enemies" type="Node3D" parent="."]
-
-
-[node name="E2" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.59846, 0.00000, 0.80115, 0.00000, 1.00000, 0.00000, -0.80115, 0.00000, -0.59846, -4.30121, 0.00000, 6.45683)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E2"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E2"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E2"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E3" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.54977, 0.00000, -0.83532, 0.00000, 1.00000, 0.00000, 0.83532, 0.00000, 0.54977, 0.55140, 0.00000, 1.20830)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E3"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E3"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E3"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E5" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.77580, 0.00000, -0.63097, 0.00000, 1.00000, 0.00000, 0.63097, 0.00000, 0.77580, -11.70902, 0.00000, 0.75948)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E5"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E5"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E5"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E6" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.33542, 0.00000, 0.94207, 0.00000, 1.00000, 0.00000, -0.94207, 0.00000, 0.33542, -11.43382, 0.00000, 3.36849)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E6"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E6"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E6"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E9" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.40162, 0.00000, -0.91580, 0.00000, 1.00000, 0.00000, 0.91580, 0.00000, 0.40162, 1.92755, 0.00000, 8.74720)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E9"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E9"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E9"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E10" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.37438, 0.00000, -0.92728, 0.00000, 1.00000, 0.00000, 0.92728, 0.00000, 0.37438, -6.98537, 0.00000, 2.99965)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E10"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E10"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E10"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E12" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.03939, 0.00000, 0.99922, 0.00000, 1.00000, 0.00000, -0.99922, 0.00000, 0.03939, 4.17141, 0.00000, -11.21308)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E12"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E12"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E12"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E14" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.78854, 0.00000, 0.61499, 0.00000, 1.00000, 0.00000, -0.61499, 0.00000, 0.78854, -16.54301, 0.00000, -10.83674)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E14"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E14"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E14"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E16" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.20621, 0.00000, 0.97851, 0.00000, 1.00000, 0.00000, -0.97851, 0.00000, 0.20621, -1.42556, 0.00000, -6.52506)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E16"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E16"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E16"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E17" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.75704, 0.00000, 0.65337, 0.00000, 1.00000, 0.00000, -0.65337, 0.00000, 0.75704, -9.45524, 0.00000, -9.14527)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E17"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E17"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E17"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E18" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.33983, 0.00000, 0.94049, 0.00000, 1.00000, 0.00000, -0.94049, 0.00000, -0.33983, 0.48585, 0.00000, -7.02273)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E18"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E18"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E18"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E20" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.87908, 0.00000, -0.47668, 0.00000, 1.00000, 0.00000, 0.47668, 0.00000, -0.87908, -5.99281, 0.00000, 4.57209)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E20"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E20"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E20"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E21" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.28758, 0.00000, -0.95776, 0.00000, 1.00000, 0.00000, 0.95776, 0.00000, 0.28758, 3.22112, 0.00000, 17.36844)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E21"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E21"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E21"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E22" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.94077, 0.00000, 0.33906, 0.00000, 1.00000, 0.00000, -0.33906, 0.00000, -0.94077, -7.15656, 0.00000, -7.90295)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E22"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E22"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E22"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E23" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.77308, 0.00000, -0.63431, 0.00000, 1.00000, 0.00000, 0.63431, 0.00000, 0.77308, -4.10278, 0.00000, 18.29691)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E23"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E23"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E23"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E24" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.85117, 0.00000, 0.52489, 0.00000, 1.00000, 0.00000, -0.52489, 0.00000, -0.85117, -15.60699, 0.00000, 4.59267)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E24"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E24"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E24"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E25" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.44564, 0.00000, 0.89521, 0.00000, 1.00000, 0.00000, -0.89521, 0.00000, 0.44564, -15.40420, 0.00000, 5.51031)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E25"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E25"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E25"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E26" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.27343, 0.00000, 0.96189, 0.00000, 1.00000, 0.00000, -0.96189, 0.00000, 0.27343, -5.50152, 0.00000, 3.11900)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E26"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E26"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E26"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E27" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.99990, 0.00000, -0.01379, 0.00000, 1.00000, 0.00000, 0.01379, 0.00000, -0.99990, -2.77394, 0.00000, 11.49599)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E27"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E27"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E27"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E28" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.98096, 0.00000, 0.19420, 0.00000, 1.00000, 0.00000, -0.19420, 0.00000, 0.98096, -11.89840, 0.00000, -4.96268)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E28"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E28"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E28"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E29" type="Node3D" parent="Enemies"]
-transform = Transform3D(0.93051, 0.00000, -0.36627, 0.00000, 1.00000, 0.00000, 0.36627, 0.00000, 0.93051, -3.91234, 0.00000, -12.80380)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E29"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E29"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E29"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E31" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.16195, 0.00000, 0.98680, 0.00000, 1.00000, 0.00000, -0.98680, 0.00000, -0.16195, -6.71565, 0.00000, -16.63303)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E31"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E31"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E31"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E32" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.67094, 0.00000, -0.74151, 0.00000, 1.00000, 0.00000, 0.74151, 0.00000, -0.67094, -6.46971, 0.00000, 11.49712)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E32"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E32"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E32"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")
-
-[node name="E33" type="Node3D" parent="Enemies"]
-transform = Transform3D(-0.97067, 0.00000, -0.24041, 0.00000, 1.00000, 0.00000, 0.24041, 0.00000, -0.97067, -1.88789, 0.00000, -8.23863)
-
-[node name="Body" type="MeshInstance3D" parent="Enemies/E33"]
-transform = Transform3D(0.55000, 0.00000, 0.00000, 0.00000, 1.10000, 0.00000, 0.00000, 0.00000, 0.45000, 0.00000, 0.55000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Head" type="MeshInstance3D" parent="Enemies/E33"]
-transform = Transform3D(0.42000, 0.00000, 0.00000, 0.00000, 0.40000, 0.00000, 0.00000, 0.00000, 0.42000, 0.00000, 1.25000, 0.00000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemy")
-
-[node name="Arm" type="MeshInstance3D" parent="Enemies/E33"]
-transform = Transform3D(0.16000, 0.00000, 0.00000, 0.00000, 0.16000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.75000, -0.45000)
-mesh = SubResource("MeshBox")
-surface_material_override/0 = SubResource("MatHrEnemyDark")

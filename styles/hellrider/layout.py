@@ -66,6 +66,20 @@ CAM_FOCUS_Z = 0.5
 
 FORWARD_PLUS = False
 
+# 调参模式：只留地面、熔岩、少量石头和树，去掉河、桥、房子、敌人。
+# 单个物体的形状和明暗要在**没有别的东西干扰**的情况下调，
+# 调好了再放回完整场景 —— 正式场景本来也不会这么满。
+# 改回 False 就是完整村庄。
+MINIMAL = True
+
+# 调参模式下手工摆的位置：每个物体都摆在空处，互不遮挡，一眼能看全
+MIN_ROCKS = ((-11.0, -12.0, 1.25, 0.0),
+             (-1.0, 3.0, 1.0, 40.0),
+             (10.0, -14.0, 0.85, -25.0))
+MIN_TREES = ((-12.0, 9.0, 1.0, 0.0),
+             (2.0, -22.0, 1.15, 30.0),
+             (12.0, 7.0, 0.9, -15.0))
+
 
 def camera_z():
     return CAM_FOCUS_Z + CAM_HEIGHT / math.tan(math.radians(CAM_PITCH))
@@ -182,6 +196,10 @@ def build(MAT, MESH, performance=False):
         s = random.uniform(0.35, 1.05)
         mesh("Ember%d" % i, em, box, MAT["lava"], (x, 0.02, z),
              ry=45.0, scale=(s, 0.06, s), cast_shadow="0")
+
+    if MINIMAL:
+        _minimal(MAT, MESH, plane)
+        return
 
     # ------------------------------------------------------------ 河与桥 --
     ri = node("River", "Node3D", ".")
@@ -325,3 +343,43 @@ def build(MAT, MESH, performance=False):
              scale=(0.16, 0.16, 1.0))
         n_en += 1
     print("units: 1 player + %d enemies" % n_en)
+
+
+def _minimal(MAT, MESH, plane):
+    """调参场景：地面 + 熔岩 + 3 块石头 + 3 棵树，每个都摆在空处。
+
+    位置写死而不是随机散布 —— 调形状的时候需要**每次渲染看到同一个东西**，
+    随机散布会让"改前/改后"没法比。
+
+    用 ScatterField 而不是 instance()：一个 GLB 里装着多个变体，
+    直接 instance() 会把**里面所有物体**都带进场景（各自按导出时的偏移摆开），
+    child= 只是给其中一个挂材质，其余的会用 GLB 自带的白色载体材质。
+    第一版就是这样，3 个实例出来了 18 块石头，一半是白的。
+    """
+    sc = node("Tune", "Node3D", ".")
+
+    def put(nm, src, n_var, spots, blob_mul):
+        pl = []
+        for px, pz, s_, ry in spots:
+            pl += [px, 0.0, pz, ry, s_, s_, s_]
+            mesh("Blob_%s_%d" % (nm, len(pl)), sc, plane, MAT["blob"],
+                 (px, 0.03, pz), scale=(s_ * blob_mul, 1.0, s_ * blob_mul),
+                 cast_shadow="0")
+        node(nm, "Node3D", sc, {
+            "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+            "kind": '"rock"',
+            "source_scene": ext("PackedScene", MESH(src)),
+            "variants": str(n_var),
+            "material": MAT["flat"],
+            "placements": "PackedFloat32Array(%s)"
+                          % ", ".join("%.3f" % v for v in pl)})
+
+    put("Rocks", "rocks.glb", 6, MIN_ROCKS, 3.2)
+    put("Trees", "trees.glb", 4, MIN_TREES, 4.4)
+
+    # 玩家留着当尺度参照
+    pl = node("Player", "Node3D", ".", None, T((0.0, 0.0, -6.0), ry=20.0))
+    mesh("Body", pl, sub("BoxMesh", "MeshBoxP", size="Vector3(1, 1, 1)"),
+         MAT["player"], (0.0, 1.0, 0.0), scale=(1.5, 1.6, 2.1))
+    print("MINIMAL 调参场景：%d 块石头 + %d 棵树"
+          % (len(MIN_ROCKS), len(MIN_TREES)))
