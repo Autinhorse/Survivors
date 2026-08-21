@@ -30,14 +30,34 @@ DEFAULT_STYLE = "gatling"
 REFERENCE_STYLE = "gatling"      # 性能基准固定用它，保证数字可比
 
 
-def load_style(name):
-    path = os.path.join(ROOT, "styles", name, "materials.py")
-    if not os.path.isfile(path):
-        raise SystemExit("找不到风格 '%s'（缺 %s）" % (name, path))
-    spec = importlib.util.spec_from_file_location("style_%s" % name, path)
+def _load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def load_style(name):
+    """返回 (材质模块, 布局模块)。
+
+    布局默认用共享的 tools/layout.py；风格目录下如果有自己的 layout.py，
+    就用它自己的。**这是给"美术语言差得太远"的风格留的出口** ——
+    hellrider 的参考图是熔岩走廊，构图逻辑和 gatling 的村庄河谷不同，
+    强行共用布局只会两头不讨好。
+    """
+    d = os.path.join(ROOT, "styles", name)
+    mp = os.path.join(d, "materials.py")
+    if not os.path.isfile(mp):
+        raise SystemExit("找不到风格 '%s'（缺 %s）" % (name, mp))
+    materials = _load("style_%s_materials" % name, mp)
+    lp = os.path.join(d, "layout.py")
+    if os.path.isfile(lp):
+        layout = _load("style_%s_layout" % name, lp)
+        print("[gen_scene] 风格 '%s' 使用自带布局" % name)
+    else:
+        import layout
+    return materials, layout
 
 
 def main(argv):
@@ -51,9 +71,9 @@ def main(argv):
               % (REFERENCE_STYLE, style))
         style = REFERENCE_STYLE
 
-    import layout
     import tscnlib
 
+    st, layout = load_style(style)
     if "--forward-plus" in argv:
         layout.FORWARD_PLUS = True
     for i, tok in enumerate(argv):
@@ -64,7 +84,6 @@ def main(argv):
         elif tok == "--fov":
             layout.CAM_FOV = float(argv[i + 1])
 
-    st = load_style(style)
     layout.build(st.materials(), st.MESH, performance=performance)
 
     name = ("PerformanceBenchmark.tscn" if performance

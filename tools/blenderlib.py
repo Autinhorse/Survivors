@@ -70,6 +70,18 @@ def cyl(radius, depth, loc, material, verts=8, rot=(0, 0, 0)):
     return o
 
 
+def ico(radius, loc, material, subdiv=1, rot=(0, 0, 0)):
+    """低面球。subdiv=1 -> 80 面，subdiv=2 -> 320 面。
+
+    平面着色的低模风格里树冠/灌木就是它 —— 不做平滑，每个面一个亮度台阶。
+    """
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=subdiv, radius=radius,
+                                          location=loc, rotation=rot)
+    o = bpy.context.active_object
+    o.data.materials.append(mat(material))
+    return o
+
+
 def wedge(size, loc, material, rot=(0, 0, 0)):
     """三棱柱屋顶：Blender 没有现成的，用 bmesh 直接建，
     这样能精确控制屋脊位置和出檐，比缩放 primitive 可控得多。"""
