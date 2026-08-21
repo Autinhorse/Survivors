@@ -15,3 +15,7 @@ Thumbs.db
 # 丢在根目录的临时截图（Godot 会给它生成 .import）
 /*.png
 /*.png.import
+
+# Python
+__pycache__/
+*.pyc
