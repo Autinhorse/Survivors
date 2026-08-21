@@ -312,12 +312,15 @@ def _overlap_1d(a0, a1, b0, b1):
     return min(a1, b1) - max(a0, b0)
 
 
-def check_clearance(items, min_gap=0.6):
+def check_clearance(items, min_gap=0.6, allowed=()):
     """作者手摆的大件之间留没留出间距。
 
     桥加宽一倍之后和 HouseB 撞了，而这件事**在截图里很难看出来** ——
     60° 俯视下前后错开几米和真的重叠长得差不多，只有算一遍才知道。
     用轴对齐包围盒近似（都是接近轴向的矩形），够用了。
+
+    allowed 列本来就该贴在一起的组合（比如引桥土坡和桥面端头）——
+    否则真正的问题会淹没在预期内的报告里。
     """
     bad = []
     for i in range(len(items)):
@@ -328,7 +331,7 @@ def check_clearance(items, min_gap=0.6):
             oz = _overlap_1d(min(p[1] for p in f1), max(p[1] for p in f1),
                              min(p[1] for p in f2), max(p[1] for p in f2))
             gap = max(-ox, -oz)          # 两轴都重叠时为负 = 真重叠
-            if gap < min_gap:
+            if gap < min_gap and (n1, n2) not in allowed and (n2, n1) not in allowed:
                 bad.append((n1, n2, gap))
     for n1, n2, gap in bad:
         print("  [clearance] %s <-> %s : %s%.2f m"
@@ -557,6 +560,10 @@ BRIDGE_Z = -8.0
 # 桥面本身是 Blender 资产，这两个数只用来算桥墩、拉索和占位检查。
 DECK_L = 16.0                    # 河道在 z=-8 处宽 6.7 m，两端各有约 4.6 m 落地
 DECK_W = 8.4                     # 参考图的桥宽约是机甲的 4-5 倍
+RAMP_LEN = 8.0                   # 桥头土坡的长度（坡趾到桥头）
+# 占位检查登记的是**实际抬起来的那一块**，不是整个包围盒：
+# 高度场在边缘已经归零，拿整块外框去判定会把周围一大片都判成冲突。
+RAMP_SOLID = (0.78, 0.74)        # 有效长/宽相对整体的比例
 DECK_Y = 2.1                     # meets the far-bank plateau top
 
 # Village loop road
@@ -834,18 +841,25 @@ def build():
             mesh("Pylon%d%d" % (i, j), br, cyl, MAT["wood"],
                  (bcx + dx, (DECK_Y + BED_Y) / 2.0, bz + offz),
                  scale=(0.6, DECK_Y - BED_Y, 0.6))
-    # 近岸引桥：**堆一道土坡**，不是几块悬空的大木板。
-    # 之前那三块木板缩放到 8.4 m 宽之后，成了三块巨大的平板，
-    # 既没有厚度也没有材质 —— 而且现实里 2.1 m 的高差本来就是填土解决的。
-    # 用地形材质，着色器会自动按坡度给出草/土/石的过渡。
-    ramp_len = 9.0
-    ramp_ang = math.degrees(math.atan2(DECK_Y, ramp_len))
-    node("Approach", "CSGBox3D", ter,
-         {"size": "Vector3(%g, 2.0, %g)" % (ramp_len + 2.0, DECK_W + 3.2),
-          "material": MAT["grass"], "operation": "0"},
-         T((x0 - ramp_len * 0.5 + 1.0,
-            DECK_Y * 0.5 - 0.35 - math.sin(math.radians(ramp_ang)) * 0.4, bz),
-           ry=RANG, rz=ramp_ang))
+    # 近岸引桥：一个四周平滑归零的**高度场土丘**（scripts/environment/EarthRamp.gd）。
+    #
+    # 走过两版都不行：
+    #   三块悬空的大木板 —— 缩放到 8.4 m 宽之后是三块巨大的平板；
+    #   一个旋转的 CSG 盒子 —— 三面都是硬棱，读成三角楔子，而且是实体，
+    #                          既捅穿了桥面也捅穿了旁边的房子。
+    # 高度场把这三条一起解决：两端和两侧都 smoothstep 归零，边缘落回地面高度。
+    # 用地形材质（世界坐标投影），草地纹理和周围地面严丝合缝。
+    node("Approach", "MeshInstance3D", br,
+         {"script": ext("Script", "res://scripts/environment/EarthRamp.gd"),
+          "material_override": MAT["grass"],
+          "length": "%g" % RAMP_LEN,
+          "height": "%g" % (DECK_Y - 0.42),   # 低于桥底面（纵梁底在 -0.30），留 0.12 余量
+          "half_width_toe": "%g" % (DECK_W * 0.5 + 2.2),  # 坡趾比桥宽，才不像个楔子
+          "half_width_head": "%g" % (DECK_W * 0.5 + 0.9),
+          "side_falloff": "0.42", "head_flat": "0.16",
+          "noise_amp": "0.16", "noise_freq": "0.55"},
+         T((x0 + 0.6, 0.0, bz), ry=RANG))
+
     # 拉索。桅杆在资产局部 x = -L/2 + 1.2、高 4.6，顶横梁在 y = ±0.55。
     #
     # **必须沿桥的方向走**：桥绕 Y 轴转了 RANG（约 15.6°），用只在 XY 平面里算的
@@ -888,8 +902,8 @@ def build():
     # 每样只花几十个面。GLB 里三栋房子摆在 x = -9 / 0 / 9，
     # 用一个偏移把需要的那栋挪到父节点原点，其余两栋跟着挪出画面外。
     for nm, px, pz, ry, src in [
-            ("HouseA", -12.9, -13.2, -8.0, "house_large"),
-            ("HouseB", -7.5, -5.5, 22.0, "house_small"),
+            ("HouseA", -14.5, -14.5, -8.0, "house_large"),
+            ("HouseB", -4.0, -18.5, 22.0, "house_small"),
             ("HouseC", -21.5, -6.5, 22.0, "house_tall")]:
         instance(nm, bl, ext("PackedScene", "res://assets/environment/%s.glb" % src),
                  T((px, 0.0, pz), ry=ry), child=src, override=MAT["prop"])
@@ -1247,11 +1261,18 @@ print("wrote %s : %d ext + %d sub_resources, %d nodes"
       % (os.path.normpath(OUT), len(extres), len(subres), len(nodes)))
 check_clearance([
     ("Bridge", footprint(river_x(BRIDGE_Z), BRIDGE_Z, DECK_L, DECK_W, RANG)),
-    ("HouseA", footprint(-12.9, -13.2, 7.6, 5.6, -8.0)),
-    ("HouseB", footprint(-7.5, -5.5, 5.4, 4.6, 22.0)),
+    ("HouseA", footprint(-14.5, -14.5, 7.6, 5.6, -8.0)),
+    ("HouseB", footprint(-4.0, -18.5, 5.4, 4.6, 22.0)),
     ("HouseC", footprint(-21.5, -6.5, 5.8, 5.0, 22.0)),
     ("Shed", footprint(2.6, -17.6, 4.0, 3.4, 6.0)),
-])
+    # 土坡必须一起算。上一版漏了它，于是 HouseB 的位置是"避开了桥"
+    # 但正好落在坡里 —— 检查表漏一项，检查就等于没做。
+    ("Ramp", footprint(
+        river_x(BRIDGE_Z) - DECK_L / 2.0 + 0.6
+        - RAMP_LEN * 0.5 * (1.0 - (1.0 - RAMP_SOLID[0]) * 0.6),
+        BRIDGE_Z, RAMP_LEN * RAMP_SOLID[0],
+        (DECK_W + 4.4) * RAMP_SOLID[1], RANG)),
+], allowed=[("Bridge", "Ramp")])   # 土坡本来就要顶到桥头
 print("camera: pitch %.1f deg, height %.1f m, fov %.1f, z %.2f"
       % (CAM_PITCH, CAM_HEIGHT, CAM_FOV, camera_z()))
 print("visible ground: %.1f m wide, depth z %.1f .. %.1f (%.1f m)"
