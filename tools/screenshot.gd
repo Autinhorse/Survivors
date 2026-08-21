@@ -12,6 +12,8 @@ extends Node
 
 const SETTLE_FRAMES := 20
 
+var _sub: SubViewport = null
+
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	var out_path: String = args[0] if args.size() > 0 else "user://shot.png"
@@ -22,7 +24,25 @@ func _ready() -> void:
 		printerr("[screenshot] cannot load ", scene_path)
 		get_tree().quit(1)
 		return
-	add_child(packed.instantiate())
+
+	# `size=WxH` 走 SubViewport 渲染：窗口尺寸受桌面分辨率钳制，
+	# 想测 21:9 / 32:9 / 4K 这类超出屏幕的画面就只能这样。
+	var forced := Vector2i.ZERO
+	for a in args:
+		if String(a).begins_with("size="):
+			var wh := String(a).substr(5).split("x")
+			if wh.size() == 2:
+				forced = Vector2i(int(wh[0]), int(wh[1]))
+	if forced.x > 0 and forced.y > 0:
+		_sub = SubViewport.new()
+		_sub.size = forced
+		_sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		_sub.handle_input_locally = false
+		add_child(_sub)
+		_sub.add_child(packed.instantiate())
+		print("[screenshot] SubViewport ", forced)
+	else:
+		add_child(packed.instantiate())
 
 	for _i in SETTLE_FRAMES:
 		await get_tree().process_frame
@@ -74,7 +94,8 @@ func _ready() -> void:
 		if shot > 0:
 			await get_tree().create_timer(interval).timeout
 			await RenderingServer.frame_post_draw
-		var img: Image = get_viewport().get_texture().get_image()
+		var vp: Viewport = _sub if _sub else get_viewport()
+		var img: Image = vp.get_texture().get_image()
 		var path := out_path
 		if shots > 1:
 			path = out_path.get_basename() + "_%d." % (shot + 1) + out_path.get_extension()

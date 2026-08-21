@@ -278,7 +278,7 @@ func _process(delta: float) -> void:
 			_dead_t[k] = respawn_delay
 			_nodes[k].visible = false
 
-	var blob_visible := shadow_mode == "C"
+	var blob_visible: bool = shadow_mode == "C" 			and _blob_mm != null and _blob_mm.instance_count >= _nodes.size()
 	for i in _nodes.size():
 		var n: Node3D = _nodes[i]
 		if _dead_t[i] > 0.0:

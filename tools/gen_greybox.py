@@ -432,8 +432,14 @@ def build():
          T((0.0, 20.0, 0.0), ry=-136.0, rx=-38.0))
 
     node("GameplayCamera", "Camera3D", ".",
-         {"fov": "%.1f" % CAM_FOV, "near": "0.5", "far": "300.0",
-          "current": "true"},
+         {"script": ext("Script",
+                        "res://scripts/environment/GameplayCameraPolicy.gd"),
+          "fov": "%.1f" % CAM_FOV, "near": "0.5", "far": "300.0",
+          "current": "true",
+          # 默认 KEEP_HEIGHT 会让 32:9 玩家看到两倍宽的战场（131.5m vs 65.7m），
+          # 那是玩法优势而不只是画面问题
+          "aspect_policy": '"clamp"',
+          "design_fov_vertical": "%.1f" % CAM_FOV},
          T((0.0, CAM_HEIGHT, camera_z()), rx=-CAM_PITCH))
 
     # ---------------------------------------------------------------- terrain

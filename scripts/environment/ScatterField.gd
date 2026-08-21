@@ -131,5 +131,7 @@ func _add_layer(nm: String, mesh: Mesh, mat: Material,
 	if not cast_shadows:
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
-	if Engine.is_editor_hint() and owner:
-		mmi.owner = owner
+	# 不设 owner：一旦设了，编辑器里保存场景会把这些**运行时生成**的节点
+	# 写进 .tscn。下次打开脚本又重建一遍，新旧混在一起，
+	# MultiMesh 的 instance_count 会和写入的索引对不上。
+	# 生成物就该只活在内存里。
