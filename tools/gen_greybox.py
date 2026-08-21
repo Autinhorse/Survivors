@@ -106,6 +106,9 @@ def materials():
     # --- shared noise ---------------------------------------------------------
     macro = noise_tex("NoiseMacro", 0.010, lo=0.0, hi=1.0, octaves=4, size=512)
     detail = noise_tex("NoiseDetail", 0.035, lo=0.0, hi=1.0, octaves=3, size=256)
+    # 叶片图集（tools/gen_leaf_atlas.py 生成）：RGB 是叶片自身的明暗，
+    # alpha 是叶片形状。颜色来自顶点色，所以一张灰度图集能长出所有色系变体。
+    leaf_atlas = ext("Texture2D", "res://assets/environment/leaf_atlas.png")
     rock_n = noise_tex("NoiseRock", 0.055, lo=0.62, hi=1.05, octaves=4)
     wood_n = noise_tex("NoiseWood", 0.090, lo=0.70, hi=1.08, octaves=2)
     plaster_n = noise_tex("NoisePlaster", 0.030, lo=0.80, hi=1.06, octaves=3)
@@ -161,7 +164,9 @@ def materials():
                               leaf_light=col(0.349, 0.427, 0.161),
                               noise_scale="0.55", wind_strength="0.10",
                               wind_speed="1.1", ao_strength="0.45",
-                              sway_height="4.4", use_vertex_colour="1.0")
+                              sway_height="4.4", use_vertex_colour="1.0",
+                              leaf_atlas=leaf_atlas, use_atlas="1.0",
+                              alpha_cut="0.34", normal_flatten="0.62")
     MAT["leafB"] = shader_mat("MatLeafB", "res://shaders/foliage.gdshader",
                               detail_noise=detail,
                               leaf_dark=col(0.110, 0.165, 0.055),
@@ -175,7 +180,9 @@ def materials():
                              leaf_light=col(0.318, 0.353, 0.125),
                              noise_scale="0.95", wind_strength="0.07",
                              wind_speed="1.6", ao_strength="0.35",
-                             sway_height="0.7", use_vertex_colour="1.0")
+                             sway_height="0.7", use_vertex_colour="1.0",
+                             leaf_atlas=leaf_atlas, use_atlas="1.0",
+                             alpha_cut="0.34", normal_flatten="0.55")
     MAT["tuft"] = shader_mat("MatTuft", "res://shaders/grass_tuft.gdshader",
                              base_color=col(0.216, 0.259, 0.094),
                              tip_color=col(0.392, 0.427, 0.169),

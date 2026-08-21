@@ -28,7 +28,7 @@ import sys
 
 import bpy
 import bmesh
-from mathutils import Vector
+from mathutils import Quaternion, Vector
 
 # ------------------------------------------------------------------ 调色板 --
 # 与 M2 在 Godot 侧使用的颜色保持一致，避免资产和现有场景割裂。
@@ -362,41 +362,29 @@ def build_rocks(out_dir):
     export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
 
 
-# ------------------------------------------------------------ 叶簇 / 灌木 --
-# 参考图的灌木和树冠是**许多小叶簇堆成的**：轮廓有明显锯齿和缺口，
-# 而且同一丛里颜色深浅不一。光滑的球（M2 的做法）从原理上出不来这个 ——
-# 它的轮廓永远是连续曲线。
+# ------------------------------------------------------ 叶片贴片 / 灌木 --
+# 参考图的树冠是**细枝干 + 一片片独立的叶子贴片**，中间透光、能看见底下的影子。
 #
-# 做法：每个小叶簇是一个 6-8 点的凸包（和石头同一套原理，只是很小、压扁），
-# 若干个撒在半球壳上。凸包天然给出棱角，堆积天然给出缺口。
-# 不用 alpha 贴片：M2 已经量过，真几何在这个机位下比透明层便宜
-# （§15 点名的 overdraw 才是风险）。
+# 之前两版都是实体几何（先是光滑球，后是凸包叶簇堆积），无论怎么调都是"一坨"——
+# 实体不可能透光，这是原理性的，不是参数问题。
+#
+# 现在：枝干是细圆柱（真几何，它需要明确的走向），叶子是挂在枝头的四边形，
+# 采样 assets/environment/leaf_atlas.png 做 alpha 裁剪。
+# 用 alpha 裁剪而不是 alpha 混合：走不透明通道，不需要排序，阴影自动正确，
+# 也没有透明层的填充开销（§15 点名的 overdraw 风险主要来自混合）。
+
+ATLAS_GRID = 2
 
 
-def leaf_blob(rng, radius, squash=0.75):
-    """一个小叶簇。返回 bmesh，调用方负责摆位和材质。"""
-    bm = bmesh.new()
-    n = rng.randint(12, 15)
-    for i in range(n):
-        z = rng.uniform(-1.0, 1.0)
-        r = math.sqrt(max(0.0, 1.0 - z * z))
-        a = rng.uniform(0.0, math.tau)
-        k = rng.uniform(0.88, 1.0)
-        bm.verts.new((math.cos(a) * r * radius * k,
-                      math.sin(a) * r * radius * k,
-                      z * radius * squash * k))
-    bmesh.ops.convex_hull(bm, input=bm.verts[:])
-    bmesh.ops.triangulate(bm, faces=bm.faces[:])
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-    return bm
-
-
-def set_vcol(obj, colour_name, material="Foliage"):
+def set_vcol(obj, colour_name, material="Foliage", alpha=0.0):
     """把颜色烘进顶点色，并统一材质。
 
     统一材质有两个作用：合并后只剩一个 surface（一次 draw call），
     以及 Godot 侧可以用一个 material_override 挂着色器而不冲掉任何东西。
-    树干也必须走这条路 —— 否则 material_override 会把它一起冲成白色。"""
+    树干也必须走这条路 —— 否则 material_override 会把它一起冲成白色。
+
+    **顶点色的 alpha 是"这是不是叶片贴片"的标志**：1 = 采样叶片图集并做
+    alpha 裁剪，0 = 实体木头，强制不透明。合并成一个网格之后就靠它区分。"""
     me = obj.data
     c = [srgb_to_linear(x) for x in PALETTE[colour_name]]
     attr = me.color_attributes.get("Color")
@@ -404,63 +392,92 @@ def set_vcol(obj, colour_name, material="Foliage"):
         attr = me.color_attributes.new(name="Color", type="BYTE_COLOR",
                                        domain="CORNER")
     for i in range(len(attr.data)):
-        attr.data[i].color = (c[0], c[1], c[2], 1.0)
+        attr.data[i].color = (c[0], c[1], c[2], alpha)
     me.materials.clear()
     me.materials.append(mat(material))
     return obj
 
 
-def _blob_object(rng, radius, loc, colour_name, squash=0.75):
-    """叶簇的颜色烘进**顶点色**，不是每簇一个材质。
+def leaf_card(rng, size, loc, colour_name, tile=None, tilt_max=1.0):
+    """一张叶片贴片：带图集 UV 的四边形。
 
-    每簇一个材质的话，Godot 侧就只能用 GLB 自带材质，
-    风摆着色器（scripts 的 foliage.gdshader）无从挂载 ——
-    要么有颜色没风摆，要么用 material_override 把颜色全冲掉。
-    顶点色让"一个材质 + 一个着色器"同时保住两者。"""
-    bm = leaf_blob(rng, radius, squash)
-    me = bpy.data.meshes.new("clump")
+    朝向 = 随机 yaw + 从**水平面**起算的随机倾角。60° 俯视下水平的贴片正好
+    看得清，完全竖直的会退化成一条线 —— 所以倾角从水平开始加，不是从竖直。"""
+    bm = bmesh.new()
+    h = size * 0.5
+    vs = [bm.verts.new((-h, -h, 0.0)), bm.verts.new((h, -h, 0.0)),
+          bm.verts.new((h, h, 0.0)), bm.verts.new((-h, h, 0.0))]
+    f = bm.faces.new(vs)
+    uvl = bm.loops.layers.uv.new("UVMap")
+    k = rng.randrange(ATLAS_GRID * ATLAS_GRID) if tile is None else tile
+    u0 = (k % ATLAS_GRID) / float(ATLAS_GRID)
+    v0 = (k // ATLAS_GRID) / float(ATLAS_GRID)
+    d = 1.0 / ATLAS_GRID
+    # 随机翻转 UV：四张图能长出八种朝向，重复感更弱
+    fu = rng.random() < 0.5
+    fv = rng.random() < 0.5
+    for lp, (cu, cv) in zip(f.loops, [(0, 0), (1, 0), (1, 1), (0, 1)]):
+        uu = 1 - cu if fu else cu
+        vv = 1 - cv if fv else cv
+        lp[uvl].uv = (u0 + uu * d, v0 + vv * d)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    me = bpy.data.meshes.new("card")
     bm.to_mesh(me)
     bm.free()
-
-    o = bpy.data.objects.new("clump", me)
+    o = bpy.data.objects.new("card", me)
     bpy.context.collection.objects.link(o)
     o.location = loc
-    return set_vcol(o, colour_name)
+    o.rotation_euler = (rng.uniform(0.0, 1.0) * tilt_max, 0.0,
+                        rng.uniform(0.0, math.tau))
+    return set_vcol(o, colour_name, alpha=1.0)
 
 
-def bush(name, seed, loc=(0, 0, 0), radius=0.95, height=0.85, clumps=13,
-         palette=("LeafDark", "LeafMid", "LeafLight")):
-    """一丛灌木：**实心核 + 外圈叶簇**。
+def twig(rng, r0, length, base, direction, colour="Wood"):
+    """一根细枝：从 base 沿 direction 伸出。返回 (对象, 末端位置)。"""
+    d = Vector(direction).normalized()
+    tip = Vector(base) + d * length
+    mid = (Vector(base) + tip) * 0.5
+    up = Vector((0.0, 0.0, 1.0))        # 圆柱默认沿 +Z，转到 d
+    axis = up.cross(d)
+    ang = up.angle(d)
+    if axis.length < 1e-6:
+        axis = Vector((1.0, 0.0, 0.0))
+        ang = 0.0 if d.z > 0 else math.pi
+    e = Quaternion(axis.normalized(), ang).to_euler()
+    o = cyl(r0, length, mid, colour, verts=4, rot=(e.x, e.y, e.z))
+    return set_vcol(o, colour, alpha=0.0), tip
 
-    只做外圈是第一版的错误 —— 叶簇撒在半球壳上、彼此不重叠，
-    渲染出来是一地互不相连的碎片，完全没有体积。
-    正确的读法是：核负责"这是一团东西"，外圈只负责把轮廓咬出缺口。"""
+
+def bush(name, seed, loc=(0, 0, 0), radius=0.95, height=0.85, cards=14,
+         palette=("LeafDark", "LeafMid", "LeafLight"), card_scale=0.46):
+    """一丛灌木：几根从根部张开的细枝 + 挂在枝头的叶片贴片。"""
     import random
     rng = random.Random(seed)
     parts = []
 
-    # 核：两三个大blob，把内部填实
-    for i in range(2):
-        parts.append(_blob_object(
-            rng, radius * rng.uniform(0.58, 0.70),
-            (rng.uniform(-0.18, 0.18) * radius, rng.uniform(-0.18, 0.18) * radius,
-             height * rng.uniform(0.30, 0.45)),
-            palette[min(len(palette) - 1, 1)], squash=height / max(radius, 0.01)))
+    stems = max(4, cards // 6)
+    tips = []
+    for i in range(stems):
+        a = math.tau * i / stems + rng.uniform(-0.4, 0.4)
+        d = (math.cos(a) * rng.uniform(0.55, 1.05),
+             math.sin(a) * rng.uniform(0.55, 1.05), 1.0)
+        o, tip = twig(rng, 0.022, height * rng.uniform(0.60, 0.85),
+                      (0.0, 0.0, 0.0), d)
+        parts.append(o)
+        tips.append(tip)
 
-    # 外圈：咬出缺口的叶簇，必须和核有重叠，否则又变成碎片
-    for i in range(clumps):
-        u = rng.uniform(0.0, 1.0)
-        zt = u ** 0.7
-        rr = math.sqrt(max(0.0, 1.0 - zt * zt))
-        a = rng.uniform(0.0, math.tau)
-        p = (math.cos(a) * rr * radius * rng.uniform(0.45, 0.92),
-             math.sin(a) * rr * radius * rng.uniform(0.45, 0.92),
-             zt * height * rng.uniform(0.5, 1.0))
+    for i in range(cards):
+        t = tips[i % len(tips)]
+        p = (t.x + rng.uniform(-0.22, 0.22) * radius,
+             t.y + rng.uniform(-0.22, 0.22) * radius,
+             max(height * 0.18, t.z + rng.uniform(-0.30, 0.18) * height))
+        zt = min(1.0, max(0.0, p[2] / max(height, 0.01)))
         idx = min(len(palette) - 1, int(zt * len(palette) + rng.uniform(-0.4, 0.6)))
-        parts.append(_blob_object(rng, radius * rng.uniform(0.22, 0.36), p,
-                                  palette[max(0, idx)]))
+        parts.append(leaf_card(rng, radius * card_scale * rng.uniform(0.75, 1.15),
+                               p, palette[max(0, idx)], tilt_max=1.0))
+
     o = join_as(parts, name)
-    finalize(o, loc, smooth_angle=50.0)
+    finalize(o, loc)
     return o
 
 
@@ -469,84 +486,88 @@ def build_bushes(out_dir):
     颜色差异比形状差异更能打破重复感。"""
     clear()
     specs = [
-        ("bush_green", ("LeafDark", "LeafMid", "LeafLight"), 0.95, 0.80, 22),
-        ("bush_dark", ("LeafDark", "LeafDark", "LeafMid"), 1.10, 0.70, 26),
-        ("bush_yellow", ("LeafMid", "LeafLight", "LeafLight"), 0.85, 0.90, 20),
-        ("bush_rust", ("LeafRust", "LeafDry", "LeafLight"), 0.90, 0.75, 20),
-        ("bush_flower", ("LeafDark", "LeafMid", "Flower"), 0.80, 0.85, 22),
-        ("bush_small", ("LeafDark", "LeafMid", "LeafMid"), 0.55, 0.45, 14),
+        ("bush_green", ("LeafDark", "LeafMid", "LeafLight"), 0.95, 0.80, 62),
+        ("bush_dark", ("LeafDark", "LeafDark", "LeafMid"), 1.10, 0.70, 72),
+        ("bush_yellow", ("LeafMid", "LeafLight", "LeafLight"), 0.85, 0.90, 58),
+        ("bush_rust", ("LeafRust", "LeafDry", "LeafLight"), 0.90, 0.75, 58),
+        ("bush_flower", ("LeafDark", "LeafMid", "Flower"), 0.80, 0.85, 62),
+        ("bush_small", ("LeafDark", "LeafMid", "LeafMid"), 0.55, 0.45, 28),
     ]
     for i, (nm, pal, r, h, c) in enumerate(specs):
         bush(nm, seed=900 + i * 41, loc=(i * 3.0 - 7.5, 0, 0),
-             radius=r, height=h, clumps=c, palette=pal)
+             radius=r, height=h, cards=c, palette=pal)
     export(os.path.join(out_dir, "bushes.glb"), "bushes")
 
 
 # -------------------------------------------------------------------- 树 --
-def tree(name, loc, height=5.4, trunk_r=0.17, seed=0, clumps=22,
+def tree(name, loc, height=5.4, trunk_r=0.11, seed=0, cards=30,
          palette=("LeafDark", "LeafMid", "LeafLight"), crown_ratio=0.34):
-    """树 = 有锥度和弯曲的树干 + 粗枝 + **由叶簇堆成的树冠**。
+    """树 = 细树干 + 二级分叉的枝 + 挂在枝头的叶片贴片。
 
-    M2 的"两个球"轮廓是连续曲线，一眼假。参考图的树冠边缘全是缺口和锯齿 ——
-    那来自叶簇的堆积，不是来自把球体细分得更密。"""
+    树干比之前细了近一半：参考图里的树干在这个机位下只有两三个像素宽，
+    原来 0.17 m 的锥形树干太抢眼，看着像电线杆。"""
     import random
     rng = random.Random(seed)
     parts = []
 
-    # 树干：分段、带锥度和轻微弯曲（笔直圆柱是"棒棒糖树"的主因）
-    segs = 4
-    trunk_h = height * 0.44
-    lean = Vector((rng.uniform(-0.22, 0.22), rng.uniform(-0.22, 0.22), 0.0))
-    prev = None
-    for i in range(segs + 1):
+    trunk_h = height * 0.46
+    lean = Vector((rng.uniform(-0.18, 0.18), rng.uniform(-0.18, 0.18), 0.0))
+    segs = 3
+    prev = Vector((0.0, 0.0, 0.0))
+    for i in range(1, segs + 1):
         t = i / float(segs)
-        r = trunk_r * (1.4 - 0.8 * t)
-        c = Vector((0, 0, trunk_h * t)) + lean * (t * t)
-        if prev is not None:
-            mid = (prev + c) * 0.5
-            seg_h = (c - prev).length + 0.02
-            parts.append(set_vcol(
-                cyl(max(r, 0.045), seg_h, mid, "Wood", verts=6), "Wood"))
+        r = trunk_r * (1.35 - 0.75 * t)
+        c = Vector((0.0, 0.0, trunk_h * t)) + lean * (t * t)
+        mid = (prev + c) * 0.5
+        d = c - prev
+        up = Vector((0.0, 0.0, 1.0))
+        ax = up.cross(d.normalized())
+        ang = up.angle(d.normalized())
+        if ax.length < 1e-6:
+            ax, ang = Vector((1.0, 0.0, 0.0)), 0.0
+        e = Quaternion(ax.normalized(), ang).to_euler()
+        parts.append(set_vcol(
+            cyl(max(r, 0.035), d.length + 0.02, mid, "Wood", verts=5,
+                rot=(e.x, e.y, e.z)), "Wood", alpha=0.0))
         prev = c
 
-    # 粗枝：伸进树冠，让树冠不是"浮在树干上"
-    for i in range(3):
-        a = rng.uniform(0, math.tau)
-        parts.append(set_vcol(
-            cyl(0.075, height * 0.22,
-                (math.cos(a) * 0.35, math.sin(a) * 0.35, trunk_h * 0.9),
-                "Wood", verts=5,
-                rot=(math.radians(rng.uniform(38, 58)), 0, a)), "Wood"))
-
-    # 树冠：叶簇撒在一个压扁的椭球壳上，越靠上越亮
+    # 一级枝 -> 二级枝，贴片挂在二级枝末端。这样树冠是"从中心张开"的结构，
+    # 而不是一团悬空的叶子
     crown_r = height * crown_ratio
-    crown_h = height - trunk_h * 0.82
-    base_z = trunk_h * 0.82
+    tips = []
+    primaries = 6
+    for i in range(primaries):
+        a = math.tau * i / primaries + rng.uniform(-0.35, 0.35)
+        d = (math.cos(a) * rng.uniform(0.5, 0.95),
+             math.sin(a) * rng.uniform(0.5, 0.95), rng.uniform(0.7, 1.25))
+        o, tip = twig(rng, trunk_r * 0.45, crown_r * rng.uniform(0.55, 0.85),
+                      prev, d)
+        parts.append(o)
+        tips.append(prev + (tip - prev) * rng.uniform(0.45, 0.75))
+        for j in range(3):
+            a2 = a + rng.uniform(-1.1, 1.1)
+            d2 = (math.cos(a2) * rng.uniform(0.5, 1.1),
+                  math.sin(a2) * rng.uniform(0.5, 1.1), rng.uniform(0.2, 0.9))
+            o2, tip2 = twig(rng, trunk_r * 0.26,
+                            crown_r * rng.uniform(0.28, 0.5), tip, d2)
+            parts.append(o2)
+            tips.append(tip2)
 
-    # 树冠的核：撑起体积，否则外圈叶簇之间全是洞，树看着是"一把撒开的碎叶"
-    for i in range(3):
-        parts.append(_blob_object(
-            rng, crown_r * rng.uniform(0.60, 0.74),
-            (rng.uniform(-0.22, 0.22) * crown_r,
-             rng.uniform(-0.22, 0.22) * crown_r,
-             base_z + crown_h * rng.uniform(0.30, 0.62)),
-            palette[min(len(palette) - 1, 1)], squash=0.9))
-
-    for i in range(clumps):
-        u = rng.uniform(-0.85, 1.0)
-        zt = (u + 0.85) / 1.85
-        rr = math.sqrt(max(0.0, 1.0 - (zt * 2.0 - 1.0) ** 2))
-        a = rng.uniform(0.0, math.tau)
-        p = (math.cos(a) * rr * crown_r * rng.uniform(0.55, 0.95),
-             math.sin(a) * rr * crown_r * rng.uniform(0.55, 0.95),
-             base_z + zt * crown_h * rng.uniform(0.75, 1.0))
+    top = max(t.z for t in tips)
+    bot = min(t.z for t in tips)
+    for i in range(cards):
+        t = tips[i % len(tips)]
+        p = (t.x + rng.uniform(-0.28, 0.28) * crown_r,
+             t.y + rng.uniform(-0.28, 0.28) * crown_r,
+             t.z + rng.uniform(-0.35, 0.22) * crown_r)
+        zt = min(1.0, max(0.0, (p[2] - bot) / max(top - bot, 0.01)))
         idx = min(len(palette) - 1,
-                  int(zt * len(palette) + rng.uniform(-0.5, 0.6)))
-        parts.append(_blob_object(rng, crown_r * rng.uniform(0.21, 0.34), p,
-                                  palette[max(0, idx)], squash=0.85))
+                  int(zt * len(palette) + rng.uniform(-0.4, 0.6)))
+        parts.append(leaf_card(rng, crown_r * rng.uniform(0.36, 0.58), p,
+                               palette[max(0, idx)], tilt_max=1.05))
 
     o = join_as(parts, name)
-    finalize(o, loc, smooth_angle=50.0)
+    finalize(o, loc)
     return o
 
 
@@ -587,14 +608,14 @@ def build_buildings(out_dir):
 def build_trees(out_dir):
     clear()
     specs = [
-        ("tree_a", 5.6, 34, ("LeafDark", "LeafMid", "LeafLight")),
-        ("tree_b", 6.9, 42, ("LeafDark", "LeafDark", "LeafMid")),
-        ("tree_c", 4.5, 28, ("LeafMid", "LeafLight", "LeafLight")),
-        ("tree_d", 5.2, 30, ("LeafRust", "LeafDry", "LeafLight")),
+        ("tree_a", 5.6, 150, ("LeafDark", "LeafMid", "LeafLight")),
+        ("tree_b", 6.9, 190, ("LeafDark", "LeafDark", "LeafMid")),
+        ("tree_c", 4.5, 120, ("LeafMid", "LeafLight", "LeafLight")),
+        ("tree_d", 5.2, 135, ("LeafRust", "LeafDry", "LeafLight")),
     ]
     for i, (nm, h, c, pal) in enumerate(specs):
         tree(nm, (i * 7.0 - 10.5, 0, 0), height=h, seed=1 + i * 17,
-             clumps=c, palette=pal)
+             cards=c, palette=pal)
     export(os.path.join(out_dir, "trees.glb"), "trees")
 
 
