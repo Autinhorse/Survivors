@@ -120,13 +120,20 @@ def vgrad(obj, amount=0.28):
     comp = _components(me)
     span = _comp_span(me, comp)
     for poly in me.polygons:
+        # **顶点色的 alpha 存这个面在自己那块几何里的相对高度**（0 底 1 顶）。
+        # 着色器用它给 N·L 封顶，把"位置低的面"压下去 —— 这是唯一能让
+        # "低处更暗"作用到**光照**上的办法：光是运行时算的，烘进 RGB 的
+        # 偏置只改反照率，压不住一个朝光的下部面比背光的上部面亮两倍。
+        # 高度在绕 Y 旋转下不变，所以烘它是安全的（光照方向就不是）。
+        flo, fhi = span[comp[poly.vertices[0]]]
+        hf = min(max((poly.center.z - flo) / max(fhi - flo, 1e-4), 0.0), 1.0)
         for li in poly.loop_indices:
             vi = me.loops[li].vertex_index
             lo, hi = span[comp[vi]]
             t = (me.vertices[vi].co.z - lo) / max(hi - lo, 1e-4)
             k = 1.0 - amount * (1.0 - t)
             c = attr.data[li].color
-            attr.data[li].color = (c[0] * k, c[1] * k, c[2] * k, c[3])
+            attr.data[li].color = (c[0] * k, c[1] * k, c[2] * k, hf)
     return obj
 
 
@@ -305,16 +312,28 @@ def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
         lo.append(bm.verts.new((cx + ca * k * (1.0 + flare),
                                 cy + sa * k * (1.0 + flare), 0.0)))
 
+    # 上环：三个方向各抖 jitter，角度也错开，所以上下顶点不垂直对应。
+    #
+    # 但抖动要**沿环平滑一次**：相邻两个节点各自独立随机，很容易一个往上
+    # 一个往下，把它们之间那片侧面折出很陡的角。量过一次 —— 同一圈侧壁上
+    # 出现过法线夹角 52°、60° 的邻面，配合光照量化就变成"下面那个面比上面
+    # 亮两倍"。平滑保留整体起伏的幅度，只压掉这种高频对折。
+    dr = [rng.uniform(-jitter, jitter) for _ in range(sides)]
+    dz = [rng.uniform(-jitter, jitter) for _ in range(sides)]
+    dx = [rng.uniform(-jitter, jitter) for _ in range(sides)]
+    dy = [rng.uniform(-jitter, jitter) for _ in range(sides)]
+    da = [rng.uniform(-0.30, 0.30) for _ in range(sides)]
+    for arr in (dr, dz, dx, dy, da):
+        sm = [0.5 * arr[i] + 0.25 * (arr[i - 1] + arr[(i + 1) % sides])
+              for i in range(sides)]
+        arr[:] = [v / 0.75 for v in sm]     # 平滑会缩幅度，除回去
+
     for i in range(sides):
-        # 角度错开：上下顶点不垂直对应
-        ta = base_ang[i] + math.tau / sides * rng.uniform(-0.30, 0.30)
-        rt = radius * (1.0 - taper) * (1.0 + rng.uniform(-jitter, jitter))
-        # 三个方向各抖 jitter：x/y 用半径和角度带出来，z 直接抖
-        hz = H * (1.0 + rng.uniform(-jitter, jitter))
-        hi.append(bm.verts.new((cx + math.cos(ta) * rt
-                                + radius * rng.uniform(-jitter, jitter) * 0.35,
-                                cy + math.sin(ta) * rt
-                                + radius * rng.uniform(-jitter, jitter) * 0.35,
+        ta = base_ang[i] + math.tau / sides * da[i]
+        rt = radius * (1.0 - taper) * (1.0 + dr[i])
+        hz = H * (1.0 + dz[i])
+        hi.append(bm.verts.new((cx + math.cos(ta) * rt + radius * dx[i] * 0.35,
+                                cy + math.sin(ta) * rt + radius * dy[i] * 0.35,
                                 hz)))
 
     bm.faces.new(list(reversed(lo)))

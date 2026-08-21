@@ -30,6 +30,14 @@ uniform float face_tilt = 0.10;
 // 跳变最大 step_weight/(steps-1)，剩下的 (1-step_weight) 严格正比于法线差。
 // 真正的邻面约束在 Blender 端做（face_relax），那里才有拓扑。
 uniform float step_weight = 0.80;
+// "位置低的面更暗"的**硬约束**。COLOR.a 里烘着这个面在自己那块几何里的
+// 相对高度（0 底 1 顶），这里拿它给 N·L 封顶：低处的面再怎么朝光也亮不
+// 过这个上限，高处的面不受影响。
+//
+// 为什么不能只在顶点色里压暗：光是运行时算的，烘进 RGB 的偏置只改反照率。
+// 量过 —— 一个朝光的下部面能比它上面那个背光的面亮 4.28 倍，几个百分点的
+// 反照率偏置根本压不住。封顶是**单调**的，直接消掉这种倒挂。
+uniform float low_cap = 0.30;
 uniform float tint = 1.0;               // 顶点色的权重，0 = 用 base_color
 uniform vec3 base_color : source_color = vec3(0.6, 0.6, 0.6);
 // 顶面提亮一点点：参考图的低模石头顶面明显比推导出来的更亮，
@@ -37,9 +45,12 @@ uniform vec3 base_color : source_color = vec3(0.6, 0.6, 0.6);
 uniform float top_boost = 0.10;
 
 varying float v_up;
+// COLOR 在 light() 里读不到（只有 fragment 能读），用 varying 递过去
+varying float v_h;
 
 void vertex() {
 	v_up = clamp(normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz).y, 0.0, 1.0);
+	v_h = COLOR.a;
 }
 
 void fragment() {
@@ -51,6 +62,7 @@ void fragment() {
 void light() {
 	float d = dot(NORMAL, LIGHT);
 	float nl = mix(clamp(d, 0.0, 1.0), d * 0.5 + 0.5, light_wrap);
+	nl = min(nl, low_cap + (1.0 - low_cap) * v_h);
 	float q = floor(nl * light_steps) / max(light_steps - 1.0, 1.0);
 	float shade = mix(nl, clamp(q, 0.0, 1.0), step_weight);
 	float lit = mix(light_floor, 1.0, shade)
