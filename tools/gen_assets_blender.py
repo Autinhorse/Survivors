@@ -38,12 +38,12 @@ from mathutils import Quaternion, Vector
 # 同样的数字直接搬过去，整体会被明显提亮（0.318 当 sRGB 是深橄榄，
 # 当线性是浅卡其）。写入 Blender 前必须转换。
 PALETTE = {
-    "Wall":      (0.616, 0.573, 0.478),
-    "WallDark":  (0.482, 0.443, 0.365),
-    "Thatch":    (0.318, 0.310, 0.176),
-    "ThatchDark": (0.235, 0.227, 0.125),
+    "Wall":      (0.352, 0.336, 0.302),
+    "WallDark":  (0.275, 0.260, 0.232),
+    "Thatch":    (0.160, 0.131, 0.069),
+    "ThatchDark": (0.116, 0.094, 0.050),
     "Wood":      (0.286, 0.192, 0.110),
-    "WoodLight": (0.443, 0.318, 0.180),
+    "WoodLight": (0.355, 0.255, 0.146),
     "Stone":     (0.255, 0.235, 0.231),
     "Metal":     (0.298, 0.310, 0.337),
     "Dark":      (0.102, 0.086, 0.075),
@@ -243,9 +243,22 @@ def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
       - 门和窗的凹陷（深色内凹，不是贴在墙上的色块）
       - 转角立柱 / 横梁（给墙面加水平分段，破掉大色块）
     """
+    import random
+    rng = random.Random(hash(name) & 0xffff)
     parts = []
     base_h = 0.28
-    parts.append(box((w + 0.3, d + 0.3, base_h), (0, 0, base_h / 2), "Stone"))
+    # 地基改成一圈石块：整块板的上沿也是一条直线
+    parts.append(box((w + 0.24, d + 0.24, base_h * 0.8),
+                     (0, 0, base_h * 0.4), "Stone"))
+    for sy in (-1, 1):
+        n_s = max(3, int(w / 0.55))
+        for i in range(n_s):
+            x = -w / 2 + (i + 0.5) * w / n_s
+            parts.append(box((w / n_s * rng.uniform(0.8, 0.96),
+                              0.20, base_h * rng.uniform(0.85, 1.25)),
+                             (x, sy * (d / 2 + 0.06),
+                              base_h * 0.5 * rng.uniform(0.9, 1.1)),
+                             rng.choice(("Stone", "WallDark"))))
 
     wall_z = base_h + wall_h / 2
     parts.append(box((w, d, wall_h), (0, 0, wall_z), "Wall"))
@@ -273,12 +286,58 @@ def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
         roof_base_z = base_h + wall_h
         roof_w, roof_d = w, d
 
-    # 屋顶：出檐是关键，纯三棱柱贴着墙沿会显得很假
-    parts.append(wedge((roof_w + eaves * 2, roof_d + eaves * 2, roof_h),
-                       (0, 0, roof_base_z), "Thatch"))
-    # 屋脊
-    parts.append(box((0.22, roof_d + eaves * 2 + 0.1, 0.22),
-                     (0, 0, roof_base_z + roof_h - 0.05), "ThatchDark"))
+    # 屋顶。
+    #
+    # 两个老问题都出在这里：**边界太直**（屋脊和檐口都是一条数学直线）、
+    # **贴图太均匀**（各向同性噪声，而茅草的读法来自一束束草秆的方向性）。
+    #
+    # 形状上的解法是把屋脊和檐口拆成**一件件**：
+    # 屋脊是一捆捆压顶草，檐口是一排草头。每件抖大小、角度、色调，
+    # 轮廓就自然不直了 —— 这和树叶、石头是同一个道理，不是调参能调出来的。
+    rw, rd = roof_w + eaves * 2, roof_d + eaves * 2
+    parts.append(wedge((rw, rd, roof_h), (0, 0, roof_base_z), "Thatch"))
+
+    slope = math.atan2(roof_h, rw * 0.5)
+
+    # 檐口：一排草头，逐个抖出挑长度和厚度。参考图的檐口是又厚又毛的一条，
+    # 不是一条锐利的边
+    n_eave = max(4, int(rd / 0.42))
+    for i in range(n_eave):
+        y = -rd / 2 + (i + 0.5) * rd / n_eave
+        for sx in (-1, 1):
+            out = rng.uniform(0.06, 0.20)
+            th = rng.uniform(0.16, 0.26)
+            parts.append(box((0.24 + out, rd / n_eave * rng.uniform(0.82, 0.98),
+                              th),
+                             (sx * (rw / 2 - 0.02 + out * 0.4), y,
+                              roof_base_z + rng.uniform(-0.01, 0.04)),
+                             rng.choice(("Thatch", "ThatchDark")),
+                             rot=(0, sx * slope * rng.uniform(0.5, 0.8), 0)))
+
+    # 屋脊：一捆捆压顶草，还带一点点下垂（老屋脊都不是水平的）
+    n_ridge = max(4, int(rd / 0.5))
+    for i in range(n_ridge):
+        t = (i + 0.5) / n_ridge
+        y = -rd / 2 + t * rd
+        sag = math.sin(t * math.pi) * 0.045          # 中间略沉
+        parts.append(box((rng.uniform(0.30, 0.42),
+                          rd / n_ridge * rng.uniform(0.80, 0.96),
+                          rng.uniform(0.20, 0.30)),
+                         (rng.uniform(-0.04, 0.04), y,
+                          roof_base_z + roof_h - 0.04 - sag),
+                         rng.choice(("ThatchDark", "Thatch")),
+                         rot=(0, 0, rng.uniform(-0.10, 0.10))))
+
+    # 山墙边的压条：把两端的斜边也打碎
+    for sy in (-1, 1):
+        n_g = 5
+        for i in range(n_g):
+            t = (i + 0.5) / n_g
+            parts.append(box((0.30, 0.16, 0.18),
+                             ((0.5 - t) * rw * 0.9, sy * (rd / 2 - 0.02),
+                              roof_base_z + roof_h * t * 0.92 + 0.02),
+                             "ThatchDark",
+                             rot=(0, -math.copysign(slope, 0.5 - t), 0)))
 
     # 门：凹进墙面
     door_w, door_h = 0.95, 1.9
@@ -313,6 +372,19 @@ def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
         parts.append(box((w * 0.86, 0.16, 0.16),
                          (0, py - 0.5, base_h + 1.92), "Wood"))
 
+    # 全件倒角 + 铺 UV。
+    # 倒角解决"边界太直"里那条**每个面都是 90° 硬棱**；
+    # UV 解决"贴图太均匀"—— 有了 UV 才能用有方向性的茅草/灰泥贴图，
+    # 世界坐标程序化噪声只有各向同性斑点，做不出草秆的方向。
+    # 屋面用 long_axis_u=False：茅草条纹要顺着坡走，而屋面长边是沿屋脊的。
+    for o in parts:
+        m = o.data.materials[0].name if o.data.materials else ""
+        roofish = m.startswith("Thatch")
+        uv_planar(o, uv_scale=0.55 if roofish else 0.42,
+                  offset=(rng.uniform(0.0, 4.0), rng.uniform(0.0, 4.0)),
+                  long_axis_u=not roofish)
+        bevel_edges(o, width=0.022)
+
     o = join_as(parts, name)
     finalize(o, loc)
     return o
@@ -338,7 +410,7 @@ ROCK_ARCHETYPES = {
 }
 
 
-def uv_planar(obj, uv_scale=0.30, offset=(0.0, 0.0)):
+def uv_planar(obj, uv_scale=0.30, offset=(0.0, 0.0), long_axis_u=True):
     """按局部坐标做平面投影 UV，纹理**沿物件的长轴**跑。
 
     这是"外部贴图"这条路的入口：程序生成的网格默认没有可用的 UV
@@ -348,24 +420,33 @@ def uv_planar(obj, uv_scale=0.30, offset=(0.0, 0.0)):
 
     每个面按法线的主轴投影到另外两轴；两轴里**较长的那个给 U**，
     于是木纹自然顺着板子、梁、立柱的长边走，不用逐件指定方向。
+    long_axis_u=False 反过来（短边给 U）—— 屋面要用它：
+    茅草的条纹应该**顺着坡**走，而屋面的长边是沿屋脊的。
     offset 给每件一个随机位移，否则所有木件的纹理完全一样。
     """
     me = obj.data
-    sx, sy, sz = obj.scale
+    sc = obj.scale
     if not me.uv_layers:
         me.uv_layers.new(name="UVMap")
     uvl = me.uv_layers.active.data
-    size = (sx, sy, sz)
+    # 尺寸要从**网格包围盒**算，不能直接用 obj.scale：
+    # primitive_cube_add 建的网格是 ±0.5 的单位立方体、尺寸在 scale 里，
+    # 而 bmesh / from_pydata 建的（wedge、凸包）坐标已经是米、scale 是 1。
+    # 只看 scale 的话，后者会被当成 1x1x1，长边判断随机。
+    co_all = [v.co for v in me.vertices]
+    size = [(max(c[i] for c in co_all) - min(c[i] for c in co_all)) * sc[i]
+            for i in range(3)]
     for poly in me.polygons:
         n = poly.normal
         axis = max(range(3), key=lambda i: abs(n[i]))
         a, b = [i for i in range(3) if i != axis]
-        if size[a] < size[b]:            # 长边给 U
+        want_long_u = long_axis_u
+        if (size[a] < size[b]) == want_long_u:
             a, b = b, a
         for li in poly.loop_indices:
             co = me.vertices[me.loops[li].vertex_index].co
-            uvl[li].uv = ((co[a] * size[a]) * uv_scale + offset[0],
-                          (co[b] * size[b]) * uv_scale + offset[1])
+            uvl[li].uv = ((co[a] * sc[a]) * uv_scale + offset[0],
+                          (co[b] * sc[b]) * uv_scale + offset[1])
     return obj
 
 
@@ -759,29 +840,6 @@ def bridge(name, length=16.0, width=8.4, seed=77, rail_h=1.15):
             prev_x = x
         add(box((length, 0.18, 0.16), (0.0, y, rail_h + 0.02), "Wood"),
             (0.404, 0.290, 0.163), bw=0.03)
-
-    # **两座 A 形塔，各立在一侧的峡谷边**，不是一座立在跨中。
-    #
-    # 一座塔立在桥面中段，从俯视机位看就是"甲板上插了一根带横担的柱子"——
-    # 和场景里的电线杆长得一模一样，完全读不出斜拉桥。
-    # 两座对称的塔 + 从塔顶拉向**桥面两侧边缘**的索，
-    # 俯视下是两把对称的扇形，一眼就是桥。
-    mast_h = 4.6
-    y_foot, y_top = width * 0.5 - 0.35, 0.55
-    for sx in (-1.0, 1.0):
-        mx = sx * (length * 0.5 - 4.4)          # 大致落在两侧峡谷边
-        for sy in (-1.0, 1.0):
-            dy = sy * (y_top - y_foot)
-            ln = math.hypot(mast_h, dy)
-            add(box((0.32, 0.32, ln),
-                    (mx, sy * (y_foot + y_top) * 0.5, mast_h * 0.5), "Wood",
-                    rot=(math.atan2(dy, mast_h), 0.0, 0.0)),
-                (0.264, 0.178, 0.102), bw=0.035)
-        # 顶端横梁 + 半高横撑，A 形的那一横
-        add(box((0.36, y_top * 2.0 + 0.6, 0.36), (mx, 0.0, mast_h), "Wood"),
-            (0.318, 0.214, 0.122), bw=0.035)
-        add(box((0.24, width - 1.6, 0.24), (mx, 0.0, mast_h * 0.50), "Wood"),
-            (0.286, 0.192, 0.110), bw=0.03)
 
     o = join_as(parts, name)
     finalize(o, (0.0, 0.0, 0.0))

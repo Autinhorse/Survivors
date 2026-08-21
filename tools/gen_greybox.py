@@ -100,26 +100,22 @@ def shader_mat(name, shader_path, **params):
 
 
 def tex_mean(rel_path):
-    """贴图的平均色（线性空间），给着色器做归一化用。
+    """贴图的平均色，**在线性空间求平均**。
 
-    PNG 存的是 sRGB，而着色器里拿到的是线性值 —— 平均要在**线性空间**算，
-    在 sRGB 空间算会偏亮，归一化之后木头整体发暗。
+    第一版是先用 Image.BOX 降采样（等于在 sRGB 空间平均）再转线性 ——
+    错的。sRGB->线性是凸函数，f(mean) < mean(f)，算出来的均值偏小，
+    着色器里 tex/mean 就整体偏大：实测屋顶亮度 140，目标 68，
+    而且被推到色调映射的肩部去，颜色跟着发白（R/B 1.31 vs 目标 2.43）。
     """
-    from PIL import Image
     import os
+    import numpy as np
+    from PIL import Image
     p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                      rel_path)
-    im = Image.open(p).convert("RGB").resize((64, 64), Image.BOX)
-    acc = [0.0, 0.0, 0.0]
-    px = im.load()
-    for y in range(64):
-        for x in range(64):
-            c = px[x, y]
-            for i in range(3):
-                v = c[i] / 255.0
-                acc[i] += v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-    n = 64.0 * 64.0
-    return col(acc[0] / n, acc[1] / n, acc[2] / n)
+    a = np.asarray(Image.open(p).convert("RGB")).astype(np.float64) / 255.0
+    lin = np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
+    m = lin.reshape(-1, 3).mean(axis=0)
+    return col(m[0], m[1], m[2])
 
 
 def col(r, g, b, a=1.0):
@@ -287,6 +283,22 @@ def materials():
                                  contrast_stone="0.30", contrast_wood="0.14",
                                  bump_stone="1.10", bump_wood="0.70",
                                  epsilon="0.06", surface_roughness="0.94")
+
+    # 房屋：灰泥（COLOR.a=0）+ 茅草（COLOR.a=1）两张方向性贴图。
+    # 茅草的条纹在资产侧用 long_axis_u=False 铺成顺坡方向。
+    MAT["prophouse"] = shader_mat(
+        "MatPropHouse", "res://shaders/prop.gdshader",
+        detail_noise=detail,
+        albedo_tex=ext("Texture2D", "res://assets/textures/plaster.png"),
+        albedo_tex_b=ext("Texture2D", "res://assets/textures/thatch.png"),
+        uv_tex_mean=tex_mean("assets/textures/plaster.png"),
+        uv_tex_mean_b=tex_mean("assets/textures/thatch.png"),
+        use_uv_tex="1.0", uv_tex_scale="1.0", uv_tex_scale_b="1.0",
+        uv_tex_strength="0.42",
+        scale_stone="0.55", scale_wood="0.75",
+        contrast_stone="0.24", contrast_wood="0.16",
+        bump_stone="1.10", bump_wood="0.80",
+        epsilon="0.06", surface_roughness="0.94")
 
     MAT["prop"] = shader_mat("MatProp", "res://shaders/prop.gdshader",
                              detail_noise=detail,
@@ -565,8 +577,6 @@ RAMP_LEN = 8.0                   # 桥头土坡的长度（坡趾到桥头）
 # 高度场在边缘已经归零，拿整块外框去判定会把周围一大片都判成冲突。
 RAMP_SOLID = (0.78, 0.74)        # 有效长/宽相对整体的比例
 
-# 电线杆：沿路排成一条线，避开所有建筑（占位检查会验）
-POLES = ((8.6, -22.6), (-0.6, -23.4), (-10.4, -22.2), (-19.8, -19.4))
 DECK_Y = 2.1                     # meets the far-bank plateau top
 
 # Village loop road
@@ -863,40 +873,6 @@ def build():
           "noise_amp": "0.16", "noise_freq": "0.55"},
          T((x0 + 0.6, 0.0, bz), ry=RANG))
 
-    # 拉索。两座塔在资产局部 x = ±(L/2 - 4.4)、高 4.6，顶横梁在 y = ±0.55。
-    #
-    # 索要拉到**桥面两侧的边缘**（栏杆脚下），不是拉到中线附近 ——
-    # 真实斜拉桥就是这样，而且俯视下才会读成两把对称的扇形。
-    # 之前索几乎沿中线走，加上单塔，整体看着就是"甲板上插了根电线杆"。
-    def bridge_pt(dx, dz):
-        """桥局部坐标 -> 世界 XZ。
-
-        T() 的基是 Ry(RANG)，列为 ax=(cos,0,-sin), az=(sin,0,cos)，
-        所以 world = (dx*cos + dz*sin, -dx*sin + dz*cos)。
-        这里写错过一次（z 分量两项符号都反了，等于做了个镜像），
-        表现是拉索沿着错误的对角线走、跟桥面对不上。
-        """
-        c, sn = math.cos(math.radians(RANG)), math.sin(math.radians(RANG))
-        return (bcx + dx * c + dz * sn, bz - dx * sn + dz * c)
-
-    tower_d = DECK_L / 2.0 - 4.4          # 塔到桥中心的距离
-    mast_top = DECK_Y + 4.6
-    edge = DECK_W / 2.0 - 0.45            # 锚点落在栏杆脚下
-    for t, sx in enumerate((-1.0, 1.0)):
-        for k, side in enumerate((-1.0, 1.0)):
-            tx, tz = bridge_pt(sx * tower_d, side * 0.55)
-            # 朝跨中的两根 + 朝端头的一根背索。
-            # 锚点用**绝对位置**给，不要写成 "塔的位置 + 偏移" ——
-            # 第一版那样写，塔在 +x 侧时索反而朝桥外拉，伸到了甲板之外。
-            for i, anchor in enumerate((sx * (tower_d - 1.5),
-                                        sx * (tower_d - 3.0),
-                                        sx * (tower_d + 2.9))):
-                ax_, az_ = bridge_pt(anchor, side * edge)
-                mesh("Cable%d%d_%d" % (t, k, i), br, box, MAT["metal"],
-                     cast_shadow="0",
-                     xform=T_seg3((tx, mast_top, tz),
-                                  (ax_, DECK_Y + 0.5, az_), 0.055))
-
     # -------------------------------------------------------------- buildings
     bl = node("Buildings", "Node3D", ".")
 
@@ -918,7 +894,7 @@ def build():
             ("HouseB", -4.0, -18.5, 22.0, "house_small"),
             ("HouseC", -21.5, -6.5, 22.0, "house_tall")]:
         instance(nm, bl, ext("PackedScene", "res://assets/environment/%s.glb" % src),
-                 T((px, 0.0, pz), ry=ry), child=src, override=MAT["prop"])
+                 T((px, 0.0, pz), ry=ry), child=src, override=MAT["prophouse"])
 
     mesh("ShedFloor", bl, box, MAT["woodlt"], (2.6, 0.6, -17.6), ry=6.0,
          scale=(3.6, 0.2, 3.0))
@@ -947,15 +923,6 @@ def build():
         mesh("FenceB%d" % i, pr, box, MAT["wood"],
              (-16.0 + i * 1.3, 0.6, -18.6 - i * 0.2), ry=8.0,
              scale=(0.14, 1.2, 0.14))
-    # 电线杆的位置写死在这里，而房子的位置是后来求解出来的 ——
-    # 上一轮挪房子时它们没跟着动，于是两根直接立进了房子里。
-    # 现在它们也进 check_clearance（见文件末尾），挪房子会当场报出来。
-    for i, (px, pz) in enumerate(POLES):
-        mesh("Pole%d" % i, pr, cyl, MAT["wood"], (px, 3.2, pz),
-             scale=(0.34, 6.4, 0.34))
-        mesh("PoleArm%d" % i, pr, box, MAT["wood"], (px, 5.9, pz), ry=20.0,
-             scale=(2.2, 0.16, 0.16))
-
     # ------------------------------------------------- scatter (rejection map)
     # Shared occupancy list so rocks/trees/bushes never pile into each other or
     # into gameplay space (roads, meadow, bridge approach, player).
@@ -963,7 +930,7 @@ def build():
     # 于是石头树木照着**旧位置**避让 —— 新位置周围反而堆满了散布物。
     taken = [(-14.5, -14.5, 6.4), (-4.0, -18.5, 5.0), (-21.5, -6.5, 5.2),
              (2.6, -17.6, 3.4), (-1.2, 3.6, 7.5), (bcx, bz, 11.0),
-             ] + [(px, pz, 1.6) for px, pz in POLES]
+             ]
 
     def blocked(px, pz, r):
         if abs(px - river_x(pz)) < RIVER_W / 2.0 + 1.0 + r * 0.3:
@@ -1282,8 +1249,6 @@ check_clearance([
     ("HouseB", footprint(-4.0, -18.5, 5.4, 4.6, 22.0)),
     ("HouseC", footprint(-21.5, -6.5, 5.8, 5.0, 22.0)),
     ("Shed", footprint(2.6, -17.6, 4.0, 3.4, 6.0)),
-] + [("Pole%d" % i, footprint(px, pz, 2.4, 0.5, 20.0))
-     for i, (px, pz) in enumerate(POLES)] + [
     # 土坡和电线杆都必须在表里。漏掉土坡那一版，求解出的房屋位置
     # "避开了桥"却正好落在坡里；漏掉电线杆那一版，房子直接搬到了杆上。
     # 检查表漏一项，检查就等于没做。

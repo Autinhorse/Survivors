@@ -7,6 +7,7 @@
 
     python tools/gen_textures.py                 # 全部
     python tools/gen_textures.py wood            # 只生成木纹
+                                                 # 可选: wood / thatch / plaster
 
 改完之后：
     Godot_v4.7-stable_win64_console.exe --path . --import --headless
@@ -84,7 +85,74 @@ def wood(size=512, seed=4):
     return base
 
 
-TEXTURES = {"wood": ("wood_planks.png", wood)}
+def thatch(size=512, seed=11):
+    """茅草。**条纹沿 U 方向跑**，UV 铺到屋面时让它顺着坡走。
+
+    这是"值噪声做不出来"的典型：茅草的读法来自一束束草秆的**方向性**，
+    各向同性的斑点无论怎么调都只是脏，不成材质。
+    """
+    rng = random.Random(seed)
+    im = Image.new("RGB", (size, size), (150, 140, 96))
+    px = im.load()
+    warp = _tile_noise(size, rng, 5, -4.0, 4.0).load()
+    fine = _tile_noise(size, rng, 64, -1.0, 1.0).load()
+
+    # 一束束草：沿 V 方向切成宽窄不等的条，每条一个色调
+    bands = []
+    v = 0
+    while v < size:
+        h = rng.randint(4, 11)
+        bands.append((v, min(size, v + h), rng.uniform(0.74, 1.16)))
+        v += h
+    # 让最后一条和第一条接得上（可平铺）
+    band_of = [0] * size
+    tone = [1.0] * size
+    for i, (v0, v1, t) in enumerate(bands):
+        for y in range(v0, v1):
+            band_of[y] = i
+            tone[y] = t
+
+    for y in range(size):
+        for x in range(size):
+            yy = int((y + warp[x, y]) % size)
+            k = tone[yy]
+            # 束内还有更细的草秆
+            k *= 1.0 + fine[x, y] * 0.13
+            # 束与束之间的暗缝
+            edge = 1.0
+            if band_of[yy] != band_of[(yy + 1) % size]:
+                edge = 0.72
+            k *= edge
+            k = max(0.35, min(1.25, k))
+            px[x, y] = (int(150 * k), int(140 * k), int(96 * k * 0.95))
+    return im.filter(ImageFilter.GaussianBlur(0.5))
+
+
+def plaster(size=512, seed=23):
+    """灰泥墙。大块的斑驳 + 细颗粒，还有几处露出底色的剥落。"""
+    rng = random.Random(seed)
+    im = Image.new("RGB", (size, size), (196, 184, 156))
+    px = im.load()
+    patch = _tile_noise(size, rng, 7, 0.86, 1.14).load()
+    grain = _tile_noise(size, rng, 70, -1.0, 1.0).load()
+    for y in range(size):
+        for x in range(size):
+            k = patch[x, y] * (1.0 + grain[x, y] * 0.06)
+            k = max(0.6, min(1.3, k))
+            px[x, y] = (int(196 * k), int(184 * k), int(156 * k))
+    # 剥落：几块偏暗偏冷的斑
+    dr = ImageDraw.Draw(im)
+    for _ in range(7):
+        cx, cy = rng.randrange(size), rng.randrange(size)
+        r = rng.randint(9, 26)
+        dr.ellipse([cx - r, cy - r * 0.72, cx + r, cy + r * 0.72],
+                   fill=(138, 130, 116))
+    return im.filter(ImageFilter.GaussianBlur(0.9))
+
+
+TEXTURES = {"wood": ("wood_planks.png", wood),
+            "thatch": ("thatch.png", thatch),
+            "plaster": ("plaster.png", plaster)}
 
 
 def main(names):
