@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d4j57vqgnk0pb"
-path="res://.godot/imported/menu_map.jpg-00b6abc26bd004f7a0abb54793bad4c2.ctex"
+uid="uid://b8fjfv8r0mvsb"
+path="res://.godot/imported/b5cab64bd889bb22807fcf958ed841917fd2d400c8f7d17026c717c564c2f712_600.webp-2eb47b4b2bbfea3ece7d0775e556ec9d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://styles/hellrider/reference/menu_map.jpg"
-dest_files=["res://.godot/imported/menu_map.jpg-00b6abc26bd004f7a0abb54793bad4c2.ctex"]
+source_file="res://styles/hellrider/reference/b5cab64bd889bb22807fcf958ed841917fd2d400c8f7d17026c717c564c2f712_600.webp"
+dest_files=["res://.godot/imported/b5cab64bd889bb22807fcf958ed841917fd2d400c8f7d17026c717c564c2f712_600.webp-2eb47b4b2bbfea3ece7d0775e556ec9d.ctex"]
 
 [params]
 

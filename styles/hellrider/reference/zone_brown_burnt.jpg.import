@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bliywlxoiwujg"
-path="res://.godot/imported/zone_brown_burnt.jpg-b390330c7210dcb40fddb4f753a613d1.ctex"
+path="res://.godot/imported/zone_brown_burnt.jpg-29d928cd8c387f758ab1122768dd96c9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://styles/HellRider/reference/zone_brown_burnt.jpg"
-dest_files=["res://.godot/imported/zone_brown_burnt.jpg-b390330c7210dcb40fddb4f753a613d1.ctex"]
+source_file="res://styles/hellrider/reference/zone_brown_burnt.jpg"
+dest_files=["res://.godot/imported/zone_brown_burnt.jpg-29d928cd8c387f758ab1122768dd96c9.ctex"]
 
 [params]
 

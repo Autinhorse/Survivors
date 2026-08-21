@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b7h1iig4deua8"
-path="res://.godot/imported/zone_green_trees.jpg-7d15c2aa41f73d71adf67c18f0919e25.ctex"
+path="res://.godot/imported/zone_green_trees.jpg-bd163a179b79f3ebea09f408f718a261.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://styles/HellRider/reference/zone_green_trees.jpg"
-dest_files=["res://.godot/imported/zone_green_trees.jpg-7d15c2aa41f73d71adf67c18f0919e25.ctex"]
+source_file="res://styles/hellrider/reference/zone_green_trees.jpg"
+dest_files=["res://.godot/imported/zone_green_trees.jpg-bd163a179b79f3ebea09f408f718a261.ctex"]
 
 [params]
 

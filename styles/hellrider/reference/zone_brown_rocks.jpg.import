@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bul48txgqt6yx"
-path="res://.godot/imported/zone_brown_rocks.jpg-314984cdd3d373a7735487ab85130357.ctex"
+path="res://.godot/imported/zone_brown_rocks.jpg-922da1414cf1b56f833f34621c791428.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://styles/HellRider/reference/zone_brown_rocks.jpg"
-dest_files=["res://.godot/imported/zone_brown_rocks.jpg-314984cdd3d373a7735487ab85130357.ctex"]
+source_file="res://styles/hellrider/reference/zone_brown_rocks.jpg"
+dest_files=["res://.godot/imported/zone_brown_rocks.jpg-922da1414cf1b56f833f34621c791428.ctex"]
 
 [params]
 

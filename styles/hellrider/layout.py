@@ -53,7 +53,13 @@ BRIDGE_W = 6.0
 # （收敛斜率 −0.005 px/行），只有正交做得到；我们原来的透视是 +1.06 px/行。
 CAM_ORTHO = True
 CAM_ORTHO_SIZE = 37.0        # 纵向世界高度；16:9 下横向 = 37*16/9 = 65.8 m
-CAM_PITCH = 60.0
+# 俯角 40°。参考图里石头和树的**侧面露得很多、树干看得见**，60° 做不到这个。
+# 用三档（60/48/38）并排比出来的，见 styles/hellrider/pitch_compare.png。
+#
+# **这一条不只是观感，是玩法参数**：正交下可见纵深 = size / sin(俯角)，
+#   60° -> 42.7 m      40° -> 57.6 m
+# 看得更远，屏幕外生成半径要跟着重算（见 spawn_radius()）。
+CAM_PITCH = 40.0
 CAM_HEIGHT = 44.0
 CAM_FOV = 40.0
 CAM_FOCUS_Z = 0.5
@@ -79,6 +85,17 @@ def frame_size(aspect=16.0 / 9.0):
     d = CAM_HEIGHT / math.sin(math.radians(CAM_PITCH))
     width = 2.0 * d * math.tan(math.atan(math.tan(math.radians(half)) * aspect))
     return camera_z() - far, camera_z() - near, width
+
+
+def spawn_radius(margin=1.1, aspect=16.0 / 9.0):
+    """屏幕外生成的最小世界半径。
+
+    **正交下可见区域是矩形**，比透视简单得多 ——
+    gatling 那边是梯形（近边 ±27.2 m、远边 ±41.6 m），要按最远的角算。
+    这里只需要矩形的半对角线。
+    """
+    zf, zn, w = frame_size(aspect)
+    return math.hypot(w * 0.5, (zn - zf) * 0.5) * margin
 
 
 def in_river(x, margin=1.5):
@@ -148,7 +165,11 @@ def build(MAT, MESH, performance=False):
           "half_width": "%g" % FIELD_HALF,
           "z_start": "%g" % FIELD_Z0, "z_end": "%g" % FIELD_Z1,
           "tooth_len": "%g" % TOOTH_LEN, "tooth_depth": "%g" % TOOTH_DEPTH,
-          "lava_width": "34.0", "lava_drop": "0.12", "lava_rows": "3",
+          # lava_drop 必须是 0：熔岩和地面共用同一条边界曲线，一旦有高差，
+          # 俯视下就会从缝里漏出背景色，沿着锯齿描出一条黑线
+          # （0.12 m 的落差在 60° 下是 0.07 m 水平缝 = 2 px，正好看得见）。
+          # 两者 X 范围不重叠，共面也不会 z-fighting。
+          "lava_width": "34.0", "lava_drop": "0.0", "lava_rows": "3",
           "ground_material": MAT["ground"], "lava_material": MAT["lava"]})
 
     # 熔岩里飘的小方块：参考图里数量不少，是这个风格的签名之一

@@ -132,7 +132,7 @@ shadow_blur = 2.4
 directional_shadow_max_distance = 120.0
 
 [node name="GameplayCamera" type="Camera3D" parent="."]
-transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.50000, 0.86603, 0.00000, -0.86603, 0.50000, 0.00000, 44.00000, 25.90341)
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.76604, 0.64279, 0.00000, -0.64279, 0.76604, 0.00000, 44.00000, 52.93716)
 script = ExtResource("ext_4_GameplayCameraPolicy")
 fov = 40.0
 near = 0.5
@@ -151,7 +151,7 @@ z_end = 36
 tooth_len = 5
 tooth_depth = 2.8
 lava_width = 34.0
-lava_drop = 0.12
+lava_drop = 0.0
 lava_rows = 3
 ground_material = SubResource("MatHrGround")
 lava_material = SubResource("MatHrLava")

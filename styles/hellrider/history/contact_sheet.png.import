@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d4j57vqgnk0pb"
-path="res://.godot/imported/menu_map.jpg-00b6abc26bd004f7a0abb54793bad4c2.ctex"
+uid="uid://cnjah53qf51b5"
+path="res://.godot/imported/contact_sheet.png-3c0bf71033ad25680073ee1018485409.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://styles/hellrider/reference/menu_map.jpg"
-dest_files=["res://.godot/imported/menu_map.jpg-00b6abc26bd004f7a0abb54793bad4c2.ctex"]
+source_file="res://styles/hellrider/history/contact_sheet.png"
+dest_files=["res://.godot/imported/contact_sheet.png-3c0bf71033ad25680073ee1018485409.ctex"]
 
 [params]
 

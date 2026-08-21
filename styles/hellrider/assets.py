@@ -67,9 +67,44 @@ def seeded(name):
     return random.Random(zlib.crc32(name.encode("utf-8")) & 0xffffffff)
 
 
-def flat(parts, name, loc=(0, 0, 0)):
-    """合并 + **平面着色**（smooth_angle=0）。这个风格里没有一条平滑边。"""
+def vgrad(obj, amount=0.28):
+    """把**垂直渐变**烘进顶点色：顶亮底暗。
+
+    这是参考图和"纯平面着色"之间最大的一处差别，而且是量出来的：
+    参考图里每个物体从上到下都在变暗（绿丛 120->92、树冠 120->89、
+    石头 125->96），而单个面**内部**的 std 有 12-26；
+    我们纯平面着色的面内 std 只有 0.45，死平。
+
+    它不是贴图 —— 是烘在模型上的渐变。按整个物体的包围盒算，
+    所以高的树和矮的灌木各自都有完整的过渡，不会因为世界高度不同而失真。
+    在合并之后、finalize 之前做，渐变才覆盖整个物体而不是每个部件各来一遍。
+    """
+    me = obj.data
+    zs = [v.co.z for v in me.vertices]
+    lo, hi = min(zs), max(zs)
+    span = max(hi - lo, 1e-4)
+    attr = me.color_attributes.get("Color")
+    if attr is None:
+        return obj
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            z = me.vertices[me.loops[li].vertex_index].co.z
+            t = (z - lo) / span
+            k = 1.0 - amount * (1.0 - t)
+            c = attr.data[li].color
+            attr.data[li].color = (c[0]*k, c[1]*k, c[2]*k, c[3])
+    return obj
+
+
+def flat(parts, name, loc=(0, 0, 0), grad=0.28):
+    """合并 + 垂直渐变 + **平面着色**（smooth_angle=0）。
+
+    面与面之间保持硬边（这个风格的骨架），面**内部**靠顶点色渐变产生过渡。
+    两者不矛盾：硬边来自法线不平滑，过渡来自顶点色插值。
+    """
     o = join_as(parts, name)
+    if grad > 0.0:
+        vgrad(o, grad)
     finalize(o, loc, smooth_angle=0.0)
     return o
 
@@ -133,6 +168,7 @@ def rock(name, shape, seed, loc=(0, 0, 0)):
     o = bpy.data.objects.new(name, me)
     bpy.context.collection.objects.link(o)
     tint(o, "Rock", rng, 0.05)
+    vgrad(o, 0.26)
     finalize(o, loc, smooth_angle=0.0)
     return o
 
