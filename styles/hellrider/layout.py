@@ -143,7 +143,10 @@ def build(MAT, MESH, performance=False):
               background_color=col(0.086, 0.055, 0.075),
               ambient_light_source="2",
               ambient_light_color=col(0.400, 0.360, 0.420),
-              ambient_light_energy="0.62",
+              # 环境光压到方向光之下。原来 0.62 配 1.75 的太阳，
+              # 环境光把三个面糊成了一档 —— 实测石头 侧/顶 = 1.03（参考 0.66）。
+              # 这个风格的"明暗有方向"全靠方向光，环境光只负责托住暗部不死黑。
+              ambient_light_energy="0.15",
               tonemap_mode="2", tonemap_exposure="1.0", tonemap_white="6.0",
               # 不开 glow。平面着色风格里 bloom 会给纯色块镶一圈光晕，
               # 白色的小兵直接变成发光的团 —— 纯色块的干净感就没了。
@@ -156,12 +159,15 @@ def build(MAT, MESH, performance=False):
     # 光源接近正上方偏一侧：分档着色下，斜光会让同一块石头出现太多台阶，
     # 参考图里每块石头只有 3 个明确的面
     node("Sun", "DirectionalLight3D", ".",
-         {"light_color": col(1.0, 0.96, 0.90), "light_energy": "1.75",
+         {"light_color": col(1.0, 0.96, 0.90), "light_energy": "3.10",
           "shadow_enabled": "true", "shadow_opacity": "0.22",
           "shadow_bias": "0.03", "shadow_normal_bias": "1.0",
           "shadow_blur": "2.4",
           "directional_shadow_max_distance": "120.0"},
-         T((0.0, 24.0, 0.0), ry=-150.0, rx=-58.0))
+         # 光要够斜，两面墙才分得开。58° 太陡，大部分可见面都落进同一档；
+         # 50° 下：顶面 nl=0.77（最高档）、迎光墙 0.64（中档）、背光墙 ~0（最低档），
+         # 正好对上参考图的三个台阶。
+         T((0.0, 24.0, 0.0), ry=-142.0, rx=-50.0))
 
     node("GameplayCamera", "Camera3D", ".",
          {"script": ext("Script",

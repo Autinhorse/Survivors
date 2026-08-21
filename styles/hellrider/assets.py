@@ -135,82 +135,90 @@ def tint(obj, colour, rng=None, jitter=0.0):
 
 
 # ------------------------------------------------------------------ 石头 --
-# 参考图的石头是**平顶台地**：一个大的不规则平顶 + 近乎竖直的侧壁，
-# 六到九个面，硬边。像一块被切出来的方料，不是一颗石子。
+# 参考图的石头有两个特征，缺一个都不像：
 #
-# 第一版用随机点的凸包（照抄 gatling 的做法）——**方向就错了**：
-# 凸包到处都是斜面，没有那个决定性的大平顶。
-# 参考图里几乎每块石头都能一眼看到一个完整的顶面，侧壁则几乎是竖直的。
+# 1. **平顶 + 近乎竖直的侧壁**。不是随机点的凸包（那到处都是斜面，
+#    没有那个决定性的大平顶）。
+# 2. **大块的是两层**：一个宽的低平台，上面偏一侧压着一个小锥台，
+#    锥台的顶面还会收窄成脊或尖。单层的棱柱只能做小石头。
 #
-# 生成方式因此简单得多：在 XY 平面上取一个不规则凸多边形当顶面，
-# 竖直挤出到地面即可。"盒子切几刀"就是这个意思。
-ROCK_SHAPES = {
-    # 尺寸按参考图反推：那里的骷髅约 1.8 m，大石头是它的 3 倍高、
-    # 顶面宽度和总高度大致相当（敦实的块体，不是矮墩）。
-    # 第一版 radius 1.0 / height 0.62 出来比玩家还小，而且太扁。
-    #              半径   高度   边数  锥度  顶面倾斜
-    # 顺序有意义：ScatterField 按 i % variants 取变体，
-    # 调参场景只摆 3 个，所以把最有代表性的三种排在最前面
-    "mesa":       (1.55, 1.30,  8,  0.06, 0.05),
-    "wedge":      (1.30, 1.05,  6,  0.04, 0.30),   # 顶面明显倾斜
-    "tall":       (0.95, 2.05,  6,  0.08, 0.10),
-    "mesa_low":   (1.85, 0.78,  7,  0.05, 0.08),
-    "block":      (1.10, 1.50,  6,  0.03, 0.04),
-    "slab":       (2.05, 0.62,  9,  0.07, 0.06),
+# 所以生成器是"堆锥台"：每一层给底半径、顶半径、高度和横向偏移。
+# 顶半径 < 底半径就得到锥面，相等就是竖直墙。
+ROCK_TIERS = {
+    # 每层: (底半径, 顶半径, 高度, 偏移x, 偏移y, 边数)
+    # 顺序有意义：ScatterField 按 i % variants 取变体，调参场景只摆 3 个
+    "mesa2": [(1.90, 1.75, 0.80, 0.00, 0.00, 8),
+              (1.15, 0.72, 0.95, 0.38, 0.22, 7)],
+    "wedge": [(1.30, 1.15, 1.05, 0.00, 0.00, 6)],          # 顶面倾斜见 tilt
+    "tall":  [(1.00, 0.92, 1.35, 0.00, 0.00, 6),
+              (0.82, 0.30, 0.75, -0.12, 0.10, 5)],
+    "mesa_low": [(1.85, 1.72, 0.70, 0.00, 0.00, 7)],
+    "block": [(1.10, 1.02, 1.25, 0.00, 0.00, 6),
+              (0.70, 0.52, 0.55, 0.22, -0.18, 5)],
+    "slab":  [(2.05, 1.95, 0.55, 0.00, 0.00, 9)],
 }
+ROCK_TILT = {"wedge": 0.30, "mesa_low": 0.08, "slab": 0.06}
+
+
+def _ngon(rng, sides, radius):
+    """不规则凸多边形的角度和半径。半径抖动控制在 ±20% 以内保持凸性。"""
+    ang, a = [], rng.uniform(0.0, math.tau)
+    for _i in range(sides):
+        a += math.tau / sides * rng.uniform(0.74, 1.26)
+        ang.append(a)
+    return ang, [radius * rng.uniform(0.82, 1.08) for _ in range(sides)]
 
 
 def rock(name, shape, loc=(0, 0, 0)):
-    """平顶 + 竖直侧壁。顶面是不规则凸多边形，所以每块都不一样。"""
     rng = seeded(name)
-    radius, height, sides, taper, tilt = ROCK_SHAPES[shape]
-
-    # 顶面的多边形：角度和半径都抖，但保持凸性（半径抖动不超过 ±25%）
-    ang = []
-    a = rng.uniform(0.0, math.tau)
-    for i in range(sides):
-        a += math.tau / sides * rng.uniform(0.72, 1.28)
-        ang.append(a)
-    rad = [radius * rng.uniform(0.78, 1.10) for _ in range(sides)]
+    tiers = ROCK_TIERS[shape]
+    tilt = ROCK_TILT.get(shape, 0.04)
 
     bm = bmesh.new()
-    top, bot = [], []
-    for i in range(sides):
-        cx, cy = math.cos(ang[i]) * rad[i], math.sin(ang[i]) * rad[i]
-        # 顶面整体倾斜：读起来像被掀起来的一块，参考图里有好几块是这样
-        z = height + cx * tilt
-        top.append(bm.verts.new((cx, cy, z)))
-        # 底面略外扩（taper），石头才不像一根柱子
-        k = 1.0 + taper
-        bot.append(bm.verts.new((cx * k, cy * k, 0.0)))
-    bm.faces.new(top)
-    for i in range(sides):
-        j = (i + 1) % sides
-        bm.faces.new((bot[i], bot[j], top[j], top[i]))
+    z = 0.0
+    for ti, (r0, r1, h, ox, oy, sides) in enumerate(tiers):
+        ang, jit = _ngon(rng, sides, 1.0)
+        bot, top = [], []
+        for i in range(sides):
+            ca, sa = math.cos(ang[i]), math.sin(ang[i])
+            k = jit[i]
+            bot.append(bm.verts.new((ox + ca * r0 * k, oy + sa * r0 * k, z)))
+            # 顶面整体倾斜：参考图里好几块石头的顶是斜的，像被掀起来一块
+            tz = z + h + ca * r1 * k * tilt
+            top.append(bm.verts.new((ox + ca * r1 * k, oy + sa * r1 * k, tz)))
+        # 只有最上一层需要封顶：下面几层的顶面会被上一层压住，
+        # 但压不满（上层更小且有偏移），所以每层都封，让露出来的台面可见
+        bm.faces.new(top)
+        if ti == 0:
+            bm.faces.new(list(reversed(bot)))
+        for i in range(sides):
+            j = (i + 1) % sides
+            bm.faces.new((bot[i], bot[j], top[j], top[i]))
+        z += h
+
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
     o = bpy.data.objects.new(name, me)
     bpy.context.collection.objects.link(o)
     tint(o, "Rock", rng, 0.045)
-    vgrad(o, 0.26)
+    vgrad(o, 0.24)
     finalize(o, loc, smooth_angle=0.0)
     return o
 
 
 def build_rocks(out_dir):
     clear()
-    for i, shape in enumerate(ROCK_SHAPES):
-        rock("rock_%s" % shape, shape, loc=(i * 3.4 - 8.0, 0, 0))
+    for i, shape in enumerate(ROCK_TIERS):
+        rock("rock_%s" % shape, shape, loc=(i * 5.0 - 12.0, 0, 0))
     export(os.path.join(out_dir, "rocks.glb"), "rocks")
 
     clear()
-    for i, shape in enumerate(("mesa_low", "block", "slab", "wedge")):
-        o = rock("pebble_%d" % i, shape, loc=(i * 1.4 - 2.0, 0, 0))
-        o.scale = (0.22, 0.22, 0.20)
+    for i, shape in enumerate(("mesa_low", "slab", "wedge", "block")):
+        o = rock("pebble_%d" % i, shape, loc=(i * 1.6 - 2.4, 0, 0))
+        o.scale = (0.20, 0.20, 0.18)
     export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
 
 

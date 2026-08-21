@@ -42,7 +42,7 @@ def materials():
         tile_a=col(0.545, 0.392, 0.282), tile_b=col(0.563, 0.406, 0.292),
         tile_size="2.6", tile_steps="4.0", tile_bias="0.55",
         path_a=col(0.310, 0.216, 0.153), path_b=col(0.404, 0.290, 0.204),
-        light_steps="3.0", light_floor="0.66")
+        light_steps="3.0", light_floor="0.72")
 
     MAT["lava"] = shader_mat(
         "MatHrLava", "res://shaders/hr_lava.gdshader",
@@ -65,7 +65,7 @@ def materials():
     # 所有道具共用一个材质：颜色在顶点色里，明暗台阶由着色器分档产生
     MAT["flat"] = shader_mat(
         "MatHrFlat", "res://shaders/hr_flat.gdshader",
-        tint="1.0", light_steps="3.0", light_floor="0.52", top_boost="0.10")
+        tint="1.0", light_steps="3.0", light_floor="0.44", top_boost="0.10")
 
     # blob 阴影：贴在地面上的软影贴片，代替真实投影阴影。
     # 参考图里树/石头下面的影子是居中的软椭圆，没有方向偏移。

@@ -21,7 +21,7 @@ shader_parameter/tile_bias = 0.55
 shader_parameter/path_a = Color(0.31, 0.216, 0.153, 1)
 shader_parameter/path_b = Color(0.404, 0.29, 0.204, 1)
 shader_parameter/light_steps = 3.0
-shader_parameter/light_floor = 0.66
+shader_parameter/light_floor = 0.72
 
 [sub_resource type="ShaderMaterial" id="MatHrLava"]
 shader = ExtResource("ext_2_hr_lava")
@@ -56,7 +56,7 @@ shader_parameter/top_boost = 0.0
 shader = ExtResource("ext_3_hr_flat")
 shader_parameter/tint = 1.0
 shader_parameter/light_steps = 3.0
-shader_parameter/light_floor = 0.52
+shader_parameter/light_floor = 0.44
 shader_parameter/top_boost = 0.10
 
 [sub_resource type="ShaderMaterial" id="MatHrBlob"]
@@ -106,7 +106,7 @@ background_mode = 1
 background_color = Color(0.086, 0.055, 0.075, 1)
 ambient_light_source = 2
 ambient_light_color = Color(0.4, 0.36, 0.42, 1)
-ambient_light_energy = 0.62
+ambient_light_energy = 0.15
 tonemap_mode = 2
 tonemap_exposure = 1.0
 tonemap_white = 6.0
@@ -126,9 +126,9 @@ size = Vector3(1, 1, 1)
 environment = SubResource("Env")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.86603, 0.42402, -0.26496, 0.00000, 0.52992, 0.84805, 0.50000, 0.73443, -0.45892, 0.00000, 24.00000, 0.00000)
+transform = Transform3D(-0.78801, 0.47162, -0.39574, 0.00000, 0.64279, 0.76604, 0.61566, 0.60365, -0.50652, 0.00000, 24.00000, 0.00000)
 light_color = Color(1, 0.96, 0.9, 1)
-light_energy = 1.75
+light_energy = 3.10
 shadow_enabled = true
 shadow_opacity = 0.22
 shadow_bias = 0.03
