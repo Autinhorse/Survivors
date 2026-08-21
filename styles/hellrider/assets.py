@@ -485,28 +485,61 @@ def build_rocks(out_dir):
 
 
 # -------------------------------------------------------------------- 树 --
-def tree(name, loc=(0, 0, 0), height=4.6, crown=1.9, seed=0):
-    """细杆 + 低面球树冠。参考图就是这么简单 —— 没有枝、没有贴片。
+# 每个变体一套**不同的比例**，不是同一个模型缩放。
+# 之前 4 个变体只改了总高和冠半径，等比缩放之后读起来就是同一棵树。
+# (总高, 冠半径, 团数, 树干占总高, 冠的扁平, 树干倾斜)
+TREE_SHAPES = (
+    (4.6, 1.70, 3, 0.44, 1.12, 0.00),
+    (5.8, 1.95, 4, 0.38, 0.92, 0.07),
+    (3.7, 1.55, 2, 0.52, 1.26, 0.12),
+    (5.0, 1.80, 3, 0.34, 1.00, 0.05),
+)
 
-    第二团要和主团**同色系且大幅重叠**。第一版给了明显更深的 LeafDeep
-    又只压住一点点，读出来是贴在树冠上的一块深色补丁，不是同一团树叶。
-    深浅差异交给着色器的分档光照和 vgrad 去产生，不要在颜色上先分好。
+
+def tree(name, loc=(0, 0, 0), shape=0, seed=0):
+    """细杆 + 几团低面球。参考图就是这么简单 —— 没有枝、没有贴片。
+
+    树冠是**几团明显分开的球**，不是一团加一个几乎重合的小球。
+    第一版第二团只探出主球 0.12 个冠半径，缩小之后根本看不出是两团，
+    只剩交线上一条深色的缝。衡量的量是**探出量** d + r2 - r1
+    （球心距 + 小球半径 - 主球半径），要 0.30-0.45 个冠半径才读得出来。
+
+    各团同色系。第一版给了明显更深的 LeafDeep 又只压住一点点，读出来是
+    贴在树冠上的一块深色补丁。深浅交给分档光照和 vgrad 去产生，
+    不要在颜色上先分好 —— 而且各团是独立连通块，vgrad 会各给各的渐变。
     """
     rng = seeded(name)
+    height, crown, lobes, trunk_f, flat_z, lean = TREE_SHAPES[shape]
     parts = []
-    th = height * 0.44
+
+    th = height * trunk_f
     # 树干更细：参考图里树干只有两三个像素宽
-    parts.append(tint(cyl(0.10, th, (0, 0, th * 0.5), "Trunk", verts=5),
-                      "Trunk", rng, 0.04))
-    cz = th + crown * 0.66
+    tr = cyl(0.10, th, (0, 0, th * 0.5), "Trunk", verts=5)
+    tr.rotation_euler = (lean, 0.0, rng.uniform(0.0, math.tau))
+    parts.append(tint(tr, "Trunk", rng, 0.04))
+
+    cz = th + crown * 0.62
     c = ico(crown, (0, 0, cz), "Leaf", subdiv=1)
-    c.scale = (1.0, 1.0, 1.12)
-    tint(c, "Leaf", rng, 0.07)
-    parts.append(c)
-    c2 = ico(crown * 0.70, (crown * 0.30, crown * 0.12, cz + crown * 0.26),
-             "Leaf", subdiv=1)
-    tint(c2, "Leaf", rng, 0.07)
-    parts.append(c2)
+    c.scale = (1.0, 1.0, flat_z)
+    parts.append(tint(c, "Leaf", rng, 0.07))
+
+    a0 = rng.uniform(0.0, math.tau)
+    outs = []
+    for i in range(lobes - 1):
+        # 团均匀铺开一圈再抖，避免全挤在一侧
+        ang = a0 + math.tau * (i + 1) / lobes + rng.uniform(-0.35, 0.35)
+        r2 = crown * rng.uniform(0.58, 0.74)
+        # 由探出量反解球心距：d = 探出量 + r1 - r2
+        out = crown * rng.uniform(0.30, 0.45)
+        outs.append(out / crown)
+        d = out + crown - r2
+        parts.append(tint(ico(r2, (math.cos(ang) * d, math.sin(ang) * d,
+                                   cz + crown * rng.uniform(-0.22, 0.40)),
+                              "Leaf", subdiv=1), "Leaf", rng, 0.07))
+    # 把探出量打出来：这是"能不能看出是几团"的唯一指标，
+    # 而且改比例时很容易无声地掉回去（第一版就是 0.12）
+    print("  %-8s %d 团，探出 %s 冠半径"
+          % (name, lobes, ", ".join("%.2f" % v for v in outs) or "-"))
     return flat(parts, name, loc)
 
 
@@ -520,8 +553,8 @@ def bush(name, loc=(0, 0, 0), radius=0.85, seed=0):
 
 def build_trees(out_dir):
     clear()
-    for i, (h, c) in enumerate(((4.6, 1.9), (5.6, 2.2), (3.9, 1.6), (5.0, 2.0))):
-        tree("tree_%d" % i, (i * 6.0 - 9.0, 0, 0), height=h, crown=c, seed=i)
+    for i in range(len(TREE_SHAPES)):
+        tree("tree_%d" % i, (i * 6.0 - 9.0, 0, 0), shape=i, seed=i)
     export(os.path.join(out_dir, "trees.glb"), "trees")
 
     clear()
