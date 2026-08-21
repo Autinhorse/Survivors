@@ -99,6 +99,29 @@ def shader_mat(name, shader_path, **params):
     return sub("ShaderMaterial", name, props)
 
 
+def tex_mean(rel_path):
+    """贴图的平均色（线性空间），给着色器做归一化用。
+
+    PNG 存的是 sRGB，而着色器里拿到的是线性值 —— 平均要在**线性空间**算，
+    在 sRGB 空间算会偏亮，归一化之后木头整体发暗。
+    """
+    from PIL import Image
+    import os
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     rel_path)
+    im = Image.open(p).convert("RGB").resize((64, 64), Image.BOX)
+    acc = [0.0, 0.0, 0.0]
+    px = im.load()
+    for y in range(64):
+        for x in range(64):
+            c = px[x, y]
+            for i in range(3):
+                v = c[i] / 255.0
+                acc[i] += v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+    n = 64.0 * 64.0
+    return col(acc[0] / n, acc[1] / n, acc[2] / n)
+
+
 def col(r, g, b, a=1.0):
     return "Color(%g, %g, %g, %g)" % (r, g, b, a)
 
@@ -249,6 +272,22 @@ def materials():
     # 硬表面道具（房屋）：颜色来自顶点色，细节和法线扰动在着色器里算。
     # 不走 StandardMaterial3D 的法线贴图 —— 程序化网格没有 UV，
     # Godot 没 UV 就生成不了切线，那条路会静默失效。
+    # 桥用外部木纹贴图（assets/textures/wood_planks.png，可以直接改图）。
+    # 房屋仍走纯程序化那一路 —— 它们没有铺 UV。
+    MAT["propwood"] = shader_mat("MatPropWood", "res://shaders/prop.gdshader",
+                                 detail_noise=detail,
+                                 albedo_tex=ext(
+                                     "Texture2D",
+                                     "res://assets/textures/wood_planks.png"),
+                                 use_uv_tex="1.0", uv_tex_scale="1.0",
+                                 uv_tex_strength="0.85",
+                                 uv_tex_mean=tex_mean(
+                                     "assets/textures/wood_planks.png"),
+                                 scale_stone="0.55", scale_wood="0.75",
+                                 contrast_stone="0.30", contrast_wood="0.14",
+                                 bump_stone="1.10", bump_wood="0.70",
+                                 epsilon="0.06", surface_roughness="0.94")
+
     MAT["prop"] = shader_mat("MatProp", "res://shaders/prop.gdshader",
                              detail_noise=detail,
                              scale_stone="0.55", scale_wood="0.75",
@@ -259,6 +298,42 @@ def materials():
 
     MAT["player"] = mat("MatPlayer", (0.706, 0.290, 0.098), rough=0.48, metal=0.35)
     MAT["enemy"] = mat("MatEnemy", (0.502, 0.161, 0.129), rough=0.58, metal=0.25)
+
+
+def footprint(cx, cz, w, d, ry):
+    """XZ 平面上的四角。ry 与 T() 的约定一致（绕 Y 轴，度）。"""
+    c, sn = math.cos(math.radians(ry)), math.sin(math.radians(ry))
+    return [(cx + dx * c + dz * sn, cz - dx * sn + dz * c)
+            for dx, dz in ((-w / 2, -d / 2), (w / 2, -d / 2),
+                           (w / 2, d / 2), (-w / 2, d / 2))]
+
+
+def _overlap_1d(a0, a1, b0, b1):
+    return min(a1, b1) - max(a0, b0)
+
+
+def check_clearance(items, min_gap=0.6):
+    """作者手摆的大件之间留没留出间距。
+
+    桥加宽一倍之后和 HouseB 撞了，而这件事**在截图里很难看出来** ——
+    60° 俯视下前后错开几米和真的重叠长得差不多，只有算一遍才知道。
+    用轴对齐包围盒近似（都是接近轴向的矩形），够用了。
+    """
+    bad = []
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            (n1, f1), (n2, f2) = items[i], items[j]
+            ox = _overlap_1d(min(p[0] for p in f1), max(p[0] for p in f1),
+                             min(p[0] for p in f2), max(p[0] for p in f2))
+            oz = _overlap_1d(min(p[1] for p in f1), max(p[1] for p in f1),
+                             min(p[1] for p in f2), max(p[1] for p in f2))
+            gap = max(-ox, -oz)          # 两轴都重叠时为负 = 真重叠
+            if gap < min_gap:
+                bad.append((n1, n2, gap))
+    for n1, n2, gap in bad:
+        print("  [clearance] %s <-> %s : %s%.2f m"
+              % (n1, n2, "重叠 " if gap < 0 else "间距 ", abs(gap)))
+    return bad
 
 
 # --------------------------------------------------------------- transforms --
@@ -275,15 +350,58 @@ def _emit(ax, ay, az, pos):
     return "Transform3D(" + ", ".join("%.5f" % f for f in v) + ")"
 
 
-def T(pos=(0.0, 0.0, 0.0), ry=0.0, scale=(1.0, 1.0, 1.0), rx=0.0):
-    """Basis = Ry(ry) * Rx(rx) * Scale."""
-    cy, sy = math.cos(math.radians(ry)), math.sin(math.radians(ry))
-    cx, sx = math.cos(math.radians(rx)), math.sin(math.radians(rx))
-    s = scale
-    ax = tuple(c * s[0] for c in (cy, 0.0, -sy))
-    ay = tuple(c * s[1] for c in (sy * sx, cx, cy * sx))
-    az = tuple(c * s[2] for c in (sy * cx, -sx, cy * cx))
+def _matmul(a, b):
+    return [[sum(a[i][k] * b[k][j] for k in range(3)) for j in range(3)]
+            for i in range(3)]
+
+
+def T(pos=(0.0, 0.0, 0.0), ry=0.0, scale=(1.0, 1.0, 1.0), rx=0.0, rz=0.0):
+    """Basis = Ry(ry) * Rz(rz) * Rx(rx) * Scale.
+
+    用矩阵连乘而不是手推分量：手推过一版，rx 那几项是错的，
+    而错法很隐蔽（只在同时给 ry 和 rx 时才看得出来）。
+    rz 是做斜坡引桥用的 —— 沿桥向倾斜要绕 Z 转。
+    """
+    def rot_y(d):
+        c, s_ = math.cos(math.radians(d)), math.sin(math.radians(d))
+        return [[c, 0.0, s_], [0.0, 1.0, 0.0], [-s_, 0.0, c]]
+
+    def rot_z(d):
+        c, s_ = math.cos(math.radians(d)), math.sin(math.radians(d))
+        return [[c, -s_, 0.0], [s_, c, 0.0], [0.0, 0.0, 1.0]]
+
+    def rot_x(d):
+        c, s_ = math.cos(math.radians(d)), math.sin(math.radians(d))
+        return [[1.0, 0.0, 0.0], [0.0, c, -s_], [0.0, s_, c]]
+
+    m = _matmul(_matmul(rot_y(ry), rot_z(rz)), rot_x(rx))
+    ax = tuple(m[i][0] * scale[0] for i in range(3))
+    ay = tuple(m[i][1] * scale[1] for i in range(3))
+    az = tuple(m[i][2] * scale[2] for i in range(3))
     return _emit(ax, ay, az, pos)
+
+
+def T_seg3(p0, p1, thickness):
+    """把单位立方体拉成连接 p0 -> p1 的一根杆（真三维，不限于 XY 平面）。
+
+    原来的 T_segment 只在 XY 平面里算，z 恒定 —— 桥绕 Y 轴转了 15.6°，
+    拉索却拉在恒定 z 上，于是斜着穿过桥面。静帧上像一堆乱线。
+    """
+    d = [p1[i] - p0[i] for i in range(3)]
+    ln = math.sqrt(sum(v * v for v in d)) or 1e-6
+    ax = [v / ln for v in d]
+    up = (0.0, 1.0, 0.0) if abs(ax[1]) < 0.95 else (1.0, 0.0, 0.0)
+    az = [ax[1] * up[2] - ax[2] * up[1],
+          ax[2] * up[0] - ax[0] * up[2],
+          ax[0] * up[1] - ax[1] * up[0]]
+    n = math.sqrt(sum(v * v for v in az)) or 1e-6
+    az = [v / n for v in az]
+    ay = [az[1] * ax[2] - az[2] * ax[1],
+          az[2] * ax[0] - az[0] * ax[2],
+          az[0] * ax[1] - az[1] * ax[0]]
+    mid = tuple((p0[i] + p1[i]) * 0.5 for i in range(3))
+    return _emit(tuple(v * ln for v in ax), tuple(v * thickness for v in ay),
+                 tuple(v * thickness for v in az), mid)
 
 
 def T_segment(p0, p1, thickness):
@@ -435,8 +553,10 @@ BED_Y = -3.4
 
 # Bridge
 BRIDGE_Z = -8.0
-DECK_L = 13.0                     # gorge is 7.5 m; ~2.7 m of overhang each side
-DECK_W = 4.2
+# **必须和 tools/gen_assets_blender.py 的 BRIDGE_L / BRIDGE_W 一致** ——
+# 桥面本身是 Blender 资产，这两个数只用来算桥墩、拉索和占位检查。
+DECK_L = 16.0                    # 河道在 z=-8 处宽 6.7 m，两端各有约 4.6 m 落地
+DECK_W = 8.4                     # 参考图的桥宽约是机甲的 4-5 倍
 DECK_Y = 2.1                     # meets the far-bank plateau top
 
 # Village loop road
@@ -695,49 +815,61 @@ def build():
              scale=(w, 0.06, d), cast_shadow="0")
 
     # ----------------------------------------------------------------- bridge
+    # 桥面、栏杆、桅杆现在是 Blender 资产（tools/gen_assets_blender.py 的 bridge()）：
+    # 横铺的板逐块抖长度/厚度/角度/颜色、所有木件带倒角。
+    # 之前在这里用 CSG 盒子拼，出来是"几块对齐的平板"——
+    # 板是一整块、边是 90° 硬棱、整片同色，三件事都得在几何层解决。
+    #
+    # 留在场景侧的只有和地形相关的部分：桥墩（长度取决于河床）、
+    # 拉索（端点取决于地面）、引桥台阶。
     bz, bcx = BRIDGE_Z, river_x(BRIDGE_Z)
     br = node("Bridge", "Node3D", ".")
     x0 = bcx - DECK_L / 2.0                                # near end of deck
-    mesh("Deck", br, box, MAT["wood"], (x0 + DECK_L / 2.0, DECK_Y, bz),
-         ry=RANG, scale=(DECK_L, 0.30, DECK_W))
-    nplank = int(DECK_L / 1.55)
-    for i in range(nplank):
-        mesh("Plank%d" % i, br, box, MAT["woodlt"],
-             (x0 + (i + 0.5) * DECK_L / nplank, DECK_Y + 0.18, bz), ry=RANG,
-             scale=(0.38, 0.10, DECK_W + 0.2))
-    for i, offz in enumerate((-DECK_W / 2.0 + 0.5, DECK_W / 2.0 - 0.5)):
+    instance("Deck", br, ext("PackedScene", "res://assets/environment/bridge.glb"),
+             T((bcx, DECK_Y, bz), ry=RANG), child="bridge",
+             override=MAT["propwood"])
+
+    for i, offz in enumerate((-DECK_W / 2.0 + 1.1, DECK_W / 2.0 - 1.1)):
         for j, dx in enumerate((-RIVER_W / 2.0 + 0.9, RIVER_W / 2.0 - 0.9)):
             mesh("Pylon%d%d" % (i, j), br, cyl, MAT["wood"],
                  (bcx + dx, (DECK_Y + BED_Y) / 2.0, bz + offz),
                  scale=(0.6, DECK_Y - BED_Y, 0.6))
-    npost = int(DECK_L / 1.9)
-    for i in range(npost):
-        for k, s in enumerate((-DECK_W / 2.0 + 0.2, DECK_W / 2.0 - 0.2)):
-            mesh("Post%d_%d" % (i, k), br, box, MAT["wood"],
-                 (x0 + (i + 0.5) * DECK_L / npost, DECK_Y + 0.75, bz + s),
-                 ry=RANG, scale=(0.16, 1.2, 0.16))
-    for k, s in enumerate((-DECK_W / 2.0 + 0.2, DECK_W / 2.0 - 0.2)):
-        mesh("Rail%d" % k, br, box, MAT["wood"],
-             (x0 + DECK_L / 2.0, DECK_Y + 1.3, bz + s), ry=RANG,
-             scale=(DECK_L - 0.4, 0.16, 0.16))
-    # Near-side abutment: stepped ramp from ground level up to the deck.
-    for i, (dx, f) in enumerate(((-1.2, 0.75), (-3.0, 0.42), (-4.8, 0.16))):
-        mesh("Abut%d" % i, br, box, MAT["woodlt"],
-             (x0 + dx, f * DECK_Y / 2.0, bz), ry=RANG,
-             scale=(2.0, f * DECK_Y, DECK_W))
-    # A-frame mast + stay cables (silhouette from target.png)
-    mast_x, mast_top = x0 + 0.3, DECK_Y + 5.6
-    for k, s in enumerate((-DECK_W / 2.0 + 0.6, DECK_W / 2.0 - 0.6)):
-        mesh("Mast%d" % k, br, box, MAT["wood"],
-             (mast_x, (mast_top + DECK_Y) / 2.0 - 0.4, bz + s), ry=RANG,
-             scale=(0.5, mast_top - DECK_Y + 1.6, 0.5))
-    mesh("MastTop", br, box, MAT["wood"], (mast_x, mast_top, bz), ry=RANG,
-         scale=(0.44, 0.44, DECK_W))
-    for i, dx in enumerate((3.2, 6.4, 9.6, 12.8)):
-        mesh("Cable%d" % i, br, box, MAT["metal"], cast_shadow="0",
-             xform=T_segment((mast_x, mast_top, bz), (mast_x + dx, DECK_Y), 0.07))
-    mesh("CableBack", br, box, MAT["metal"], cast_shadow="0",
-         xform=T_segment((mast_x, mast_top, bz), (mast_x - 6.5, 0.0), 0.07))
+    # 近岸引桥：**堆一道土坡**，不是几块悬空的大木板。
+    # 之前那三块木板缩放到 8.4 m 宽之后，成了三块巨大的平板，
+    # 既没有厚度也没有材质 —— 而且现实里 2.1 m 的高差本来就是填土解决的。
+    # 用地形材质，着色器会自动按坡度给出草/土/石的过渡。
+    ramp_len = 9.0
+    ramp_ang = math.degrees(math.atan2(DECK_Y, ramp_len))
+    node("Approach", "CSGBox3D", ter,
+         {"size": "Vector3(%g, 2.0, %g)" % (ramp_len + 2.0, DECK_W + 3.2),
+          "material": MAT["grass"], "operation": "0"},
+         T((x0 - ramp_len * 0.5 + 1.0,
+            DECK_Y * 0.5 - 0.35 - math.sin(math.radians(ramp_ang)) * 0.4, bz),
+           ry=RANG, rz=ramp_ang))
+    # 拉索。桅杆在资产局部 x = -L/2 + 1.2、高 4.6，顶横梁在 y = ±0.55。
+    #
+    # **必须沿桥的方向走**：桥绕 Y 轴转了 RANG（约 15.6°），用只在 XY 平面里算的
+    # T_segment 会把拉索拉在恒定 z 上，于是斜着穿过桥面，像一堆乱线。
+    ca, sa = math.cos(math.radians(RANG)), -math.sin(math.radians(RANG))
+    mast_x, mast_top = x0 + 4.2, DECK_Y + 4.6
+
+    def along(d, off=0.0):
+        return (bcx + d * ca - off * sa, bz - d * sa - off * ca)
+
+    top_d = mast_x - bcx
+    for k, side in enumerate((-0.55, 0.55)):
+        tx, tz = along(top_d, side)
+        # 锚点落在栏杆以内（side=±0.55，乘 6.2 得 ±3.4 m，桥半宽 4.2 m）。
+        # 之前拉索看着像摊在桥面上，原因不在锚点而在桅杆 ——
+        # 它立在甲板最端头，被引桥土坡埋了半截，索是从一个很低的点拉出来的。
+        for i, dl in enumerate((3.0, 6.6, 10.0)):
+            ax_, az_ = along(top_d + dl, side * 6.2)
+            mesh("Cable%d_%d" % (k, i), br, box, MAT["metal"], cast_shadow="0",
+                 xform=T_seg3((tx, mast_top, tz), (ax_, DECK_Y + 0.55, az_), 0.06))
+        # 背拉索朝上游拉，不再压向村子（原来拉到 x-6.5，正好穿过 HouseB 屋顶）
+        bx, bzz = along(top_d - 5.4, side * 3.0)
+        mesh("CableBack%d" % k, br, box, MAT["metal"], cast_shadow="0",
+             xform=T_seg3((tx, mast_top, tz), (bx, 0.1, bzz), 0.06))
 
     # -------------------------------------------------------------- buildings
     bl = node("Buildings", "Node3D", ".")
@@ -757,18 +889,18 @@ def build():
     # 用一个偏移把需要的那栋挪到父节点原点，其余两栋跟着挪出画面外。
     for nm, px, pz, ry, src in [
             ("HouseA", -12.9, -13.2, -8.0, "house_large"),
-            ("HouseB", -2.7, -11.1, 14.0, "house_small"),
+            ("HouseB", -7.5, -5.5, 22.0, "house_small"),
             ("HouseC", -21.5, -6.5, 22.0, "house_tall")]:
         instance(nm, bl, ext("PackedScene", "res://assets/environment/%s.glb" % src),
                  T((px, 0.0, pz), ry=ry), child=src, override=MAT["prop"])
 
-    mesh("ShedFloor", bl, box, MAT["woodlt"], (3.9, 0.6, -14.4), ry=6.0,
+    mesh("ShedFloor", bl, box, MAT["woodlt"], (2.6, 0.6, -17.6), ry=6.0,
          scale=(3.6, 0.2, 3.0))
     for i, (dx, dz) in enumerate(((-1.6, -1.3), (1.6, -1.3),
                                   (-1.6, 1.3), (1.6, 1.3))):
         mesh("ShedPost%d" % i, bl, box, MAT["wood"],
-             (3.9 + dx, 1.2, -14.4 + dz), scale=(0.2, 1.4, 0.2))
-    mesh("ShedRoof", bl, box, MAT["wood"], (3.9, 2.0, -14.4), ry=6.0,
+             (2.6 + dx, 1.2, -17.6 + dz), scale=(0.2, 1.4, 0.2))
+    mesh("ShedRoof", bl, box, MAT["wood"], (2.6, 2.0, -17.6), ry=6.0,
          scale=(4.0, 0.2, 3.4))
 
     # ------------------------------------------------------------------ props
@@ -1113,6 +1245,13 @@ with open(os.path.abspath(OUT), "w", encoding="utf-8") as f:
 _zf, _zn, _w = frame_size()
 print("wrote %s : %d ext + %d sub_resources, %d nodes"
       % (os.path.normpath(OUT), len(extres), len(subres), len(nodes)))
+check_clearance([
+    ("Bridge", footprint(river_x(BRIDGE_Z), BRIDGE_Z, DECK_L, DECK_W, RANG)),
+    ("HouseA", footprint(-12.9, -13.2, 7.6, 5.6, -8.0)),
+    ("HouseB", footprint(-7.5, -5.5, 5.4, 4.6, 22.0)),
+    ("HouseC", footprint(-21.5, -6.5, 5.8, 5.0, 22.0)),
+    ("Shed", footprint(2.6, -17.6, 4.0, 3.4, 6.0)),
+])
 print("camera: pitch %.1f deg, height %.1f m, fov %.1f, z %.2f"
       % (CAM_PITCH, CAM_HEIGHT, CAM_FOV, camera_z()))
 print("visible ground: %.1f m wide, depth z %.1f .. %.1f (%.1f m)"

@@ -22,6 +22,18 @@ render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 // COLOR.a 选择用哪一套细节参数：0 = 石/灰泥，1 = 木/茅草。
 
 uniform sampler2D detail_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
+// 可外部编辑的贴图。资产在 Blender 侧铺了按米的平面投影 UV
+// （gen_assets_blender.py 的 uv_planar），所以这里直接按 UV 取样。
+// use_uv_tex = 0 时完全不影响原来的世界坐标程序化路径。
+uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform float use_uv_tex = 0.0;
+uniform float uv_tex_scale = 1.0;
+uniform float uv_tex_strength = 1.0;
+// 贴图自身的平均色（生成器从 PNG 算出来填进来）。
+// 按它归一化之后，贴图**只贡献偏离平均的部分** —— 花纹、结疤、你画上去的脏污，
+// 整体色调仍然由顶点色控制。否则一张暖色木纹会把所有木件都拉成橙色，
+// 而且用户把整张图调暗一档，场景里所有木头就跟着暗一档，很难控制。
+uniform vec3 uv_tex_mean = vec3(1.0);
 
 // 两套参数，按 COLOR.a 混合：0 = 石/灰泥，1 = 木/茅草。
 //
@@ -65,7 +77,12 @@ void fragment() {
 	float hx = texture(detail_noise, uv + vec2(epsilon, 0.0)).r;
 	float hy = texture(detail_noise, uv + vec2(0.0, epsilon)).r;
 
-	ALBEDO = COLOR.rgb * (1.0 - contrast * 0.5 + contrast * h0);
+	vec3 base = COLOR.rgb * (1.0 - contrast * 0.5 + contrast * h0);
+	// 外部贴图叠在顶点色之上：贴图给花纹，顶点色给每个部件的色调，
+	// 两者相乘 —— 这样一张木纹图能长出深浅不同的所有木件。
+	vec3 tex = texture(albedo_tex, UV * uv_tex_scale).rgb / max(uv_tex_mean, vec3(0.001));
+	tex = mix(vec3(1.0), tex, uv_tex_strength);
+	ALBEDO = mix(base, base * tex, use_uv_tex);
 	vec3 pn = normalize(n - (th * (hx - h0) + tv * (hy - h0)) * bump);
 	NORMAL = normalize((VIEW_MATRIX * vec4(pn, 0.0)).xyz);
 	ROUGHNESS = surface_roughness;

@@ -60,6 +60,11 @@ PALETTE = {
     # 同上：颜色由顶点色承载，这个材质只是载体
     "Surface":   (1.0, 1.0, 1.0),
 }
+
+# 桥的尺寸。**tools/gen_greybox.py 的 DECK_L / DECK_W 必须和这里一致** ——
+# 桥墩、拉索、以及和房屋的间距检查都按它算。
+BRIDGE_L = 16.0
+BRIDGE_W = 8.4
 _mats = {}
 
 
@@ -333,6 +338,58 @@ ROCK_ARCHETYPES = {
 }
 
 
+def uv_planar(obj, uv_scale=0.30, offset=(0.0, 0.0)):
+    """按局部坐标做平面投影 UV，纹理**沿物件的长轴**跑。
+
+    这是"外部贴图"这条路的入口：程序生成的网格默认没有可用的 UV
+    （bmesh 建的完全没有；primitive 的每个面都铺满 0..1，尺度不一致），
+    有了这一步，assets/textures/ 下的普通 PNG 就能直接贴上来，
+    而且是**按米**铺的 —— 大小不同的木件纹理密度一致。
+
+    每个面按法线的主轴投影到另外两轴；两轴里**较长的那个给 U**，
+    于是木纹自然顺着板子、梁、立柱的长边走，不用逐件指定方向。
+    offset 给每件一个随机位移，否则所有木件的纹理完全一样。
+    """
+    me = obj.data
+    sx, sy, sz = obj.scale
+    if not me.uv_layers:
+        me.uv_layers.new(name="UVMap")
+    uvl = me.uv_layers.active.data
+    size = (sx, sy, sz)
+    for poly in me.polygons:
+        n = poly.normal
+        axis = max(range(3), key=lambda i: abs(n[i]))
+        a, b = [i for i in range(3) if i != axis]
+        if size[a] < size[b]:            # 长边给 U
+            a, b = b, a
+        for li in poly.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            uvl[li].uv = ((co[a] * size[a]) * uv_scale + offset[0],
+                          (co[b] * size[b]) * uv_scale + offset[1])
+    return obj
+
+
+def bevel_edges(obj, width=0.03, segments=1, angle=25.0):
+    """给硬表面加倒角。
+
+    这是"过渡"层的活，着色器做不了 —— 倒角改变的是**侧影和受光**：
+    90° 硬棱在任何光照下都是一条突变线，倒角面则会随朝向渐变。
+    参考图里的木结构没有一条razor edge。
+
+    宽度按物件尺寸给：桥板 0.02、立柱 0.03、大梁 0.04。
+    给得太大在这个机位（29 px/m）下会把细木件啃圆。
+    """
+    bpy.context.view_layer.objects.active = obj
+    m = obj.modifiers.new("bevel", "BEVEL")
+    m.width = width
+    m.segments = segments
+    m.limit_method = "ANGLE"
+    m.angle_limit = math.radians(angle)
+    m.harden_normals = False
+    bpy.ops.object.modifier_apply(modifier=m.name)
+    return obj
+
+
 def rock_hull(name, archetype, seed, loc=(0, 0, 0), bevel=0.05,
               smooth_angle=19.0):
     import random
@@ -420,6 +477,7 @@ ATLAS_GRID = 2
 
 
 def set_vcol(obj, colour_name, material="Foliage", alpha=0.0):
+    """colour_name 可以是调色板里的名字，也可以直接给 (r,g,b) sRGB 三元组。"""
     """把颜色烘进顶点色，并统一材质。
 
     统一材质有两个作用：合并后只剩一个 surface（一次 draw call），
@@ -429,7 +487,9 @@ def set_vcol(obj, colour_name, material="Foliage", alpha=0.0):
     **顶点色的 alpha 是"这是不是叶片贴片"的标志**：1 = 采样叶片图集并做
     alpha 裁剪，0 = 实体木头，强制不透明。合并成一个网格之后就靠它区分。"""
     me = obj.data
-    c = [srgb_to_linear(x) for x in PALETTE[colour_name]]
+    src = (PALETTE[colour_name] if isinstance(colour_name, str)
+           else colour_name)
+    c = [srgb_to_linear(x) for x in src]
     attr = me.color_attributes.get("Color")
     if attr is None:
         attr = me.color_attributes.new(name="Color", type="BYTE_COLOR",
@@ -614,6 +674,124 @@ def tree(name, loc, height=5.4, trunk_r=0.11, seed=0, cards=30,
     return o
 
 
+# ------------------------------------------------------------------ 桥 --
+# 参考图的桥：**横铺的板**（每块长短色泽都不同、有缝）、侧面的 A 形立柱和斜撑、
+# 通长的扶手、板下的横梁。所有木件都是倒角的，没有一条 razor edge。
+#
+# 之前用 CSG 盒子在场景生成器里拼，出来是"几块对齐的平板"：
+# 板是一整块、边是 90° 硬棱、颜色完全一致。这三件事都得在几何层解决。
+#
+# 局部坐标：X 沿桥、Y 横跨、Z 向上（Blender Z-up），原点在桥面中心的底面。
+
+# 亮度按实测校准：目标图里**避开爆炸照亮**的那几段桥面亮度是 111-118，
+# 靠近火焰那段是 176.8 —— 拿后者当参考会把整座桥调亮 50%。
+BRIDGE_WOOD = ((0.243, 0.163, 0.094), (0.299, 0.202, 0.115),
+               (0.207, 0.139, 0.083), (0.343, 0.247, 0.139),
+               (0.270, 0.182, 0.104))
+
+
+def _wood(rng, jitter=0.10):
+    """从木色里挑一个再抖一下。逐板色差是参考图最明显的特征之一 ——
+    整片同色的甲板一眼是程序生成的。"""
+    c = BRIDGE_WOOD[rng.randrange(len(BRIDGE_WOOD))]
+    k = 1.0 + rng.uniform(-jitter, jitter)
+    return tuple(min(1.0, v * k) for v in c)
+
+
+def bridge(name, length=16.0, width=8.4, seed=77, rail_h=1.15):
+    import random
+    rng = random.Random(seed)
+    parts = []
+
+    def add(o, colour, bw=0.03, coarse=1.0):
+        # 顺序要紧：先铺 UV 再倒角。倒角会新增面，
+        # 那些面从相邻面插值拿到 UV；反过来做的话新面没有 UV。
+        uv_planar(o, uv_scale=0.30,
+                  offset=(rng.uniform(0.0, 4.0), rng.uniform(0.0, 4.0)))
+        bevel_edges(o, width=bw)
+        return parts.append(set_vcol(o, colour, material="Surface",
+                                     alpha=coarse))
+
+    # 纵梁：两根通长的大梁，板铺在它上面
+    for sy in (-1.0, 1.0):
+        y = sy * (width * 0.5 - 0.45)
+        add(box((length, 0.36, 0.30), (0.0, y, -0.15), "Wood"),
+            (0.243, 0.163, 0.098), bw=0.04)
+
+    # 板下横梁
+    nbeam = max(3, int(length / 2.4))
+    for i in range(nbeam):
+        x = -length * 0.5 + (i + 0.5) * length / nbeam
+        add(box((0.28, width - 0.2, 0.26), (x, 0.0, -0.18), "Wood"),
+            (0.226, 0.150, 0.090), bw=0.03)
+
+    # 桥面板：横铺，逐块抖长度 / 厚度 / 转角 / 颜色，留缝
+    pitch = 0.52
+    nplank = int(length / pitch)
+    for i in range(nplank):
+        x = -length * 0.5 + (i + 0.5) * length / nplank
+        w_pl = pitch * rng.uniform(0.76, 0.90)          # 剩下的是板缝
+        ln = width * rng.uniform(0.94, 1.02)
+        th = rng.uniform(0.085, 0.125)
+        o = box((w_pl, ln, th),
+                (x + rng.uniform(-0.02, 0.02), rng.uniform(-0.10, 0.10),
+                 th * 0.5 + 0.002),
+                "Wood", rot=(0.0, 0.0, rng.uniform(-0.012, 0.012)))
+        add(o, _wood(rng), bw=0.02)
+
+    # 侧栏：立柱 + 通长扶手 + 斜撑
+    npost = max(4, int(length / 2.6))
+    for sy in (-1.0, 1.0):
+        y = sy * (width * 0.5 - 0.18)
+        prev_x = None
+        for i in range(npost + 1):
+            x = -length * 0.5 + i * length / npost
+            add(box((0.22, 0.22, rail_h), (x, y, rail_h * 0.5), "Wood"),
+                _wood(rng, 0.06), bw=0.03)
+            if prev_x is not None:
+                # 斜撑：交替方向，规则的同向斜撑看着像栅栏
+                dx = x - prev_x
+                ln = math.hypot(dx, rail_h * 0.72)
+                ang = math.atan2(rail_h * 0.72, dx) * (1 if i % 2 else -1)
+                add(box((ln, 0.13, 0.13),
+                        (prev_x + dx * 0.5, y, rail_h * 0.46), "Wood",
+                        rot=(0.0, -ang, 0.0)), _wood(rng, 0.06), bw=0.02)
+            prev_x = x
+        add(box((length, 0.18, 0.16), (0.0, y, rail_h + 0.02), "Wood"),
+            (0.404, 0.290, 0.163), bw=0.03)
+
+    # 端头的 A 形桅杆：目标图靠它拉出侧影。
+    # 两条腿要**横跨桥面**向内倾（在 Y 方向），不是沿桥向前后倾 ——
+    # 前后倾的话从上方看是个 X，读不出 A 形。
+    mast_h = 4.6
+    # 桅杆放在离近端 1/4 跨处，正对峡谷边 —— 放在最端头会被引桥土坡埋掉半截，
+    # 拉索也就从一个很低的点拉出来，读不出悬索的结构
+    mx = -length * 0.5 + 4.2
+    y_foot, y_top = width * 0.5 - 0.35, 0.55
+    for sy in (-1.0, 1.0):
+        dy = sy * (y_top - y_foot)
+        ln = math.hypot(mast_h, dy)
+        add(box((0.30, 0.30, ln),
+                (mx, sy * (y_foot + y_top) * 0.5, mast_h * 0.5), "Wood",
+                rot=(math.atan2(dy, mast_h), 0.0, 0.0)),
+            (0.264, 0.178, 0.102), bw=0.035)
+    # 顶端横梁 + 半高的横撑，A 形的那一横
+    add(box((0.34, y_top * 2.0 + 0.5, 0.34), (mx, 0.0, mast_h), "Wood"),
+        (0.318, 0.214, 0.122), bw=0.035)
+    add(box((0.22, width - 1.6, 0.22), (mx, 0.0, mast_h * 0.52), "Wood"),
+        (0.286, 0.192, 0.110), bw=0.03)
+
+    o = join_as(parts, name)
+    finalize(o, (0.0, 0.0, 0.0))
+    return o
+
+
+def build_bridge(out_dir):
+    clear()
+    bridge("bridge", length=BRIDGE_L, width=BRIDGE_W)
+    export(os.path.join(out_dir, "bridge.glb"), "bridge")
+
+
 # ------------------------------------------------------------------ 导出 --
 def export(path, label):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
@@ -668,9 +846,12 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", required=True)
-    ap.add_argument("--only", default="buildings,trees,rocks,bushes")
+    ap.add_argument("--only",
+                default="buildings,trees,rocks,bushes,bridge")
     args = ap.parse_args(argv)
     only = [s.strip() for s in args.only.split(",")]
+    if "bridge" in only:
+        build_bridge(args.out_dir)
     if "bushes" in only:
         build_bushes(args.out_dir)
     if "rocks" in only:
