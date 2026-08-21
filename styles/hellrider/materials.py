@@ -65,14 +65,15 @@ def materials():
     # 所有道具共用一个材质：颜色在顶点色里，明暗台阶由着色器分档产生
     MAT["flat"] = shader_mat(
         "MatHrFlat", "res://shaders/hr_flat.gdshader",
-        tint="1.0", light_steps="3.0", light_floor="0.44", top_boost="0.10")
+        tint="1.0", light_steps="4.0", light_floor="0.22",
+        light_wrap="0.60", face_tilt="0.10", top_boost="0.10")
 
     # blob 阴影：贴在地面上的软影贴片，代替真实投影阴影。
     # 参考图里树/石头下面的影子是居中的软椭圆，没有方向偏移。
     MAT["blob"] = shader_mat(
         "MatHrBlob", "res://shaders/hr_blob.gdshader",
         # 剖面由 shader 程序生成，不再挂贴图（贴图那版的浓区被物体自己盖住了）
-        shadow_color=col(0.31, 0.20, 0.13), strength="0.78", core="0.74")
+        shadow_color=col(0.31, 0.20, 0.13), strength="0.58", core="0.42")
 
     MAT["player"] = shader_mat(
         "MatHrPlayer", "res://shaders/hr_flat.gdshader",

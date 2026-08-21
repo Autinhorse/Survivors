@@ -355,9 +355,12 @@ def build(MAT, MESH, performance=False):
     print("units: 1 player + %d enemies" % n_en)
 
 
-# 假阴影比物体底面外扩多少。shader 的 core 要配成 1/BLOB_PAD，
-# 这样实心区边界正好落在物体轮廓上，外面那一圈才是虚的过渡。
-BLOB_PAD = 1.35
+# 假阴影比物体底面外扩多少。
+#
+# 第一版按 core = 1/BLOB_PAD 配，实心区边界正好落在物体轮廓上 ——
+# 结果影子边缘太"整齐"，像贴了张纸。改成实心区明显小于轮廓、
+# 外扩明显大于轮廓，过渡带就横跨整个可见范围，边界读不出来了。
+BLOB_PAD = 1.9
 
 
 def _rock_footprint():

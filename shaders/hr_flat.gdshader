@@ -12,6 +12,16 @@ render_mode cull_back, diffuse_lambert, specular_disabled;
 
 uniform float light_steps = 3.0;
 uniform float light_floor = 0.52;
+// 半 Lambert 的权重。0 = clamp(dot(N,L),0,1)，1 = dot*0.5+0.5。
+//
+// **这是暗面读不出朝向的根因**：clamp 把所有背光面（不管朝 90° 还是 180°）
+// 压成同一个值，一块石头的整个背面因此是一整片死平的色块。
+// 量出来只有 2 个色阶、暗侧内部跨度 0.015 —— 基本没有层次。
+// 参考图里暗面是**成组朝一个方向**的，明显分得出深浅。
+uniform float light_wrap = 0.85;
+// 档内的连续微分：同一档里朝向不同的面仍然拉开一点点。
+// 只给很小的量 —— 台阶的硬边是这个风格的骨架，不能软掉。
+uniform float face_tilt = 0.10;
 uniform float tint = 1.0;               // 顶点色的权重，0 = 用 base_color
 uniform vec3 base_color : source_color = vec3(0.6, 0.6, 0.6);
 // 顶面提亮一点点：参考图的低模石头顶面明显比推导出来的更亮，
@@ -31,8 +41,10 @@ void fragment() {
 }
 
 void light() {
-	float nl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
-	nl = floor(nl * light_steps) / max(light_steps - 1.0, 1.0);
-	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ATTENUATION
-			* mix(light_floor, 1.0, nl);
+	float d = dot(NORMAL, LIGHT);
+	float nl = mix(clamp(d, 0.0, 1.0), d * 0.5 + 0.5, light_wrap);
+	float q = floor(nl * light_steps) / max(light_steps - 1.0, 1.0);
+	float lit = mix(light_floor, 1.0, clamp(q, 0.0, 1.0))
+			* (1.0 + face_tilt * (nl - 0.5) * 2.0);
+	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ATTENUATION * lit;
 }

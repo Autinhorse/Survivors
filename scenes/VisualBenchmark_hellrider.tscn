@@ -54,15 +54,17 @@ shader_parameter/top_boost = 0.0
 [sub_resource type="ShaderMaterial" id="MatHrFlat"]
 shader = ExtResource("ext_3_hr_flat")
 shader_parameter/tint = 1.0
-shader_parameter/light_steps = 3.0
-shader_parameter/light_floor = 0.44
+shader_parameter/light_steps = 4.0
+shader_parameter/light_floor = 0.22
+shader_parameter/light_wrap = 0.60
+shader_parameter/face_tilt = 0.10
 shader_parameter/top_boost = 0.10
 
 [sub_resource type="ShaderMaterial" id="MatHrBlob"]
 shader = ExtResource("ext_4_hr_blob")
 shader_parameter/shadow_color = Color(0.31, 0.2, 0.13, 1)
-shader_parameter/strength = 0.78
-shader_parameter/core = 0.74
+shader_parameter/strength = 0.58
+shader_parameter/core = 0.42
 
 [sub_resource type="ShaderMaterial" id="MatHrPlayer"]
 shader = ExtResource("ext_3_hr_flat")
@@ -438,37 +440,37 @@ cast_shadow = 0
 
 
 [node name="Blob_Rocks_0_0" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(2.34636, 0.00000, 7.51264, 0.00000, 1.00000, 0.00000, -8.27967, 0.00000, 2.12899, -10.77982, 0.03000, -11.87837)
+transform = Transform3D(3.30228, 0.00000, 10.57334, 0.00000, 1.00000, 0.00000, -11.65287, 0.00000, 2.99635, -10.77982, 0.03000, -11.87837)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_0_1" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(2.07987, 0.00000, -3.03834, 0.00000, 1.00000, 0.00000, 3.21263, 0.00000, 1.96703, -7.46746, 0.03000, -10.57559)
+transform = Transform3D(2.92723, 0.00000, -4.27618, 0.00000, 1.00000, 0.00000, 4.52148, 0.00000, 2.76842, -7.46746, 0.03000, -10.57559)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_0_2" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(1.55654, 0.00000, 1.50310, 0.00000, 1.00000, 0.00000, -1.55126, 0.00000, 1.50822, -14.03889, 0.03000, -13.64029)
+transform = Transform3D(2.19068, 0.00000, 2.11547, 0.00000, 1.00000, 0.00000, -2.18325, 0.00000, 2.12267, -14.03889, 0.03000, -13.64029)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_1_0" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(-1.89618, 0.00000, 3.53145, 0.00000, 1.00000, 0.00000, -3.78469, 0.00000, -1.76931, -0.96524, 0.03000, 3.02161)
+transform = Transform3D(-2.66870, 0.00000, 4.97019, 0.00000, 1.00000, 0.00000, -5.32660, 0.00000, -2.49013, -0.96524, 0.03000, 3.02161)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_2_0" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(5.33278, 0.00000, 1.62730, 0.00000, 1.00000, 0.00000, -1.70472, 0.00000, 5.09061, 9.94534, 0.03000, -14.08651)
+transform = Transform3D(7.50539, 0.00000, 2.29028, 0.00000, 1.00000, 0.00000, -2.39923, 0.00000, 7.16456, 9.94534, 0.03000, -14.08651)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_2_1" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(2.09205, 0.00000, -0.15892, 0.00000, 1.00000, 0.00000, 0.16421, 0.00000, 2.02461, 12.35897, 0.03000, -13.92808)
+transform = Transform3D(2.94437, 0.00000, -0.22366, 0.00000, 1.00000, 0.00000, 0.23111, 0.00000, 2.84946, 12.35897, 0.03000, -13.92808)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
