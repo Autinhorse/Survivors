@@ -146,15 +146,11 @@ def materials():
                               water_bright=col(0.365, 0.376, 0.392),
                               water_dark=col(0.169, 0.212, 0.239),
                               foam_color=col(0.804, 0.816, 0.827),
-                              flow_speed="0.9", fleck_scale="0.34",
-                              swell_scale="0.16", streak_stretch="3.5",
+                              flow_speed="0.35", fleck_scale="2.2",
+                              swell_scale="0.35", streak_stretch="2.5",
                               foam_threshold="0.78", foam_softness="0.075",
                               bank_foam="0.055", normal_strength="0.45",
-                              base_alpha="0.95",
-                              river_x0="%g" % RX0, river_slope="%g" % RSLOPE,
-                              river_amp="%g" % RIVER_AMP,
-                              river_freq="%g" % RIVER_FREQ,
-                              river_half="%g" % (RIVER_W / 2.0))
+                              base_alpha="0.95")
 
     # --- foliage: wind sway + noise break-up ---------------------------------
     MAT["leafA"] = shader_mat("MatLeafA", "res://shaders/foliage.gdshader",
@@ -501,11 +497,24 @@ def build():
         i += 1
 
     # ------------------------------------------------------------------ water
-    water = node("Water", "Node3D", ".")
-    for i, z in enumerate(range(-84, 85, 4)):
-        mesh("Water%d" % i, water, plane, MAT["water"],
-             (river_x(z), WATER_Y, z), ry=river_ang(z),
-             scale=(river_w(z) + 3.5, 1.0, 4.6), cast_shadow="0")
+    # 一条沿河道生成的带状网格，UV 顺流。
+    # 之前是一片片独立 plane，着色器只能按世界坐标滚动噪声 ——
+    # 河道拐弯处水流会横穿河岸（静帧看不出来，跑起来一眼就错）。
+    node("River", "MeshInstance3D", ".", {
+        "script": ext("Script", "res://scripts/environment/RiverSurface.gd"),
+        "material_override": MAT["water"],
+        "river_x0": "%g" % RX0,
+        "river_slope": "%g" % RSLOPE,
+        "river_amp": "%g" % RIVER_AMP,
+        "river_freq": "%g" % RIVER_FREQ,
+        "river_w": "%g" % RIVER_W,
+        "river_w_amp": "%g" % RIVER_W_AMP,
+        "river_w_freq_mul": "1.7",
+        "river_w_phase": "1.1",
+        "water_y": "%g" % WATER_Y,
+        "z_start": "-50.0", "z_end": "50.0", "step": "1.5",
+        "overhang": "2.5", "v_scale": "6.0", "u_metre_scale": "4.0",
+    })
 
     # ------------------------------------------------------------ dirt tracks
     paths = node("Paths", "Node3D", ".")

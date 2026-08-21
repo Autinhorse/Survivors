@@ -3,66 +3,51 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 
 // 湍急山涧的水面。
 //
-// 实测参考图的水面区域（放大到像素级 + 统计）：
-//     平均 RGB (158, 136, 123)，亮度中位数 139
-//     亮于 170 的像素只占 **10.7%**
-// 也就是说：**底子是中等色调的水，白沫只占约一成面积，而且是极细的点。**
+// **流向来自网格 UV，不是世界坐标。** 之前用世界坐标滚动噪声，
+// 水流永远朝同一个世界方向 —— 河道一拐弯就能看见水从一侧河岸流出、
+// 流进对岸。静帧看不出来，跑起来一眼就是错的。
+// 现在水面是沿河道生成的一条带（scripts/environment/RiverSurface.gd）：
+//   UV.x   横向归一化，河道边界恰好是 0 和 1
+//   UV.y   顺流坐标，按 ds/宽度 累加
+//   UV2.x  横向米制坐标（保持纹理横向密度恒定）
+// UV.y 的累加方式使得**恒定的滚动速度自动得到"窄处流得快、宽处流得慢"**，
+// 着色器本身不需要知道河宽 —— 那是流量守恒 Q = 宽 × 深 × 流速 的直接结果。
 //
-// 我先后错了两次，都记在这里：
-//   1) 做成"深青色平静水面 + 岸边一圈泡沫" —— 完全没有急流感
-//   2) 矫枉过正做成"整片白" —— 白沫面积到了 60-80%，成了一条白带子
-// 正确的是介于两者之间，而且**白沫的特征尺寸要极小**（约 10 cm，
-// 在 gameplay 机位下是 2-3 像素）。特征给大了就变成"奶流"，
-// 给到半米以上就是电视雪花。
+// 色调按实测参考图对齐：平均 RGB (158,136,123)、亮度中位数 139、
+// **亮于 170 的像素只占 10.7%** —— 底子是中等色调的水，白沫只占约一成面积
+// 且特征极细（约 10 cm，在 gameplay 机位下 2-3 像素）。
 
 uniform sampler2D wave_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform sampler2D fleck_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
 
-uniform vec3 water_bright : source_color = vec3(0.52, 0.53, 0.55);
-uniform vec3 water_dark : source_color = vec3(0.22, 0.27, 0.30);
-uniform vec3 foam_color : source_color = vec3(0.88, 0.89, 0.90);
+uniform vec3 water_bright : source_color = vec3(0.365, 0.376, 0.392);
+uniform vec3 water_dark : source_color = vec3(0.169, 0.212, 0.239);
+uniform vec3 foam_color : source_color = vec3(0.804, 0.816, 0.827);
 
-uniform float flow_speed = 0.9;
-uniform float fleck_scale = 1.25;      // 白沫点的密度：特征约 10 cm
-uniform float swell_scale = 0.10;      // 大尺度明暗起伏
-uniform float streak_stretch = 3.5;
-uniform float foam_threshold = 0.66;   // 越高白沫越少
-uniform float foam_softness = 0.10;
-uniform float bank_foam = 0.22;
+uniform float flow_speed = 0.35;
+uniform float fleck_scale = 2.2;       // 白沫点密度（UV 空间）
+uniform float swell_scale = 0.35;      // 大尺度明暗起伏
+uniform float streak_stretch = 2.5;    // 沿流向拉长的倍数
+uniform float foam_threshold = 0.78;
+uniform float foam_softness = 0.075;
+uniform float bank_foam = 0.055;
 uniform float normal_strength = 0.45;
 uniform float base_alpha = 0.95;
 
-// 河心线参数（与生成器一致）：用世界坐标算离河心的距离，
-// 而不是网格 UV —— 河面由许多片拼成，每片 UV 映射不同，用 UV 会出现拼接缝。
-uniform float river_x0 = 10.0;
-uniform float river_slope = 0.28;
-uniform float river_amp = 2.6;
-uniform float river_freq = 0.085;
-uniform float river_half = 3.75;
-
-varying vec3 w_pos;
-
-void vertex() {
-	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-}
-
 void fragment() {
-	// 沿流向拉长：白沫点被拉成短划，流向才读得出来
-	vec2 fuv = vec2(w_pos.x, w_pos.z / streak_stretch) * fleck_scale
-			+ vec2(0.0, -TIME * flow_speed);
-	float fleck = texture(fleck_noise, fuv).r;
+	// 顺流坐标：UV.y 已经在网格里按 ds/宽度 累加过
+	float flow = UV.y - TIME * flow_speed;
+	vec2 fuv = vec2(UV2.x, flow / streak_stretch) * fleck_scale;
+	vec2 suv = vec2(UV2.x, flow) * swell_scale;
 
-	// 大尺度起伏：让水面有明暗区块，不是均质噪声
-	vec2 suv = w_pos.xz * swell_scale + vec2(0.0, -TIME * flow_speed * 0.25);
+	float fleck = texture(fleck_noise, fuv).r;
 	float swell = texture(wave_noise, suv).r;
 
-	float centre = river_x0 + river_slope * w_pos.z
-			+ river_amp * sin(w_pos.z * river_freq);
-	float across = clamp(abs(w_pos.x - centre) / river_half, 0.0, 1.4);
-	across += (texture(wave_noise, w_pos.xz * 0.35).r - 0.5) * 0.45;
+	// 岸边：UV.x 的 0 和 1 就是河道边界，宽窄变化时依然精确
+	float across = abs(UV.x - 0.5) * 2.0;
+	across += (texture(wave_noise, vec2(UV2.x * 0.7, flow * 0.25)).r - 0.5) * 0.45;
 	float edge = smoothstep(1.0 - bank_foam, 1.05, across);
 
-	// 白沫：只占一成左右面积
 	float foam = smoothstep(foam_threshold, foam_threshold + foam_softness,
 			fleck + swell * 0.18 + edge * 0.35);
 
