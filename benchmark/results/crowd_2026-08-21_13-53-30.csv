@@ -1,0 +1,2 @@
+timestamp,hardware,renderer,preset,architecture,enemy_count,alive_avg,projectile_count,explosion_rate,shadow_mode,move_speed,frozen,fps_avg,fps_1pct_low,frame_ms_avg,frame_ms_1pct_low,cpu_render_ms,gpu_render_ms,process_ms,draw_calls,primitives,tri_per_unit,nodes
+2026-08-21T13:53:34,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.5,500,50,B,1.60,0,574.2,401.6,1.742,2.490,0.241,0.686,3.043,641,656484,288,635

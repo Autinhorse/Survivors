@@ -26,12 +26,22 @@ uniform float grass_scale = 1.15;      // texture repeats per metre
 uniform float grass_contrast = 0.55;
 uniform float bump_strength = 2.2;
 uniform float bump_epsilon = 0.09;
+uniform float rock_scale = 0.14;      // 岩壁细节的横向密度
+uniform float rock_stretch = 4.5;     // 竖向拉伸倍数 = 层理
+uniform float rock_contrast = 0.95;
+uniform float rock_bump = 1.8;
 uniform float dirt_threshold = 0.66;
 uniform float slope_grass = 0.82;   // normal.y above this = fully ground
 uniform float slope_rock = 0.48;    // normal.y below this = fully rock
 
 varying vec3 w_pos;
 varying vec3 w_nrm;
+
+float rock_height(vec2 uv) {
+	return texture(detail_noise, uv).r * 0.65
+			+ texture(detail_noise, uv * 3.3 + vec2(0.37, 0.11)).r * 0.35;
+}
+
 
 void vertex() {
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -60,10 +70,14 @@ void fragment() {
 			macro + (detail - 0.5) * 0.18);
 	vec3 flat_surf = mix(grass, dirt_color * (0.82 + 0.36 * detail), dirt_mask);
 
-	// cliffs: project vertically so strata run horizontally on the gorge walls
-	float strata = texture(detail_noise,
-			vec2((w_pos.x + w_pos.z) * 0.12, w_pos.y * 0.55)).r;
-	vec3 rock = rock_color * (0.70 + 0.75 * strata);
+	// 岩壁：竖直投影，层理横着走。
+	// 两个倍频而不是一个 —— 单octave 的平滑值噪声在这个尺度下几乎看不出来。
+	vec2 ruv = vec2((w_pos.x + w_pos.z) * rock_scale,
+			w_pos.y * rock_scale * rock_stretch);
+	float rh0 = rock_height(ruv);
+	float rhx = rock_height(ruv + vec2(bump_epsilon, 0.0));
+	float rhy = rock_height(ruv + vec2(0.0, bump_epsilon));
+	vec3 rock = rock_color * (1.0 - rock_contrast * 0.5 + rock_contrast * rh0);
 
 	float slope = clamp((w_nrm.y - slope_rock) / (slope_grass - slope_rock), 0.0, 1.0);
 	slope = smoothstep(0.0, 1.0, slope);
@@ -77,6 +91,22 @@ void fragment() {
 	// the light catching the blade tops, not the blades themselves.
 	vec3 bumped = normalize(vec3(-(gx - g0) * bump_strength, 1.0,
 			-(gz - g0) * bump_strength));
-	vec3 wn = normalize(mix(w_nrm, bumped, slope * 0.85));
+	vec3 wn_flat = normalize(mix(w_nrm, bumped, 0.85));
+
+	// 岩壁的法线扰动。**这一条才是岩壁看着像块平板的真正原因** ——
+	// 之前 bumped 是按 slope 混进去的，而岩壁处 slope=0，
+	// 于是它拿到的是 CSG 圆柱插值出来的、完全光滑的几何法线。
+	// 在墙面自身的切平面里推法线（不是世界 XZ），斜墙才不会被拉扁。
+	vec3 t_h = cross(vec3(0.0, 1.0, 0.0), w_nrm);
+	float t_len = length(t_h);
+	vec3 wn_rock = w_nrm;
+	if (t_len > 0.001) {
+		t_h /= t_len;
+		vec3 t_v = normalize(cross(w_nrm, t_h));
+		wn_rock = normalize(w_nrm - (t_h * (rhx - rh0) + t_v * (rhy - rh0))
+				* rock_bump);
+	}
+
+	vec3 wn = normalize(mix(wn_rock, wn_flat, slope));
 	NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 }

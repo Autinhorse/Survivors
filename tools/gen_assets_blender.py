@@ -57,6 +57,8 @@ PALETTE = {
     "Flower":    (0.365, 0.310, 0.502),
     # 顶点色承载真实颜色，这个材质只是个载体，白色以免二次着色
     "Foliage":   (1.0, 1.0, 1.0),
+    # 同上：颜色由顶点色承载，这个材质只是载体
+    "Surface":   (1.0, 1.0, 1.0),
 }
 _mats = {}
 
@@ -185,6 +187,47 @@ def tris(obj):
 
 
 # ------------------------------------------------------------------ 建筑 --
+def bake_materials_to_vcol(obj, material="Surface", coarse=()):
+    """把每个材质槽的颜色烘进顶点色，然后合并成单一材质。
+
+    房屋原来是 8 个材质槽 = 8 次 draw call，而且因为它是 GLB 实例，
+    Godot 侧挂不了 material_override（一挂就把 8 个部件冲成同一个颜色），
+    于是生成器里那套 MAT["wall"]/MAT["roof"] 对房屋**根本没生效** ——
+    屋顶墙面一直是 Blender 里的纯色。
+
+    烘进顶点色之后：一个材质、一次 draw call，Godot 侧可以整体挂
+    prop.gdshader，颜色照旧、还多出表面细节和法线扰动。
+
+    COLOR.a 给着色器当细节尺度的选择器：coarse 里列出的材质名 -> 1（木头，
+    纹理粗），其余 -> 0（石头/灰泥，纹理细）。"""
+    me = obj.data
+    cols = []
+    for m in me.materials:
+        c = (1.0, 1.0, 1.0)
+        if m is not None and m.use_nodes:
+            for nd in m.node_tree.nodes:
+                if nd.type == "BSDF_PRINCIPLED":
+                    v = nd.inputs["Base Color"].default_value
+                    c = (v[0], v[1], v[2])       # Principled 的 Base Color 是线性的
+                    break
+        nm = m.name if m is not None else ""
+        cols.append((c[0], c[1], c[2],
+                     1.0 if any(k in nm for k in coarse) else 0.0))
+
+    attr = me.color_attributes.get("Color")
+    if attr is None:
+        attr = me.color_attributes.new(name="Color", type="BYTE_COLOR",
+                                       domain="CORNER")
+    for p in me.polygons:
+        cc = cols[p.material_index] if p.material_index < len(cols) else (1, 1, 1, 0)
+        for li in p.loop_indices:
+            attr.data[li].color = cc
+
+    me.materials.clear()
+    me.materials.append(mat(material))
+    return obj
+
+
 def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
              chimney=True, porch=False):
     """M2 的短板是建筑"还是纯色盒子 + 三棱柱"。真正让房子读起来像房子的
@@ -601,7 +644,9 @@ def build_buildings(out_dir):
     ]
     for name, kw in specs:
         clear()
-        building(name, kw.pop("w"), kw.pop("d"), kw.pop("wall_h"), (0, 0, 0), **kw)
+        o = building(name, kw.pop("w"), kw.pop("d"), kw.pop("wall_h"),
+                     (0, 0, 0), **kw)
+        bake_materials_to_vcol(o, coarse=("Wood", "Thatch"))
         export(os.path.join(out_dir, name + ".glb"), name)
 
 

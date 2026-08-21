@@ -37,12 +37,16 @@ extends MeshInstance3D
 @export var river_w_amp: float = 0.28
 @export var river_w_freq_mul: float = 1.7
 @export var river_w_phase: float = 1.1
+## 两岸各自独立的多倍频抖动幅度。**必须和 tools/gen_greybox.py 的
+## BANK_JIT / bank_noise() 保持一致** —— UV.x 的 0 和 1 要精确落在
+## 实际岸线上，对不上的话岸边浪花会漂在河中间或者埋进地形。
+@export var bank_jitter: float = 0.24
 
 @export_group("网格")
 @export var z_start: float = -50.0
 @export var z_end: float = 50.0
-@export var step: float = 1.5
-@export var overhang: float = 2.5      ## 超出河道的部分，埋进地形
+@export var step: float = 1.0
+@export var overhang: float = 3.2      ## 超出河道的部分，埋进地形
 @export var water_y: float = -2.55
 @export var v_scale: float = 6.0       ## 顺流 UV 的整体缩放
 @export var u_metre_scale: float = 4.0 ## UV2.x 的米制缩放
@@ -59,6 +63,19 @@ func _centre(z: float) -> float:
 func _width(z: float) -> float:
 	return river_w * (1.0 + river_w_amp * sin(z * river_freq * river_w_freq_mul
 			+ river_w_phase))
+
+
+func _bank_noise(z: float, side: float) -> float:
+	var ph := 0.0 if side < 0.0 else 11.7
+	return (0.55 * sin(z * 0.130 + 0.70 + ph)
+			+ 0.30 * sin(z * 0.370 + 2.10 + ph * 1.3)
+			+ 0.15 * sin(z * 0.910 + 4.30 + ph * 0.7))
+
+
+func _hw(z: float, side: float) -> float:
+	## 某一岸的垂直半宽。两岸独立 —— 共用一个抖动的话两岸永远同步变宽变窄，
+	## 河道读起来仍然是"一条等宽带子被正弦调制过"。
+	return _width(z) * 0.5 * (1.0 + bank_jitter * _bank_noise(z, side))
 
 
 func _tangent(z: float) -> Vector3:
@@ -79,8 +96,9 @@ func _build() -> void:
 	var rows := 0
 	var z := z_start
 	while z <= z_end:
-		var w := _width(z)
-		var half := w * 0.5 + overhang
+		var hw_l := _hw(z, -1.0)
+		var hw_r := _hw(z, 1.0)
+		var w := hw_l + hw_r
 		var c := Vector3(_centre(z), water_y, z)
 		var t := _tangent(z)
 		var side := Vector3(t.z, 0.0, -t.x)      # XZ 平面内的法向
@@ -97,8 +115,8 @@ func _build() -> void:
 		first = false
 		prev_centre = c
 
-		var l := c - side * half
-		var r := c + side * half
+		var l := c - side * (hw_l + overhang)
+		var r := c + side * (hw_r + overhang)
 		verts.append(l)
 		verts.append(r)
 		norms.append(Vector3.UP)
@@ -108,11 +126,12 @@ func _build() -> void:
 		# 注意用河道宽度 w 归一化，不是整条带子的宽度 half ——
 		# 用 half 归一化的话河道边界会落在 0.36 附近，
 		# 岸边浪花的判据 across≈1 就跑到地形里去了，表现为"浪花消失"。
-		var edge_u := half / w
-		uvs.append(Vector2(0.5 - edge_u, v_acc))
-		uvs.append(Vector2(0.5 + edge_u, v_acc))
-		uv2.append(Vector2(-half / u_metre_scale, v_acc))
-		uv2.append(Vector2(half / u_metre_scale, v_acc))
+		# UV.x 按**各自那一岸**的半宽归一化，所以 0 和 1 精确落在实际岸线上，
+		# 与两岸抖动无关。超出岸线的 overhang 落在 [0,1] 之外（会被地形挡住）。
+		uvs.append(Vector2(0.5 - 0.5 * (hw_l + overhang) / hw_l, v_acc))
+		uvs.append(Vector2(0.5 + 0.5 * (hw_r + overhang) / hw_r, v_acc))
+		uv2.append(Vector2(-(hw_l + overhang) / u_metre_scale, v_acc))
+		uv2.append(Vector2((hw_r + overhang) / u_metre_scale, v_acc))
 		rows += 1
 		z += step
 

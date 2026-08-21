@@ -70,6 +70,28 @@ def noise_tex(tid, freq, lo=0.60, hi=1.0, octaves=4, size=256, **noise_props):
                width=str(size), height=str(size))
 
 
+def noise_normal(tid, freq, octaves=4, size=256, strength=12.0, **noise_props):
+    """同一份噪声的法线图。
+
+    实测目标图的屋顶/墙面细节比我们高约 30%，而且差的主要不是 albedo 的花纹，
+    是**受光**：平坦的法线让每个面成为一块均匀的色板。
+    NoiseTexture2D 自带 as_normal_map，不需要额外美术资源、也不需要 UV
+    （材质走世界空间三平面投影）。
+
+    **strength（NoiseTexture2D 的 bump_strength）默认是 8，别往下调。**
+    这里第一版填了 1.4-2.4，结果整条法线贴图路径看着像"完全没生效" ——
+    把 normal_scale 从 0.8 拉到 8.0（10 倍）画面纹丝不动。
+    根因是这个尺度的分形噪声梯度本来就很平缓，bump_strength 再压低，
+    算出来的法线几乎等于 (0,0,1)。用一张普通灰度噪声当法线图做对照实验，
+    画面立刻有 4.4% 的像素变化 —— 才定位到不是渲染路径的问题。"""
+    n = sub("FastNoiseLite", tid + "N",
+            dict(frequency="%g" % freq, fractal_octaves=str(octaves),
+                 **noise_props))
+    return sub("NoiseTexture2D", tid, noise=n, seamless="true",
+               as_normal_map="true", bump_strength="%g" % strength,
+               width=str(size), height=str(size))
+
+
 def shader_mat(name, shader_path, **params):
     props = {"shader": ext("Shader", shader_path)}
     for k, v in params.items():
@@ -81,7 +103,8 @@ def col(r, g, b, a=1.0):
     return "Color(%g, %g, %g, %g)" % (r, g, b, a)
 
 
-def mat(name, rgb, rough=1.0, metal=0.0, alpha=None, tex=None, tex_scale=0.30):
+def mat(name, rgb, rough=1.0, metal=0.0, alpha=None, tex=None, tex_scale=0.30,
+        nrm=None, nrm_scale=1.0):
     """Flat or noise-textured StandardMaterial3D.
 
     Textures are projected triplanar in WORLD space so the surface reads at a
@@ -94,6 +117,10 @@ def mat(name, rgb, rough=1.0, metal=0.0, alpha=None, tex=None, tex_scale=0.30):
         p["uv1_triplanar"] = "true"
         p["uv1_world_triplanar"] = "true"
         p["uv1_scale"] = "Vector3(%g, %g, %g)" % (tex_scale, tex_scale, tex_scale)
+    if nrm is not None:
+        p["normal_enabled"] = "true"
+        p["normal_texture"] = nrm
+        p["normal_scale"] = "%g" % nrm_scale
     if alpha is not None:
         p["transparency"] = 1
     return sub("StandardMaterial3D", name, p)
@@ -110,6 +137,9 @@ def materials():
     # alpha 是叶片形状。颜色来自顶点色，所以一张灰度图集能长出所有色系变体。
     leaf_atlas = ext("Texture2D", "res://assets/environment/leaf_atlas.png")
     rock_n = noise_tex("NoiseRock", 0.055, lo=0.62, hi=1.05, octaves=4)
+    rock_nn = noise_normal("NrmRock", 0.055, octaves=4, strength=16.0)
+    wood_nn = noise_normal("NrmWood", 0.090, octaves=2, strength=12.0)
+    plaster_nn = noise_normal("NrmPlaster", 0.030, octaves=3, strength=14.0)
     wood_n = noise_tex("NoiseWood", 0.090, lo=0.70, hi=1.08, octaves=2)
     plaster_n = noise_tex("NoisePlaster", 0.030, lo=0.80, hi=1.06, octaves=3)
     water_n = noise_tex("NoiseWater", 0.011, lo=0.12, hi=0.88, octaves=3)
@@ -134,6 +164,8 @@ def materials():
                               rock_color=col(0.235, 0.212, 0.184),
                               macro_scale="0.022", detail_scale="0.30",
                               dirt_threshold="0.74",
+                              rock_scale="0.14", rock_stretch="4.5",
+                              rock_contrast="0.30", rock_bump="0.38",
                               slope_grass="0.82", slope_rock="0.48")
     MAT["cliff"] = MAT["grass"]
 
@@ -192,17 +224,29 @@ def materials():
 
     # --- solid props ----------------------------------------------------------
     MAT["rock"] = mat("MatRock", (0.255, 0.235, 0.231), rough=0.88,
-                      tex=rock_n, tex_scale=0.55)
+                      tex=rock_n, tex_scale=0.55, nrm=rock_nn, nrm_scale=0.7)
     MAT["wood"] = mat("MatWood", (0.286, 0.192, 0.110), rough=0.92,
-                      tex=wood_n, tex_scale=0.85)
+                      tex=wood_n, tex_scale=0.85, nrm=wood_nn, nrm_scale=0.8)
     MAT["woodlt"] = mat("MatWoodLt", (0.443, 0.318, 0.180), rough=0.90,
-                        tex=wood_n, tex_scale=0.85)
+                        tex=wood_n, tex_scale=0.85, nrm=wood_nn, nrm_scale=0.8)
     MAT["wall"] = mat("MatWall", (0.616, 0.573, 0.478), rough=0.94,
-                      tex=plaster_n, tex_scale=0.40)
+                      tex=plaster_n, tex_scale=0.40, nrm=plaster_nn,
+                      nrm_scale=1.0)
     MAT["roof"] = mat("MatRoof", (0.318, 0.310, 0.176), rough=0.96,
-                      tex=wood_n, tex_scale=1.30)
+                      tex=wood_n, tex_scale=1.30, nrm=wood_nn, nrm_scale=1.2)
     MAT["metal"] = mat("MatMetal", (0.298, 0.310, 0.337), rough=0.42, metal=0.65,
                        tex=rock_n, tex_scale=1.20)
+    # 硬表面道具（房屋）：颜色来自顶点色，细节和法线扰动在着色器里算。
+    # 不走 StandardMaterial3D 的法线贴图 —— 程序化网格没有 UV，
+    # Godot 没 UV 就生成不了切线，那条路会静默失效。
+    MAT["prop"] = shader_mat("MatProp", "res://shaders/prop.gdshader",
+                             detail_noise=detail,
+                             scale_stone="0.55", scale_wood="0.75",
+                             contrast_stone="0.38", contrast_wood="0.22",
+                             bump_stone="1.40", bump_wood="0.90",
+                             epsilon="0.06",
+                             surface_roughness="0.94")
+
     MAT["player"] = mat("MatPlayer", (0.706, 0.290, 0.098), rough=0.48, metal=0.35)
     MAT["enemy"] = mat("MatEnemy", (0.502, 0.161, 0.129), rough=0.58, metal=0.25)
 
@@ -259,13 +303,21 @@ def node(name, ntype, parent, props=None, transform=None):
     return (parent + "/" + name) if parent != "." else name
 
 
-def instance(name, parent, packed, transform=None):
-    """实例化一个外部场景（GLB 导入后就是 PackedScene）。"""
+def instance(name, parent, packed, transform=None, child=None, override=None):
+    """实例化一个外部场景（GLB 导入后就是 PackedScene）。
+
+    child/override：给实例内部的某个子节点挂 material_override。
+    .tscn 里覆盖实例的子节点属性要单独起一个 [node] 段，
+    名字必须和 GLB 里的节点名一致。"""
     head = '[node name="%s" parent="%s" instance=%s]' % (name, parent, packed)
     if transform:
         head = head + chr(10) + "transform = " + transform
     nodes.append(head)
-    return (parent + "/" + name) if parent != "." else name
+    path = (parent + "/" + name) if parent != "." else name
+    if child and override:
+        nodes.append('[node name="%s" parent="%s" index="0"]%smaterial_override = %s'
+                     % (child, path, chr(10), override))
+    return path
 
 
 def mesh(name, parent, meshres, material, pos=(0.0, 0.0, 0.0), ry=0.0,
@@ -329,6 +381,44 @@ def river_ang(z):
     否则外侧会豁口。"""
     dxdz = RSLOPE + RIVER_AMP * RIVER_FREQ * math.cos(z * RIVER_FREQ)
     return math.degrees(math.atan(dxdz))
+
+
+# 岸线抖动。**两岸各自独立**，这是关键 ——
+# 之前两岸共用一个正弦，于是永远同步变宽变窄，河道读起来还是"一条等宽的带子
+# 被正弦调制过"，规则感一点没少。给两岸错开相位之后，一侧凸出时另一侧可能也凸，
+# 河道才会出现真正的宽窄段和不对称的弯。
+#
+# 单一正弦是另一个问题：它只有一个尺度。真实岸线在每个尺度上都是碎的，
+# 所以叠三个倍频。改这里必须同步改 scripts/environment/RiverSurface.gd 里
+# 同名的函数 —— 水面网格的 UV 要让 0/1 精确落在**实际**岸线上，
+# 否则岸边浪花会漂在河中间或者埋进地形（这个坑踩过两次）。
+BANK_JIT = 0.24                  # 半宽抖动比例
+
+
+def bank_noise(z, side):
+    ph = 0.0 if side < 0 else 11.7
+    return (0.55 * math.sin(z * 0.130 + 0.70 + ph)
+            + 0.30 * math.sin(z * 0.370 + 2.10 + ph * 1.3)
+            + 0.15 * math.sin(z * 0.910 + 4.30 + ph * 0.7))
+
+
+def river_hw(z, side):
+    """某一岸的垂直半宽（米）。side: -1 左岸 / +1 右岸。"""
+    return river_w(z) * 0.5 * (1.0 + BANK_JIT * bank_noise(z, side))
+
+
+def river_perp(z):
+    """河道法向在 XZ 平面里的单位向量（指向右岸）。"""
+    a = math.radians(river_ang(z))
+    return (math.cos(a), -math.sin(a))
+
+
+def bank_point(z, side):
+    """实际岸线上的一点。石头、植被都按它摆，才会贴着真正的水边。"""
+    px, pz = river_x(z), z
+    ex, ez = river_perp(z)
+    hw = river_hw(z, side)
+    return (px + side * hw * ex, pz + side * hw * ez)
 FAR_BANK_Y = 2.0                 # top of the far-bank plateau
 WATER_Y = -2.55
 BED_Y = -3.4
@@ -492,16 +582,21 @@ def build():
     # 半径的抖动必须是**低频**的。高频抖动会让相邻圆柱互相探出，
     # 形成扇贝状锯齿 —— 那正是"一段一段"的来源。
     # 边数也要够（14 边的多边形轮廓在这个机位下能看出直边）。
-    step = 1.2
+    step = 0.9
     zi = -48.0
     i = 0
     while zi <= 48.0:
-        jitter = 1.0 + 0.10 * math.sin(zi * 0.13 + 0.7)
+        # 圆柱是对称的，但两岸要独立抖动 —— 于是把半径取两岸的平均，
+        # 再把圆心沿法向偏移两岸之差的一半。这样切出来的左右边界
+        # 精确等于 river_hw(z, -1) 和 river_hw(z, +1)。
+        hwl, hwr = river_hw(zi, -1.0), river_hw(zi, 1.0)
+        ex, ez = river_perp(zi)
+        coff = (hwr - hwl) * 0.5
         node("RiverCut%d" % i, "CSGCylinder3D", ter,
-             {"radius": "%g" % (river_w(zi) * 0.5 * jitter),
+             {"radius": "%g" % ((hwl + hwr) * 0.5),
               "height": "9.0", "sides": "32", "smooth_faces": "true",
               "operation": "2", "material": MAT["cliff"]},
-             T((river_x(zi), BED_Y + 4.5, zi)))
+             T((river_x(zi) + coff * ex, BED_Y + 4.5, zi + coff * ez)))
         zi += step
         i += 1
 
@@ -522,7 +617,8 @@ def build():
         "river_w_phase": "1.1",
         "water_y": "%g" % WATER_Y,
         "z_start": "-50.0", "z_end": "50.0", "step": "1.5",
-        "overhang": "2.5", "v_scale": "6.0", "u_metre_scale": "4.0",
+        "overhang": "3.2", "v_scale": "6.0", "u_metre_scale": "4.0",
+        "bank_jitter": "%g" % BANK_JIT,
     })
 
     # ------------------------------------------------------------ dirt tracks
@@ -613,7 +709,7 @@ def build():
             ("HouseB", -2.7, -11.1, 14.0, "house_small"),
             ("HouseC", -21.5, -6.5, 22.0, "house_tall")]:
         instance(nm, bl, ext("PackedScene", "res://assets/environment/%s.glb" % src),
-                 T((px, 0.0, pz), ry=ry))
+                 T((px, 0.0, pz), ry=ry), child=src, override=MAT["prop"])
 
     mesh("ShedFloor", bl, box, MAT["woodlt"], (3.9, 0.6, -14.4), ry=6.0,
          scale=(3.6, 0.2, 3.0))
@@ -697,21 +793,28 @@ def build():
     # 少数几块显眼的大石，作为视觉锚点 —— 参考图也是这个结构
     for cx, cz in ((-15.5, 14.5), (-8.0, 20.5), (-24.0, 6.0)):
         spots += cluster(1, cx, cz, 1.0, (2.1, 2.6), r_mul=1.2)
-    # 岸线：参考图的水陆边界完全被石头打碎，没有一段是直的。
-    # 两岸都放，并且往水里探一点。
-    for z in range(-24, 25, 2):
-        hw = river_w(z) / 2.0
+    # 岸线：参考图的水陆边界**整条被石头砌满** —— 大块的半沉在水里，
+    # 草皮直接压到石头上，没有一段裸露的土坡。这是目标图和我们差得最远的地方，
+    # 也是最有效的一招：石头一铺，岸线是否规则就不再由挖槽的曲线决定了。
+    #
+    # 关键是按 bank_point() 摆，也就是**实际**岸线（带两岸独立抖动），
+    # 而不是名义半宽 river_w/2 —— 后者在河道倾斜时本身就有 cos 误差，
+    # 石头会整体偏进水里。
+    zb = -26.0
+    while zb <= 26.0:
         for side in (-1.0, 1.0):
-            for _k in range(2):
-                off = random.uniform(-0.9, 2.2)      # 负值 = 探进水里
-                px = river_x(z) + side * (hw + off)
-                pz = z + random.uniform(-1.0, 1.0)
-                sc = random.uniform(0.45, 1.5)
-                if off < 0.0 or not blocked(px, pz, sc * 0.6):
+            ex, ez = river_perp(zb)
+            for _k in range(3):
+                off = random.uniform(-1.3, 1.9)      # 负值 = 探进水里
+                bx, bz = bank_point(zb, side)
+                px = bx + side * off * ex + random.uniform(-0.4, 0.4)
+                pz = bz + side * off * ez + random.uniform(-0.7, 0.7)
+                sc = random.uniform(0.55, 1.9)
+                if off < 0.0 or not blocked(px, pz, sc * 0.55):
                     if off >= 0.0:
-                        claim(px, pz, sc * 0.6)
-                    # 探进水里的石头要坐进水里：按标记传给下面的摆放循环
+                        claim(px, pz, sc * 0.55)
                     spots.append((px, pz, sc if off >= 0.0 else -sc))
+        zb += 1.6
     for cz in (-17.0, -2.0, 13.0):                         # far bank
         spots += cluster(4, river_x(cz) + 9.0, cz, 4.0, (0.6, 1.6), r_mul=0.9)
     for cx, cz in ((-40.0, 20.0), (30.0, -34.0), (-42.0, -22.0), (38.0, 22.0),
