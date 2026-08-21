@@ -1,34 +1,34 @@
 timestamp,hardware,renderer,preset,architecture,enemy_count,alive_avg,projectile_count,explosion_rate,shadow_mode,move_speed,frozen,fps_avg,fps_1pct_low,frame_ms_avg,frame_ms_1pct_low,cpu_render_ms,gpu_render_ms,process_ms,draw_calls,primitives,tri_per_unit,nodes,run
-2026-08-21T00:05:19,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,100,87.1,0,0,A,1384.2,947.0,0.722,1.056,0.312,0.363,2.321,1071,250155,288,843,M4 sweep node A/B (walking)
-2026-08-21T00:05:44,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,250,236.0,0,0,A,686.1,582.1,1.457,1.718,0.676,0.382,2.181,2501,373761,288,1743,M4 sweep node A/B (walking)
-2026-08-21T00:06:09,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.6,0,0,A,369.2,289.8,2.709,3.451,1.259,0.444,3.668,4989,588701,288,3243,M4 sweep node A/B (walking)
-2026-08-21T00:06:34,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,750,735.3,0,0,A,237.1,166.2,4.217,6.016,1.909,0.505,6.387,7490,804793,288,4743,M4 sweep node A/B (walking)
-2026-08-21T00:06:59,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.2,0,0,A,164.7,140.0,6.073,7.145,2.674,0.560,7.245,9986,1020504,288,6243,M4 sweep node A/B (walking)
-2026-08-21T00:07:24,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1500,1485.3,0,0,A,97.4,86.4,10.266,11.571,4.195,0.702,11.438,14899,1444938,288,9243,M4 sweep node A/B (walking)
-2026-08-21T00:07:49,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.1,0,0,A,69.9,63.5,14.306,15.749,5.775,0.818,15.455,19938,1880340,288,12243,M4 sweep node A/B (walking)
-2026-08-21T00:08:14,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,100,86.8,0,0,B,1440.9,1068.4,0.694,0.936,0.212,0.364,1.523,676,205066,288,843,M4 sweep node A/B (walking)
-2026-08-21T00:08:39,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,250,235.9,0,0,B,916.0,747.4,1.092,1.338,0.369,0.368,1.622,1394,246477,288,1743,M4 sweep node A/B (walking)
-2026-08-21T00:09:04,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.5,0,0,B,546.6,422.5,1.830,2.367,0.584,0.398,2.703,2645,318487,288,3243,M4 sweep node A/B (walking)
-2026-08-21T00:09:29,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,750,735.4,0,0,B,373.6,278.0,2.677,3.597,0.833,0.424,3.919,3881,389692,288,4743,M4 sweep node A/B (walking)
-2026-08-21T00:09:54,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.3,0,0,B,261.5,175.5,3.823,5.697,1.141,0.452,5.901,5135,461942,288,6243,M4 sweep node A/B (walking)
-2026-08-21T00:10:19,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1500,1485.1,0,0,B,140.6,116.4,7.113,8.589,1.781,0.526,8.522,7604,604164,288,9243,M4 sweep node A/B (walking)
-2026-08-21T00:10:44,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.2,0,0,B,97.4,85.2,10.264,11.742,2.442,0.572,11.542,10126,749382,288,12243,M4 sweep node A/B (walking)
-2026-08-21T00:12:15,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.6,0,0,C,486.1,338.3,2.057,2.956,0.588,0.411,3.243,2624,318221,288,3243,M4 shadow C
-2026-08-21T00:12:40,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.1,0,0,C,215.6,159.3,4.638,6.276,1.225,0.474,6.629,5123,463162,288,6243,M4 shadow C
-2026-08-21T00:13:05,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.2,0,0,C,88.7,76.9,11.276,13.004,2.447,0.591,12.633,10084,750935,288,12243,M4 shadow C
+2026-08-21T00:05:19,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,100,87.1,0,0,A,1384.2,947.0,0.722,1.056,0.312,0.363,2.321,1071,250155,288,843,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:05:44,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,250,236.0,0,0,A,686.1,582.1,1.457,1.718,0.676,0.382,2.181,2501,373761,288,1743,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:06:09,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.6,0,0,A,369.2,289.8,2.709,3.451,1.259,0.444,3.668,4989,588701,288,3243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:06:34,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,750,735.3,0,0,A,237.1,166.2,4.217,6.016,1.909,0.505,6.387,7490,804793,288,4743,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:06:59,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.2,0,0,A,164.7,140.0,6.073,7.145,2.674,0.560,7.245,9986,1020504,288,6243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:07:24,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1500,1485.3,0,0,A,97.4,86.4,10.266,11.571,4.195,0.702,11.438,14899,1444938,288,9243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:07:49,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.1,0,0,A,69.9,63.5,14.306,15.749,5.775,0.818,15.455,19938,1880340,288,12243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:08:14,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,100,86.8,0,0,B,1440.9,1068.4,0.694,0.936,0.212,0.364,1.523,676,205066,288,843,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:08:39,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,250,235.9,0,0,B,916.0,747.4,1.092,1.338,0.369,0.368,1.622,1394,246477,288,1743,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:09:04,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.5,0,0,B,546.6,422.5,1.830,2.367,0.584,0.398,2.703,2645,318487,288,3243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:09:29,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,750,735.4,0,0,B,373.6,278.0,2.677,3.597,0.833,0.424,3.919,3881,389692,288,4743,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:09:54,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.3,0,0,B,261.5,175.5,3.823,5.697,1.141,0.452,5.901,5135,461942,288,6243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:10:19,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1500,1485.1,0,0,B,140.6,116.4,7.113,8.589,1.781,0.526,8.522,7604,604164,288,9243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:10:44,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.2,0,0,B,97.4,85.2,10.264,11.742,2.442,0.572,11.542,10126,749382,288,12243,M4 sweep node A/B (spawn r=30)
+2026-08-21T00:12:15,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.6,0,0,C,486.1,338.3,2.057,2.956,0.588,0.411,3.243,2624,318221,288,3243,M4 shadow C (spawn r=30)
+2026-08-21T00:12:40,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.1,0,0,C,215.6,159.3,4.638,6.276,1.225,0.474,6.629,5123,463162,288,6243,M4 shadow C (spawn r=30)
+2026-08-21T00:13:05,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.2,0,0,C,88.7,76.9,11.276,13.004,2.447,0.591,12.633,10084,750935,288,12243,M4 shadow C (spawn r=30)
 2026-08-21T00:17:33,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node-frozen,1000,1000.0,0,0,B,919.9,734.2,1.087,1.362,0.783,0.406,5.677,3749,383066,288,6243,"M4 frozen probe (biased, superseded)"
-2026-08-21T00:51:15,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.7,0,0,B,521.9,368.2,1.916,2.716,0.579,0.394,5.240,2622,317162,288,3246,M5 architecture comparison
-2026-08-21T00:51:40,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.1,0,0,B,235.2,169.9,4.252,5.887,1.178,0.453,6.232,5113,460641,288,6246,M5 architecture comparison
-2026-08-21T00:52:05,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.1,0,0,B,93.9,81.5,10.644,12.264,2.413,0.578,11.727,10073,746345,288,12246,M5 architecture comparison
-2026-08-21T00:52:30,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,500,485.2,0,0,B,690.0,565.3,1.449,1.769,0.136,0.387,2.160,301,327170,288,250,M5 architecture comparison
-2026-08-21T00:52:55,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,1000,985.2,0,0,B,383.9,333.0,2.605,3.003,0.144,0.426,3.226,301,471170,288,250,M5 architecture comparison
-2026-08-21T00:53:20,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,2000,1985.1,0,0,B,200.3,175.3,4.992,5.705,0.182,0.476,5.946,301,759170,288,250,M5 architecture comparison
-2026-08-21T00:53:45,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,500,485.5,0,0,B,1360.1,968.1,0.735,1.033,0.140,0.395,1.640,297,327170,288,246,M5 architecture comparison
-2026-08-21T00:54:10,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.1,0,0,B,1270.6,885.0,0.787,1.130,0.140,0.437,1.658,297,471170,288,246,M5 architecture comparison
-2026-08-21T00:54:35,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,2000,1985.2,0,0,B,978.3,766.3,1.022,1.305,0.135,0.475,1.792,297,759170,288,246,M5 architecture comparison
-2026-08-21T00:55:02,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,4000,3985.0,0,0,B,556.3,450.9,1.798,2.218,0.138,0.549,2.319,297,1335170,288,246,M5 MultiMesh ceiling probe
-2026-08-21T00:55:27,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,8000,7985.0,0,0,B,306.0,263.4,3.268,3.796,0.151,0.707,3.865,297,2487170,288,246,M5 MultiMesh ceiling probe
-2026-08-21T00:55:52,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,16000,15985.0,0,0,B,161.7,138.1,6.186,7.243,0.170,1.172,7.180,297,4791170,288,246,M5 MultiMesh ceiling probe
+2026-08-21T00:51:15,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.7,0,0,B,521.9,368.2,1.916,2.716,0.579,0.394,5.240,2622,317162,288,3246,M5 architecture (spawn r=30)
+2026-08-21T00:51:40,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.1,0,0,B,235.2,169.9,4.252,5.887,1.178,0.453,6.232,5113,460641,288,6246,M5 architecture (spawn r=30)
+2026-08-21T00:52:05,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.1,0,0,B,93.9,81.5,10.644,12.264,2.413,0.578,11.727,10073,746345,288,12246,M5 architecture (spawn r=30)
+2026-08-21T00:52:30,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,500,485.2,0,0,B,690.0,565.3,1.449,1.769,0.136,0.387,2.160,301,327170,288,250,M5 architecture (spawn r=30)
+2026-08-21T00:52:55,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,1000,985.2,0,0,B,383.9,333.0,2.605,3.003,0.144,0.426,3.226,301,471170,288,250,M5 architecture (spawn r=30)
+2026-08-21T00:53:20,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,2000,1985.1,0,0,B,200.3,175.3,4.992,5.705,0.182,0.476,5.946,301,759170,288,250,M5 architecture (spawn r=30)
+2026-08-21T00:53:45,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,500,485.5,0,0,B,1360.1,968.1,0.735,1.033,0.140,0.395,1.640,297,327170,288,246,M5 architecture (spawn r=30)
+2026-08-21T00:54:10,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.1,0,0,B,1270.6,885.0,0.787,1.130,0.140,0.437,1.658,297,471170,288,246,M5 architecture (spawn r=30)
+2026-08-21T00:54:35,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,2000,1985.2,0,0,B,978.3,766.3,1.022,1.305,0.135,0.475,1.792,297,759170,288,246,M5 architecture (spawn r=30)
+2026-08-21T00:55:02,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,4000,3985.0,0,0,B,556.3,450.9,1.798,2.218,0.138,0.549,2.319,297,1335170,288,246,M5 ceiling probe (spawn r=30)
+2026-08-21T00:55:27,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,8000,7985.0,0,0,B,306.0,263.4,3.268,3.796,0.151,0.707,3.865,297,2487170,288,246,M5 ceiling probe (spawn r=30)
+2026-08-21T00:55:52,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,16000,15985.0,0,0,B,161.7,138.1,6.186,7.243,0.170,1.172,7.180,297,4791170,288,246,M5 ceiling probe (spawn r=30)
 2026-08-21T00:56:12,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.3,0,0,B,226.4,162.8,4.417,6.143,0.970,0.415,6.161,3706,380648,288,6246,M5 update cost move=0 live
 2026-08-21T00:56:31,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.1,0,0,B,1291.3,864.3,0.774,1.157,0.145,0.422,1.581,297,471170,288,246,M5 update cost move=0 live
 2026-08-21T00:56:51,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node-frozen,1000,1000.0,0,0,B,792.4,616.5,1.262,1.622,0.950,0.410,1.680,3749,383066,288,6246,M5 update cost move=0 frozen
@@ -44,3 +44,12 @@ timestamp,hardware,renderer,preset,architecture,enemy_count,alive_avg,projectile
 2026-08-21T01:32:30,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,0,0.0,500,50,B,1.60,0,768.2,675.2,1.302,1.481,0.239,0.481,1.701,654,492467,288,576,S23 VFX levels alone (0 enemies)
 2026-08-21T01:32:55,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,0,0.0,1000,100,B,1.60,0,677.8,612.7,1.475,1.632,0.242,0.567,1.844,654,492454,288,576,S23 VFX levels alone (0 enemies)
 2026-08-21T01:33:16,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.3,300,30,B,1.60,0,544.0,439.8,1.838,2.274,0.289,1.075,2.543,588,775507,288,612,S23 dynamic light per explosion
+2026-08-21T11:21:00,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,500,485.2,0,0,B,1.60,0,399.9,297.5,2.501,3.361,0.481,0.432,3.500,1692,328148,288,3648,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:21:25,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,1000,985.3,0,0,B,1.60,0,195.5,155.6,5.114,6.428,1.026,0.512,6.490,3917,456352,288,6648,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:21:50,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,node,2000,1985.3,0,0,B,1.60,0,83.4,76.4,11.985,13.093,2.161,0.623,12.966,8124,698920,288,12648,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:22:15,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,500,485.3,0,0,B,1.60,0,525.9,456.8,1.902,2.189,0.164,0.429,2.471,329,393071,288,652,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:22:40,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,1000,985.4,0,0,B,1.60,0,324.7,286.7,3.080,3.488,0.174,0.487,3.701,329,537071,288,652,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:23:05,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-parts,2000,1985.1,0,0,B,1.60,0,183.6,160.6,5.445,6.225,0.198,0.562,6.968,329,825071,288,652,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:23:30,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,500,485.3,0,0,B,1.60,0,952.6,577.7,1.050,1.731,0.165,0.462,1.968,325,393071,288,648,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:23:55,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,1000,985.1,0,0,B,1.60,0,831.7,600.2,1.202,1.666,0.165,0.499,1.895,325,537071,288,648,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
+2026-08-21T11:24:20,NVIDIA GeForce RTX 5080 Laptop GPU,mobile,default,mm-merged,2000,1985.0,0,0,B,1.60,0,643.8,558.0,1.553,1.792,0.166,0.540,1.991,325,825071,288,648,"M5 architecture RERUN (shipping: pillarbox, spawn r=54.3)"
