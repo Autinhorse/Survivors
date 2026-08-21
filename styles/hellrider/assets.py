@@ -152,7 +152,7 @@ def tint(obj, colour, rng=None, jitter=0.0):
 # 三圈之间连三角面。"前后高度有变化"就是中圈那一圈的高度梯度。
 
 def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
-               taper=0.30, jitter=0.20, flare=0.06):
+               taper=0.30, jitter=0.20, flare=0.06, third_ring=False):
     """一块石头：**下环 + 上环**，上环三个方向各随机抖动。
 
     结构就两圈顶点，不堆层、不切割：
@@ -201,10 +201,57 @@ def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
                                 hz)))
 
     bm.faces.new(list(reversed(lo)))
-    bm.faces.new(hi)                      # 上环不共面，三角化后是几个不同朝向的面
     for i in range(sides):
         j = (i + 1) % sides
         bm.faces.new((lo[i], lo[j], hi[j], hi[i]))
+
+    base_xy = [(v.co.x, v.co.y) for v in lo]
+    if not third_ring:
+        bm.faces.new(hi)      # 上环不共面，三角化后是几个不同朝向的面
+        return base_xy
+
+    # 大石块再加一环：向内收 50%，随机增删 1-2 个节点，再三轴抖 25%。
+    #
+    # 增删节点是关键的一步 —— 只抖位置的话，上下两环的顶点数一样，
+    # 侧面永远是规整的一圈四边形；增删之后环与环的拓扑就对不齐了，
+    # 面的大小和朝向自然参差。用 bridge_loops 连接，它能处理两环点数不同。
+    top_ang = []
+    n = len(hi)
+    keep = list(range(n))
+    ops = rng.randint(1, 2)
+    for _o in range(ops):
+        if rng.random() < 0.5 and len(keep) > 4:
+            keep.pop(rng.randrange(len(keep)))          # 去掉一个，相邻自然连上
+        else:
+            k = rng.randrange(len(keep))                # 在两个之间插一个
+            keep.insert(k + 1, (keep[k], keep[(k + 1) % len(keep)]))
+
+    top = []
+    for e in keep:
+        if isinstance(e, tuple):
+            a0, a1 = base_ang[e[0]], base_ang[e[1]]
+            if a1 < a0:
+                a1 += math.tau
+            ta = (a0 + a1) * 0.5
+        else:
+            ta = base_ang[e]
+        rt = radius * (1.0 - taper) * 0.50 * (1.0 + rng.uniform(-0.25, 0.25))
+        tz = H * (1.0 + cap_h / max(H, 1e-4) * 0.35) * (1.0 + rng.uniform(-0.25, 0.25))
+        top.append(bm.verts.new((cx + math.cos(ta) * rt
+                                 + radius * rng.uniform(-0.25, 0.25) * 0.30,
+                                 cy + math.sin(ta) * rt
+                                 + radius * rng.uniform(-0.25, 0.25) * 0.30,
+                                 tz)))
+    # 上环的边已经被侧面四边形建过了，直接 new 会 "this edge exists"
+    def _edge(a, b):
+        e = bm.edges.get((a, b))
+        return e if e else bm.edges.new((a, b))
+
+    hi_edges = [_edge(hi[i], hi[(i + 1) % len(hi)]) for i in range(len(hi))]
+    tp_edges = [_edge(top[i], top[(i + 1) % len(top)]) for i in range(len(top))]
+    bmesh.ops.bridge_loops(bm, edges=hi_edges + tp_edges)
+    bm.faces.new(top)
+    return base_xy
 
 
 # 每个变体是一组石头：(半径, 墙高, 顶高, 边数, x, y)
@@ -226,11 +273,41 @@ ROCK_GROUPS = {
 }
 
 
+def _fit_ellipse(pts):
+    """把底环的多边形拟合成一个椭圆：(cx, cy, rx, ry, 角度)。
+
+    假阴影要"配合石块底面形状缩放旋转"，所以量的是**真实底环**，
+    不是拍脑袋给个半径。用二阶矩求主轴 —— 多边形顶点分布的协方差
+    矩阵，特征向量就是长短轴方向，特征值开方按 2 倍缩放回外接尺度。
+    """
+    n = len(pts)
+    cx = sum(p[0] for p in pts) / n
+    cy = sum(p[1] for p in pts) / n
+    sxx = sum((p[0] - cx) ** 2 for p in pts) / n
+    syy = sum((p[1] - cy) ** 2 for p in pts) / n
+    sxy = sum((p[0] - cx) * (p[1] - cy) for p in pts) / n
+    # 2x2 对称矩阵的特征分解，手写比拉 numpy 进 Blender 省事
+    tr, det = sxx + syy, sxx * syy - sxy * sxy
+    disc = max(tr * tr * 0.25 - det, 0.0) ** 0.5
+    l0, l1 = tr * 0.5 + disc, tr * 0.5 - disc
+    ang = 0.5 * math.atan2(2.0 * sxy, sxx - syy)
+    # 均匀分布在圆周上的 n 个点，二阶矩是 R^2/2 —— 所以乘 sqrt(2) 回到半径
+    k = 2.0 ** 0.5
+    return (cx, cy, max(l0, 1e-6) ** 0.5 * k, max(l1, 1e-6) ** 0.5 * k, ang)
+
+
+ROCK_FOOTPRINT = {}      # 变体名 -> [(cx, cy, rx, ry, ang), ...]，导出给布局用
+
+
 def rock(name, shape, loc=(0, 0, 0)):
     rng = seeded(name)
+    foot = []
     bm = bmesh.new()
     for radius, wall_h, cap_h, sides, cx, cy in ROCK_GROUPS[shape]:
-        _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides)
+        # 只有够大的块才加第三环：小石头加了反而碎
+        base = _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
+                          third_ring=(radius > 0.95))
+        foot.append(_fit_ellipse(base))
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     me = bpy.data.meshes.new(name)
@@ -241,6 +318,7 @@ def rock(name, shape, loc=(0, 0, 0)):
     tint(o, "Rock", rng, 0.04)
     vgrad(o, 0.24)
     finalize(o, loc, smooth_angle=0.0)
+    ROCK_FOOTPRINT[shape] = foot
     return o
 
 
@@ -249,6 +327,18 @@ def build_rocks(out_dir):
     for i, shape in enumerate(ROCK_GROUPS):
         rock("rock_%s" % shape, shape, loc=(i * 7.0 - 17.0, 0, 0))
     export(os.path.join(out_dir, "rocks.glb"), "rocks")
+    # 底面椭圆表给布局用来摆假阴影。Blender 的 XY -> Godot 的 X/-Z，
+    # 这里只存 Blender 空间的原始值，坐标系转换留给布局做一次就好。
+    #
+    # **顺序必须按物体名排序**，不能按 ROCK_GROUPS 的声明顺序。
+    # glTF 导出的节点是按名字字母序排的（big/block/low/slab/spire/twin），
+    # 而 ScatterField 是按 GLB 里的节点顺序取变体的。第一版按声明顺序写，
+    # 结果影子和石头对不上号 —— 一块小石头顶着一组大石头的影子。
+    # 凡是给 GLB 配的"每变体侧表"，都得按 GLB 的节点顺序来。
+    import json
+    order = sorted(ROCK_GROUPS, key=lambda k: "rock_" + k)
+    with open(os.path.join(out_dir, "rocks_footprint.json"), "w") as fp:
+        json.dump([ROCK_FOOTPRINT[k] for k in order], fp, indent=1)
 
     clear()
     for i, shape in enumerate(("block", "low", "slab", "twin")):

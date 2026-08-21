@@ -33,6 +33,8 @@ const STRIDE := 7
 ## 平面着色风格用它代替真实投影阴影 —— 真影子会把纯色块切出硬边。
 @export var blob_material: Material
 @export var blob_scale: float = 2.1        ## 相对散布物尺度
+## 椭圆度：影子按物体底面的形状拉扁并跟着朝向转，比正圆更像烘出来的 AO
+@export var blob_aspect: float = 0.78
 @export var blob_y: float = 0.03
 
 @export_group("Materials")
@@ -117,8 +119,12 @@ func _blobs(buckets: Array) -> void:
 	for b in buckets:
 		for t in b:
 			var s: float = t.basis.get_scale().x * blob_scale
-			xf.append(Transform3D(Basis.IDENTITY.scaled(Vector3(s, 1.0, s)),
-					Vector3(t.origin.x, blob_y, t.origin.z)))
+			# 跟着散布物的朝向转，并按 blob_aspect 拉扁 ——
+			# 正圆的影子在成组的石头下面一眼是贴上去的
+			var yaw: float = t.basis.get_euler().y
+			var bs := Basis(Vector3.UP, yaw).scaled(
+					Vector3(s, 1.0, s * blob_aspect))
+			xf.append(Transform3D(bs, Vector3(t.origin.x, blob_y, t.origin.z)))
 	if xf.is_empty():
 		return
 	var mm := MultiMesh.new()

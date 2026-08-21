@@ -18,6 +18,7 @@
 参考图里熔岩大约占画面三分之一，这是这个风格最强的识别元素，必须进画面。
 """
 import math
+import os
 import random
 
 from tscnlib import *          # noqa: F401,F403
@@ -162,10 +163,11 @@ def build(MAT, MESH, performance=False):
     # 参考图里每块石头只有 3 个明确的面
     node("Sun", "DirectionalLight3D", ".",
          {"light_color": col(1.0, 0.96, 0.90), "light_energy": "3.10",
-          "shadow_enabled": "true", "shadow_opacity": "0.22",
-          "shadow_bias": "0.03", "shadow_normal_bias": "1.0",
-          "shadow_blur": "2.4",
-          "directional_shadow_max_distance": "120.0"},
+          # **不开真实投影**。参考图里物体下面只有一个居中的软椭圆，
+          # 没有方向偏移的投影。开着的话每棵树会同时有两个影子
+          # （blob 一个 + 投影一个），一眼就是假的。
+          # 方向光仍然负责分档着色，只是不投阴影。
+          "shadow_enabled": "false"},
          # 光要够斜，两面墙才分得开。58° 太陡，大部分可见面都落进同一档；
          # 50° 下：顶面 nl=0.77（最高档）、迎光墙 0.64（中档）、背光墙 ~0（最低档），
          # 正好对上参考图的三个台阶。
@@ -353,6 +355,51 @@ def build(MAT, MESH, performance=False):
     print("units: 1 player + %d enemies" % n_en)
 
 
+# 假阴影比物体底面外扩多少。shader 的 core 要配成 1/BLOB_PAD，
+# 这样实心区边界正好落在物体轮廓上，外面那一圈才是虚的过渡。
+BLOB_PAD = 1.35
+
+
+def _rock_footprint():
+    """读 Blender 导出的石头底面椭圆表，读不到就退化成单个圆。"""
+    import json
+    fp = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))),
+        "assets", "hellrider", "environment", "rocks_footprint.json")
+    try:
+        with open(fp) as f:
+            return json.load(f)
+    except (IOError, ValueError):
+        print("  [warn] 没有 rocks_footprint.json，石头阴影退化成圆")
+        return None
+
+
+def _blob_spots(footprint, idx, n_var, px, pz, s_, ry, pad):
+    """算出一个散布物脚下要摆哪些阴影贴片。
+
+    没有底面表就一个正圆；有的话，组里**每块石头各一个椭圆**，
+    位置和朝向都跟着散布的旋转走。
+
+    坐标系：Blender 的 (x, y) 对应 Godot 的 (x, -z)；
+    Godot 的 Basis(UP, yaw) 把局部 +X 送到 (cos yaw, 0, -sin yaw)，
+    所以 Blender 里的主轴角 a 直接就是 yaw，转完再加上散布的 ry。
+    """
+    if not footprint:
+        r = s_ * pad
+        return [(px, pz, r, r, 0.0)]
+    out = []
+    rr = math.radians(ry)
+    ca, sa = math.cos(rr), math.sin(rr)
+    for cx, cy, ex, ey, ang in footprint[idx % n_var]:
+        lx, lz = cx * s_, -cy * s_          # Blender XY -> Godot XZ
+        out.append((px + lx * ca + lz * sa,
+                    pz - lx * sa + lz * ca,
+                    2.0 * ex * s_ * pad,
+                    2.0 * ey * s_ * pad,
+                    math.degrees(ang) + ry))
+    return out
+
+
 def _minimal(MAT, MESH, plane):
     """调参场景：地面 + 熔岩 + 3 块石头 + 3 棵树，每个都摆在空处。
 
@@ -366,13 +413,16 @@ def _minimal(MAT, MESH, plane):
     """
     sc = node("Tune", "Node3D", ".")
 
-    def put(nm, src, n_var, spots, blob_mul):
+    def put(nm, src, n_var, spots, blob_mul, footprint=None):
         pl = []
-        for px, pz, s_, ry in spots:
+        for idx, (px, pz, s_, ry) in enumerate(spots):
             pl += [px, 0.0, pz, ry, s_, s_, s_]
-            mesh("Blob_%s_%d" % (nm, len(pl)), sc, plane, MAT["blob"],
-                 (px, 0.03, pz), scale=(s_ * blob_mul, 1.0, s_ * blob_mul),
-                 cast_shadow="0")
+            for k, (bx, bz, sx, sz, yaw) in enumerate(
+                    _blob_spots(footprint, idx, n_var, px, pz, s_, ry,
+                                blob_mul)):
+                mesh("Blob_%s_%d_%d" % (nm, idx, k), sc, plane, MAT["blob"],
+                     (bx, 0.03, bz), scale=(sx, 1.0, sz), ry=yaw,
+                     cast_shadow="0")
         node(nm, "Node3D", sc, {
             "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
             "kind": '"rock"',
@@ -382,8 +432,10 @@ def _minimal(MAT, MESH, plane):
             "placements": "PackedFloat32Array(%s)"
                           % ", ".join("%.3f" % v for v in pl)})
 
-    put("Rocks", "rocks.glb", 6, MIN_ROCKS, 3.2)
-    put("Trees", "trees.glb", 4, MIN_TREES, 4.4)
+    # 石头的假阴影按**每一块石头自己的底面椭圆**摆，不是整组一个圆。
+    # 底面数据是 Blender 端量出来写进 rocks_footprint.json 的。
+    put("Rocks", "rocks.glb", 6, MIN_ROCKS, BLOB_PAD, _rock_footprint())
+    put("Trees", "trees.glb", 4, MIN_TREES, 5.1)
 
     # 玩家留着当尺度参照
     pl = node("Player", "Node3D", ".", None, T((0.0, 0.0, -6.0), ry=20.0))

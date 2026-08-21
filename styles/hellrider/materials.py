@@ -71,8 +71,8 @@ def materials():
     # 参考图里树/石头下面的影子是居中的软椭圆，没有方向偏移。
     MAT["blob"] = shader_mat(
         "MatHrBlob", "res://shaders/hr_blob.gdshader",
-        blob=ext("Texture2D", "res://assets/hellrider/textures/blob.png"),
-        shadow_color=col(0.31, 0.20, 0.13), strength="0.78")
+        # 剖面由 shader 程序生成，不再挂贴图（贴图那版的浓区被物体自己盖住了）
+        shadow_color=col(0.31, 0.20, 0.13), strength="0.78", core="0.74")
 
     MAT["player"] = shader_mat(
         "MatHrPlayer", "res://shaders/hr_flat.gdshader",

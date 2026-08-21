@@ -1,15 +1,14 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Shader" path="res://shaders/hr_ground.gdshader" id="ext_1_hr_ground"]
 [ext_resource type="Shader" path="res://shaders/hr_lava.gdshader" id="ext_2_hr_lava"]
 [ext_resource type="Shader" path="res://shaders/hr_flat.gdshader" id="ext_3_hr_flat"]
-[ext_resource type="Texture2D" path="res://assets/hellrider/textures/blob.png" id="ext_4_blob"]
-[ext_resource type="Shader" path="res://shaders/hr_blob.gdshader" id="ext_5_hr_blob"]
-[ext_resource type="Script" path="res://scripts/environment/GameplayCameraPolicy.gd" id="ext_6_GameplayCameraPolicy"]
-[ext_resource type="Script" path="res://scripts/environment/HellField.gd" id="ext_7_HellField"]
-[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_8_ScatterField"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/rocks.glb" id="ext_9_rocks"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/trees.glb" id="ext_10_trees"]
+[ext_resource type="Shader" path="res://shaders/hr_blob.gdshader" id="ext_4_hr_blob"]
+[ext_resource type="Script" path="res://scripts/environment/GameplayCameraPolicy.gd" id="ext_5_GameplayCameraPolicy"]
+[ext_resource type="Script" path="res://scripts/environment/HellField.gd" id="ext_6_HellField"]
+[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_7_ScatterField"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/rocks.glb" id="ext_8_rocks"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/trees.glb" id="ext_9_trees"]
 
 [sub_resource type="ShaderMaterial" id="MatHrGround"]
 shader = ExtResource("ext_1_hr_ground")
@@ -60,10 +59,10 @@ shader_parameter/light_floor = 0.44
 shader_parameter/top_boost = 0.10
 
 [sub_resource type="ShaderMaterial" id="MatHrBlob"]
-shader = ExtResource("ext_5_hr_blob")
-shader_parameter/blob = ExtResource("ext_4_blob")
+shader = ExtResource("ext_4_hr_blob")
 shader_parameter/shadow_color = Color(0.31, 0.2, 0.13, 1)
 shader_parameter/strength = 0.78
+shader_parameter/core = 0.74
 
 [sub_resource type="ShaderMaterial" id="MatHrPlayer"]
 shader = ExtResource("ext_3_hr_flat")
@@ -129,16 +128,11 @@ environment = SubResource("Env")
 transform = Transform3D(-0.78801, 0.47162, -0.39574, 0.00000, 0.64279, 0.76604, 0.61566, 0.60365, -0.50652, 0.00000, 24.00000, 0.00000)
 light_color = Color(1, 0.96, 0.9, 1)
 light_energy = 3.10
-shadow_enabled = true
-shadow_opacity = 0.22
-shadow_bias = 0.03
-shadow_normal_bias = 1.0
-shadow_blur = 2.4
-directional_shadow_max_distance = 120.0
+shadow_enabled = false
 
 [node name="GameplayCamera" type="Camera3D" parent="."]
 transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.76604, 0.64279, 0.00000, -0.64279, 0.76604, 0.00000, 44.00000, 52.93716)
-script = ExtResource("ext_6_GameplayCameraPolicy")
+script = ExtResource("ext_5_GameplayCameraPolicy")
 fov = 40.0
 near = 0.5
 far = 300.0
@@ -149,7 +143,7 @@ orthographic = true
 ortho_size = 37.0
 
 [node name="Field" type="Node3D" parent="."]
-script = ExtResource("ext_7_HellField")
+script = ExtResource("ext_6_HellField")
 half_width = 20
 z_start = -46
 z_end = 36
@@ -443,54 +437,72 @@ cast_shadow = 0
 [node name="Tune" type="Node3D" parent="."]
 
 
-[node name="Blob_Rocks_7" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(4.96000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.96000, -11.00000, 0.03000, -12.00000)
+[node name="Blob_Rocks_0_0" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(2.34636, 0.00000, 7.51264, 0.00000, 1.00000, 0.00000, -8.27967, 0.00000, 2.12899, -10.77982, 0.03000, -11.87837)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="Blob_Rocks_14" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(3.84000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.84000, -1.00000, 0.03000, 3.00000)
+[node name="Blob_Rocks_0_1" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(2.07987, 0.00000, -3.03834, 0.00000, 1.00000, 0.00000, 3.21263, 0.00000, 1.96703, -7.46746, 0.03000, -10.57559)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="Blob_Rocks_21" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(3.20000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.20000, 10.00000, 0.03000, -14.00000)
+[node name="Blob_Rocks_0_2" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(1.55654, 0.00000, 1.50310, 0.00000, 1.00000, 0.00000, -1.55126, 0.00000, 1.50822, -14.03889, 0.03000, -13.64029)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="Blob_Rocks_1_0" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(-1.89618, 0.00000, 3.53145, 0.00000, 1.00000, 0.00000, -3.78469, 0.00000, -1.76931, -0.96524, 0.03000, 3.02161)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="Blob_Rocks_2_0" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(5.33278, 0.00000, 1.62730, 0.00000, 1.00000, 0.00000, -1.70472, 0.00000, 5.09061, 9.94534, 0.03000, -14.08651)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="Blob_Rocks_2_1" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(2.09205, 0.00000, -0.15892, 0.00000, 1.00000, 0.00000, 0.16421, 0.00000, 2.02461, 12.35897, 0.03000, -13.92808)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Rocks" type="Node3D" parent="Tune"]
-script = ExtResource("ext_8_ScatterField")
+script = ExtResource("ext_7_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_9_rocks")
+source_scene = ExtResource("ext_8_rocks")
 variants = 6
 material = SubResource("MatHrFlat")
 placements = PackedFloat32Array(-11.000, 0.000, -12.000, 0.000, 1.550, 1.550, 1.550, -1.000, 0.000, 3.000, 40.000, 1.200, 1.200, 1.200, 10.000, 0.000, -14.000, -25.000, 1.000, 1.000, 1.000)
 
-[node name="Blob_Trees_7" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(4.40000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.40000, -12.00000, 0.03000, 9.00000)
+[node name="Blob_Trees_0_0" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(5.10000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 5.10000, -12.00000, 0.03000, 9.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="Blob_Trees_14" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(5.06000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 5.06000, 2.00000, 0.03000, -22.00000)
+[node name="Blob_Trees_1_0" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(5.86500, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 5.86500, 2.00000, 0.03000, -22.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
-[node name="Blob_Trees_21" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(3.96000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.96000, 12.00000, 0.03000, 7.00000)
+[node name="Blob_Trees_2_0" type="MeshInstance3D" parent="Tune"]
+transform = Transform3D(4.59000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.59000, 12.00000, 0.03000, 7.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Trees" type="Node3D" parent="Tune"]
-script = ExtResource("ext_8_ScatterField")
+script = ExtResource("ext_7_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_10_trees")
+source_scene = ExtResource("ext_9_trees")
 variants = 4
 material = SubResource("MatHrFlat")
 placements = PackedFloat32Array(-12.000, 0.000, 9.000, 0.000, 1.000, 1.000, 1.000, 2.000, 0.000, -22.000, 30.000, 1.150, 1.150, 1.150, 12.000, 0.000, 7.000, -15.000, 0.900, 0.900, 0.900)
