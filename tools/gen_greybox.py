@@ -286,6 +286,30 @@ RIVER_FREQ = 0.085               # 蜿蜒频率（弧度/米）
 RIVER_W_AMP = 0.28               # 宽度起伏比例
 
 
+def spawn_radius(margin=1.1, aspect=16.0 / 9.0):
+    """保证"屏幕外生成"的最小世界半径。
+
+    因为项目已锁定可见范围（project.godot 的 stretch mode=viewport / aspect=keep，
+    左右加黑边），这个半径是**一个固定的世界常量**，与玩家的分辨率无关 ——
+    这正是加黑边的实际收益：刷怪逻辑不用再关心屏幕。
+
+    注意透视：远边比近边宽得多（本项目 ±41.6 m vs ±27.2 m），
+    所以决定半径的是**远端的两个角**，不是画面宽度的一半。
+    """
+    vh = math.radians(CAM_FOV / 2.0)
+    hh = math.atan(math.tan(vh) * aspect)
+    p = math.radians(CAM_PITCH)
+    best = 0.0
+    for sy in (-1.0, 1.0):
+        for sx in (-1.0, 1.0):
+            dx, dy, dz = sx * math.tan(hh), sy * math.tan(vh), -1.0
+            wy = dy * math.cos(-p) - dz * math.sin(-p)
+            wz = dy * math.sin(-p) + dz * math.cos(-p)
+            t = -CAM_HEIGHT / wy
+            best = max(best, math.hypot(dx * t, camera_z() + wz * t))
+    return best * margin
+
+
 def river_x(z):
     return RX0 + RSLOPE * z + RIVER_AMP * math.sin(z * RIVER_FREQ)
 
@@ -802,7 +826,7 @@ def build():
             "script": ext("Script", "res://scripts/units/EnemyCrowd.gd"),
             "target_path": 'NodePath("../Player")',
             "count": "0",
-            "spawn_radius": "30.0",
+            "spawn_radius": "%.1f" % spawn_radius(),
             "move_speed": "1.6",
             "stop_radius": "6.0",
             "churn_per_sec": "10.0",
@@ -813,7 +837,7 @@ def build():
             "target_path": 'NodePath("../Player")',
             "variant": '"merged"',
             "count": "0",
-            "spawn_radius": "30.0",
+            "spawn_radius": "%.1f" % spawn_radius(),
             "move_speed": "1.6",
             "stop_radius": "6.0",
             "churn_per_sec": "10.0",
