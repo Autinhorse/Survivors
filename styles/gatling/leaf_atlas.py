@@ -1,4 +1,5 @@
-"""生成叶片 alpha 图集。
+"""风格 "gatling" 的叶片 alpha 图集。
+
 
 target.png 的树冠是**细枝干 + 一片片独立叶子贴片**，中间透光、能看见底下的影子。
 之前用实体几何堆叶簇，无论怎么调都是"一坨"，因为实体不可能透光。
@@ -89,4 +90,6 @@ def main(out_path):
 
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1
-         else "assets/environment/leaf_atlas.png")
+         else os.path.join(os.path.dirname(os.path.dirname(
+             os.path.dirname(os.path.abspath(__file__)))),
+             "assets", "gatling", "environment", "leaf_atlas.png"))

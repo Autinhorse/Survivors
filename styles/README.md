@@ -16,6 +16,7 @@
 | `styles/<名字>/materials.py` | 风格 | 填充材质槽位，并给出 `MESH(名字)` 资产路径 |
 | `styles/<名字>/assets.py` | 风格 | 该风格的 Blender 资产建模 |
 | `styles/<名字>/textures.py` | 风格 | 该风格的程序化贴图（可外部编辑） |
+| `styles/<名字>/leaf_atlas.py` | 风格 | 叶片 alpha 图集（如果这个风格用贴片植被） |
 | `assets/<名字>/` | 风格 | 该风格的 GLB 和贴图产物 |
 | `styles/<名字>/history/` | 风格 | 迭代记录（`tools/snapshot_visual.py` 生成） |
 
