@@ -1,0 +1,791 @@
+# -*- coding: utf-8 -*-
+"""场景布局：地形、河道、桥、建筑与散布物的**位置**。
+
+**这一层在所有美术风格之间共享**，这是有意的：
+两个风格用同一套构图、同一个机位、同一批测量取样框，
+差异才是纯粹的美术差异，可以直接并排比较。
+
+布局代码引用材质的方式是 `MAT["grass"]`、`MAT["prophouse"]` 这类
+**语义槽位**，具体长什么样由 styles/<名字>/materials.py 决定。
+换风格 = 换一套填充这些槽位的实现，布局一行不用改。
+"""
+import math
+import random
+
+from tscnlib import *          # noqa: F401,F403  发射器 API，调用点保持原样
+
+random.seed(20260820)
+
+
+# ------------------------------------------------------------------- layout --
+GROUND = 160.0                   # CSG ground block; sized only so the fixed
+                                 # camera never sees the edge of the world
+
+# River: centerline x = RX0 + RSLOPE * z, running from upper-middle to
+# lower-right as in docs/target.png.
+RX0, RSLOPE = 10.0, 0.28
+RANG = math.degrees(math.atan(RSLOPE))
+RIVER_W = 7.5                    # 基准宽度
+# 河道不是直线：参考图的河是蜿蜒的、宽窄变化的。等宽直带子读起来像运河。
+RIVER_AMP = 2.6                  # 蜿蜒振幅（米）
+RIVER_FREQ = 0.085               # 蜿蜒频率（弧度/米）
+RIVER_W_AMP = 0.28               # 宽度起伏比例
+
+
+def spawn_radius(margin=1.1, aspect=16.0 / 9.0):
+    """保证"屏幕外生成"的最小世界半径。
+
+    因为项目已锁定可见范围（project.godot 的 stretch mode=viewport / aspect=keep，
+    左右加黑边），这个半径是**一个固定的世界常量**，与玩家的分辨率无关 ——
+    这正是加黑边的实际收益：刷怪逻辑不用再关心屏幕。
+
+    注意透视：远边比近边宽得多（本项目 ±41.6 m vs ±27.2 m），
+    所以决定半径的是**远端的两个角**，不是画面宽度的一半。
+    """
+    vh = math.radians(CAM_FOV / 2.0)
+    hh = math.atan(math.tan(vh) * aspect)
+    p = math.radians(CAM_PITCH)
+    best = 0.0
+    for sy in (-1.0, 1.0):
+        for sx in (-1.0, 1.0):
+            dx, dy, dz = sx * math.tan(hh), sy * math.tan(vh), -1.0
+            wy = dy * math.cos(-p) - dz * math.sin(-p)
+            wz = dy * math.sin(-p) + dz * math.cos(-p)
+            t = -CAM_HEIGHT / wy
+            best = max(best, math.hypot(dx * t, camera_z() + wz * t))
+    return best * margin
+
+
+def river_x(z):
+    return RX0 + RSLOPE * z + RIVER_AMP * math.sin(z * RIVER_FREQ)
+
+
+def river_w(z):
+    """宽窄变化：窄处水更急，正好放急流白水。"""
+    return RIVER_W * (1.0 + RIVER_W_AMP * math.sin(z * RIVER_FREQ * 1.7 + 1.1))
+
+
+def river_ang(z):
+    """局部切线方向（度）。河道弯了之后，挖槽的盒子必须逐段跟着转，
+    否则外侧会豁口。"""
+    dxdz = RSLOPE + RIVER_AMP * RIVER_FREQ * math.cos(z * RIVER_FREQ)
+    return math.degrees(math.atan(dxdz))
+
+
+# 岸线抖动。**两岸各自独立**，这是关键 ——
+# 之前两岸共用一个正弦，于是永远同步变宽变窄，河道读起来还是"一条等宽的带子
+# 被正弦调制过"，规则感一点没少。给两岸错开相位之后，一侧凸出时另一侧可能也凸，
+# 河道才会出现真正的宽窄段和不对称的弯。
+#
+# 单一正弦是另一个问题：它只有一个尺度。真实岸线在每个尺度上都是碎的，
+# 所以叠三个倍频。改这里必须同步改 scripts/environment/RiverSurface.gd 里
+# 同名的函数 —— 水面网格的 UV 要让 0/1 精确落在**实际**岸线上，
+# 否则岸边浪花会漂在河中间或者埋进地形（这个坑踩过两次）。
+BANK_JIT = 0.24                  # 半宽抖动比例
+
+
+def bank_noise(z, side):
+    ph = 0.0 if side < 0 else 11.7
+    return (0.55 * math.sin(z * 0.130 + 0.70 + ph)
+            + 0.30 * math.sin(z * 0.370 + 2.10 + ph * 1.3)
+            + 0.15 * math.sin(z * 0.910 + 4.30 + ph * 0.7))
+
+
+def river_hw(z, side):
+    """某一岸的垂直半宽（米）。side: -1 左岸 / +1 右岸。"""
+    return river_w(z) * 0.5 * (1.0 + BANK_JIT * bank_noise(z, side))
+
+
+def river_perp(z):
+    """河道法向在 XZ 平面里的单位向量（指向右岸）。"""
+    a = math.radians(river_ang(z))
+    return (math.cos(a), -math.sin(a))
+
+
+def bank_point(z, side):
+    """实际岸线上的一点。石头、植被都按它摆，才会贴着真正的水边。"""
+    px, pz = river_x(z), z
+    ex, ez = river_perp(z)
+    hw = river_hw(z, side)
+    return (px + side * hw * ex, pz + side * hw * ez)
+FAR_BANK_Y = 2.0                 # top of the far-bank plateau
+WATER_Y = -2.55
+BED_Y = -3.4
+
+# Bridge
+BRIDGE_Z = -8.0
+# **必须和 tools/gen_assets_blender.py 的 BRIDGE_L / BRIDGE_W 一致** ——
+# 桥面本身是 Blender 资产，这两个数只用来算桥墩、拉索和占位检查。
+DECK_L = 16.0                    # 河道在 z=-8 处宽 6.7 m，两端各有约 4.6 m 落地
+DECK_W = 8.4                     # 参考图的桥宽约是机甲的 4-5 倍
+RAMP_LEN = 8.0                   # 桥头土坡的长度（坡趾到桥头）
+# 占位检查登记的是**实际抬起来的那一块**，不是整个包围盒：
+# 高度场在边缘已经归零，拿整块外框去判定会把周围一大片都判成冲突。
+RAMP_SOLID = (0.78, 0.74)        # 有效长/宽相对整体的比例
+
+DECK_Y = 2.1                     # meets the far-bank plateau top
+
+# Village loop road
+LOOP_C, LOOP_A, LOOP_B = (-7.0, -2.0), 9.3, 6.9
+
+# ------------------------------------------------------------------- camera --
+# Fixed high-angle gameplay camera (doc section 9).  CAM_Z is derived so the
+# camera always aims at CAM_FOCUS_Z on the ground plane -- changing the pitch
+# re-frames around the same point instead of sliding the composition.
+# Height 44 m reproduces the reference frame's ~60 m visible ground width.
+CAM_PITCH = 60.0        # degrees below horizontal (confirmed 2026-08-20)
+CAM_HEIGHT = 44.0       # metres
+CAM_FOV = 40.0
+CAM_FOCUS_Z = 0.5
+
+
+FORWARD_PLUS = False     # 由 gen_scene.py 按 --forward-plus 设置
+# Doc section 25: the visual scene stays stable as the reference; the crowd
+# benchmark lives in its own copy so stress testing never disturbs it.
+PERFORMANCE = False      # emit scenes/PerformanceBenchmark.tscn (--performance)
+
+
+def _cli_overrides():
+    global CAM_PITCH, CAM_HEIGHT, CAM_FOV, FORWARD_PLUS, PERFORMANCE, OUT
+    a = sys.argv[1:]
+    if "--forward-plus" in a:
+        FORWARD_PLUS = True
+    if "--performance" in a:
+        PERFORMANCE = True
+        OUT = os.path.join(SCENES, "PerformanceBenchmark.tscn")
+    for i, tok in enumerate(a):
+        if tok == "--pitch":
+            CAM_PITCH = float(a[i + 1])
+        elif tok == "--height":
+            CAM_HEIGHT = float(a[i + 1])
+        elif tok == "--fov":
+            CAM_FOV = float(a[i + 1])
+
+
+def camera_z():
+    return CAM_FOCUS_Z + CAM_HEIGHT / math.tan(math.radians(CAM_PITCH))
+
+
+def frame_size(aspect=16.0 / 9.0):
+    """Ground-plane extents the camera can see, for sanity-checking the setup."""
+    half = CAM_FOV / 2.0
+    far = CAM_HEIGHT / math.tan(math.radians(max(CAM_PITCH - half, 1.0)))
+    near = CAM_HEIGHT / math.tan(math.radians(min(CAM_PITCH + half, 89.0)))
+    d = CAM_HEIGHT / math.sin(math.radians(CAM_PITCH))
+    width = 2.0 * d * math.tan(math.atan(math.tan(math.radians(half)) * aspect))
+    return camera_z() - far, camera_z() - near, width
+
+
+
+def build(MAT, MESH, performance=False):
+    """MAT: 风格的材质槽位字典；MESH(名字) -> res:// 路径（资产也按风格分目录）。"""
+    box = sub("BoxMesh", "MeshBox", size="Vector3(1, 1, 1)")
+    cyl = sub("CylinderMesh", "MeshCyl", top_radius="0.5", bottom_radius="0.5",
+              height="1.0", radial_segments="12")
+    cap = sub("CapsuleMesh", "MeshCap", radius="0.5", height="2.0",
+              radial_segments="10", rings="4")
+    prism = sub("PrismMesh", "MeshPrism", size="Vector3(1, 1, 1)")
+    plane = sub("PlaneMesh", "MeshPlane", size="Vector2(1, 1)")
+
+    nodes.append('[node name="VisualBenchmark" type="Node3D"]')
+
+    # ------------------------------------------------------------ environment
+    sky_mat = sub("ProceduralSkyMaterial", "SkyMat",
+                  sky_top_color=col(0.361, 0.435, 0.588),
+                  sky_horizon_color=col(0.882, 0.663, 0.435),
+                  sky_curve="0.09",
+                  ground_bottom_color=col(0.180, 0.145, 0.125),
+                  ground_horizon_color=col(0.741, 0.573, 0.404),
+                  sun_angle_max="26.0", sun_curve="0.10",
+                  energy_multiplier="1.15")
+    sky = sub("Sky", "Sky", sky_material=sky_mat)
+    env = sub("Environment", "Env",
+              background_mode="2", sky=sky,
+              ambient_light_source="3", ambient_light_sky_contribution="1.0",
+              ambient_light_energy="1.35",
+              tonemap_mode="3", tonemap_exposure="1.34", tonemap_white="9.0",
+              glow_enabled="true", glow_intensity="0.7", glow_strength="1.1",
+              glow_bloom="0.12", glow_hdr_threshold="0.95",
+              glow_blend_mode="1",
+              # Mobile renderer has no SSAO/SSIL/SDFGI; depth fog is the only
+              # atmospheric depth cue available here (doc section 10).
+              fog_enabled="true", fog_mode="0",
+              fog_light_color=col(0.788, 0.635, 0.463),
+              fog_light_energy="0.8", fog_sun_scatter="0.15",
+              fog_density="0.0011", fog_sky_affect="0.0",
+              fog_height="-6.0", fog_height_density="0.02",
+              adjustment_enabled="true", adjustment_saturation="0.94",
+              adjustment_contrast="1.02", adjustment_brightness="1.0")
+    if FORWARD_PLUS:
+        # High preset.  These keys are Forward+ only -- under Mobile the engine
+        # prints a warning and ignores them, so they are emitted on demand
+        # rather than always (doc section 24: Low / Medium / High presets).
+        subres[-1][2].extend([
+            'ssao_enabled = true', 'ssao_radius = 1.4', 'ssao_intensity = 2.2',
+            'ssao_power = 1.6', 'ssao_light_affect = 0.15',
+            'volumetric_fog_enabled = true', 'volumetric_fog_density = 0.004',
+            'volumetric_fog_albedo = ' + col(0.82, 0.74, 0.60),
+            'volumetric_fog_emission = ' + col(0.10, 0.075, 0.045),
+            'volumetric_fog_emission_energy = 0.35',
+            'volumetric_fog_anisotropy = 0.35',
+            'volumetric_fog_length = 140.0',
+            'volumetric_fog_ambient_inject = 0.15',
+        ])
+    node("WorldEnvironment", "WorldEnvironment", ".", {"environment": env})
+
+    # Key light from the far upper-left; shadows fall to the lower-right, as in
+    # docs/target.png.
+    node("Sun", "DirectionalLight3D", ".",
+         {"light_color": col(1.0, 0.804, 0.588), "light_energy": "3.4",
+          "light_angular_distance": "1.4", "shadow_enabled": "true",
+          "shadow_opacity": "0.50",
+          "shadow_bias": "0.035", "shadow_normal_bias": "1.2",
+          "shadow_blur": "1.2",
+          "directional_shadow_max_distance": "130.0",
+          "directional_shadow_split_1": "0.07",
+          "directional_shadow_split_2": "0.22",
+          "directional_shadow_blend_splits": "true"},
+         T((0.0, 20.0, 0.0), ry=-136.0, rx=-38.0))
+
+    node("GameplayCamera", "Camera3D", ".",
+         {"script": ext("Script",
+                        "res://scripts/environment/GameplayCameraPolicy.gd"),
+          "fov": "%.1f" % CAM_FOV, "near": "0.5", "far": "300.0",
+          "current": "true",
+          # 默认 KEEP_HEIGHT 会让 32:9 玩家看到两倍宽的战场（131.5m vs 65.7m），
+          # 那是玩法优势而不只是画面问题
+          "aspect_policy": '"clamp"',
+          "design_fov_vertical": "%.1f" % CAM_FOV},
+         T((0.0, CAM_HEIGHT, camera_z()), rx=-CAM_PITCH))
+
+    # ---------------------------------------------------------------- terrain
+    ter = node("Terrain", "CSGCombiner3D", ".", {"use_collision": "false"})
+    node("GroundBlock", "CSGBox3D", ter,
+         {"size": "Vector3(%g, 6, %g)" % (GROUND, GROUND),
+          "material": MAT["grass"]},
+         T((0.0, -3.0, 0.0)))
+    # Raised far bank -> a real cliff face on the river's far side.
+    perp = (math.cos(math.radians(RANG)), -math.sin(math.radians(RANG)))
+    off = RIVER_W / 2.0 + 0.5 + 25.0                       # 50 m wide plateau
+    pc = (river_x(0.0) + off * perp[0], FAR_BANK_Y - 3.0, off * perp[1])
+    node("FarBankPlateau", "CSGBox3D", ter,
+         {"size": "Vector3(50, 6, 190)", "material": MAT["grass"],
+          "operation": "0"},
+         T(pc, ry=RANG))
+    # 用一串重叠的圆柱挖河道，而不是盒子。
+    # 盒子无论怎么逐段旋转，在弯道外侧都会露出方角和直边 ——
+    # 人眼对"一段一段的直线 + 方形突起"极其敏感。圆柱的 footprint 是圆的，
+    # 重叠起来自然形成圆润不规则的岸线。
+    # 半径的抖动必须是**低频**的。高频抖动会让相邻圆柱互相探出，
+    # 形成扇贝状锯齿 —— 那正是"一段一段"的来源。
+    # 边数也要够（14 边的多边形轮廓在这个机位下能看出直边）。
+    step = 0.9
+    zi = -48.0
+    i = 0
+    while zi <= 48.0:
+        # 圆柱是对称的，但两岸要独立抖动 —— 于是把半径取两岸的平均，
+        # 再把圆心沿法向偏移两岸之差的一半。这样切出来的左右边界
+        # 精确等于 river_hw(z, -1) 和 river_hw(z, +1)。
+        hwl, hwr = river_hw(zi, -1.0), river_hw(zi, 1.0)
+        ex, ez = river_perp(zi)
+        coff = (hwr - hwl) * 0.5
+        node("RiverCut%d" % i, "CSGCylinder3D", ter,
+             {"radius": "%g" % ((hwl + hwr) * 0.5),
+              "height": "9.0", "sides": "32", "smooth_faces": "true",
+              "operation": "2", "material": MAT["cliff"]},
+             T((river_x(zi) + coff * ex, BED_Y + 4.5, zi + coff * ez)))
+        zi += step
+        i += 1
+
+    # 岸口倒角。
+    #
+    # 单个圆柱挖出来的是**纯竖直的墙 + 90° 硬棱**，草地和岸壁之间没有任何过渡，
+    # 一眼就是被铣刀切出来的槽。
+    #
+    # 试过用一圈圈更宽更浅的圆柱做台阶：**不行，原理上就不行。**
+    # 叠圆柱必然在每一级留下一个水平台面，3 级读成梯田、7 级读成灯芯绒，
+    # 台阶数量再多也只是把平行条纹变密。
+    #
+    # 正确的做法是 CSGPolygon3D 的**旋转扫掠**（mode=1，把 2D 剖面绕 Y 轴转一圈）：
+    # 剖面本身就是斜的，转出来是真正连续的斜面，没有台阶可言。
+    #
+    # 剖面有**两处外扩**，因为两岸的地面标高不同：
+    # 近岸地面在 y=0，远岸高台在 y=+2，一处外扩只能照顾其中一岸。
+    #
+    # 扫掠只负责岸口这一段软特征，步长可以粗（2.0 m）；
+    # 水线的轮廓仍然由上面步长 0.9 m 的圆柱挖槽决定，细节不丢。
+    zi = -48.0
+    i = 0
+    while zi <= 48.0:
+        hwl, hwr = river_hw(zi, -1.0), river_hw(zi, 1.0)
+        ex, ez = river_perp(zi)
+        coff = (hwr - hwl) * 0.5
+        hw = (hwl + hwr) * 0.5
+        prof = [(0.0, -1.05), (hw, -1.05),
+                (hw + 0.26, -0.62), (hw + 0.56, -0.28),
+                (hw + 0.80, 0.04), (hw + 0.93, 0.44),   # 近岸岸口
+                (hw + 1.02, 1.30),                      # 高台的墙，近乎竖直
+                (hw + 1.28, 1.72), (hw + 1.62, 2.08),
+                (hw + 1.88, 2.48),                      # 远岸高台岸口
+                (hw + 1.98, 6.0), (0.0, 6.0)]
+        node("RiverLip%d" % i, "CSGPolygon3D", ter,
+             {"polygon": "PackedVector2Array(%s)"
+                         % ", ".join("%.3f, %.3f" % p for p in prof),
+              "mode": "1", "spin_degrees": "360.0", "spin_sides": "20",
+              "smooth_faces": "true", "operation": "2",
+              "material": MAT["cliff"]},
+             T((river_x(zi) + coff * ex, 0.0, zi + coff * ez)))
+        zi += 2.0
+        i += 1
+
+    # ------------------------------------------------------------------ water
+    # 一条沿河道生成的带状网格，UV 顺流。
+    # 之前是一片片独立 plane，着色器只能按世界坐标滚动噪声 ——
+    # 河道拐弯处水流会横穿河岸（静帧看不出来，跑起来一眼就错）。
+    node("River", "MeshInstance3D", ".", {
+        "script": ext("Script", "res://scripts/environment/RiverSurface.gd"),
+        "material_override": MAT["water"],
+        "river_x0": "%g" % RX0,
+        "river_slope": "%g" % RSLOPE,
+        "river_amp": "%g" % RIVER_AMP,
+        "river_freq": "%g" % RIVER_FREQ,
+        "river_w": "%g" % RIVER_W,
+        "river_w_amp": "%g" % RIVER_W_AMP,
+        "river_w_freq_mul": "1.7",
+        "river_w_phase": "1.1",
+        "water_y": "%g" % WATER_Y,
+        "z_start": "-50.0", "z_end": "50.0", "step": "1.5",
+        "overhang": "3.2", "v_scale": "6.0", "u_metre_scale": "4.0",
+        "bank_jitter": "%g" % BANK_JIT,
+    })
+
+    # ------------------------------------------------------------ dirt tracks
+    paths = node("Paths", "Node3D", ".")
+    n = 0
+    for a in range(0, 360, 9):
+        r = math.radians(a)
+        px = LOOP_C[0] + LOOP_A * math.cos(r)
+        pz = LOOP_C[1] + LOOP_B * math.sin(r)
+        mesh("Path%d" % n, paths, box, MAT["dirt"], (px, 0.04, pz),
+             ry=-a + 90, scale=(3.0, 0.08, 2.4), cast_shadow="0")
+        n += 1
+    for t in range(7):                                     # spur to the bridge
+        f = t / 6.0
+        mesh("Path%d" % n, paths, box, MAT["dirt"],
+             (-3.4 + f * 4.4, 0.04, -4.4 - f * 3.2), ry=32,
+             scale=(2.6, 0.08, 2.2), cast_shadow="0")
+        n += 1
+    for i, (px, pz, w, d, ry) in enumerate([               # worn yards
+            (-10.4, -12.6, 7.0, 4.6, -8.0), (-2.4, -8.4, 4.6, 3.4, 16.0),
+            (3.9, -14.2, 4.4, 3.2, 6.0), (3.4, -7.4, 6.0, 3.0, -26.0)]):
+        mesh("Yard%d" % i, paths, box, MAT["dirt"], (px, 0.03, pz), ry=ry,
+             scale=(w, 0.06, d), cast_shadow="0")
+
+    # ----------------------------------------------------------------- bridge
+    # 桥面、栏杆、桅杆现在是 Blender 资产（tools/gen_assets_blender.py 的 bridge()）：
+    # 横铺的板逐块抖长度/厚度/角度/颜色、所有木件带倒角。
+    # 之前在这里用 CSG 盒子拼，出来是"几块对齐的平板"——
+    # 板是一整块、边是 90° 硬棱、整片同色，三件事都得在几何层解决。
+    #
+    # 留在场景侧的只有和地形相关的部分：桥墩（长度取决于河床）、
+    # 拉索（端点取决于地面）、引桥台阶。
+    bz, bcx = BRIDGE_Z, river_x(BRIDGE_Z)
+    br = node("Bridge", "Node3D", ".")
+    x0 = bcx - DECK_L / 2.0                                # near end of deck
+    instance("Deck", br, ext("PackedScene", MESH("bridge.glb")),
+             T((bcx, DECK_Y, bz), ry=RANG), child="bridge",
+             override=MAT["propwood"])
+
+    for i, offz in enumerate((-DECK_W / 2.0 + 1.1, DECK_W / 2.0 - 1.1)):
+        for j, dx in enumerate((-RIVER_W / 2.0 + 0.9, RIVER_W / 2.0 - 0.9)):
+            mesh("Pylon%d%d" % (i, j), br, cyl, MAT["wood"],
+                 (bcx + dx, (DECK_Y + BED_Y) / 2.0, bz + offz),
+                 scale=(0.6, DECK_Y - BED_Y, 0.6))
+    # 近岸引桥：一个四周平滑归零的**高度场土丘**（scripts/environment/EarthRamp.gd）。
+    #
+    # 走过两版都不行：
+    #   三块悬空的大木板 —— 缩放到 8.4 m 宽之后是三块巨大的平板；
+    #   一个旋转的 CSG 盒子 —— 三面都是硬棱，读成三角楔子，而且是实体，
+    #                          既捅穿了桥面也捅穿了旁边的房子。
+    # 高度场把这三条一起解决：两端和两侧都 smoothstep 归零，边缘落回地面高度。
+    # 用地形材质（世界坐标投影），草地纹理和周围地面严丝合缝。
+    node("Approach", "MeshInstance3D", br,
+         {"script": ext("Script", "res://scripts/environment/EarthRamp.gd"),
+          "material_override": MAT["grass"],
+          "length": "%g" % RAMP_LEN,
+          "height": "%g" % (DECK_Y - 0.42),   # 低于桥底面（纵梁底在 -0.30），留 0.12 余量
+          "half_width_toe": "%g" % (DECK_W * 0.5 + 2.2),  # 坡趾比桥宽，才不像个楔子
+          "half_width_head": "%g" % (DECK_W * 0.5 + 0.9),
+          "side_falloff": "0.42", "head_flat": "0.16",
+          "noise_amp": "0.16", "noise_freq": "0.55"},
+         T((x0 + 0.6, 0.0, bz), ry=RANG))
+
+    # -------------------------------------------------------------- buildings
+    bl = node("Buildings", "Node3D", ".")
+
+    def building(nm, pos, w, d, h, ry, chim):
+        mesh(nm + "Walls", bl, box, MAT["wall"], (pos[0], h / 2.0, pos[1]),
+             ry=ry, scale=(w, h, d))
+        mesh(nm + "Roof", bl, prism, MAT["roof"], (pos[0], h + 1.1, pos[1]),
+             ry=ry, scale=(w + 0.8, 2.2, d + 0.8))
+        mesh(nm + "Chimney", bl, box, MAT["wall"],
+             (pos[0] + chim[0], h + 1.6, pos[1] + chim[1]), ry=ry,
+             scale=(0.7, 2.4, 0.7))
+
+    # 建筑改用 Blender 程序化生成的资产（tools/gen_assets_blender.py）：
+    # 出檐、屋脊、门窗凹陷、转角立柱、门廊 —— 这些是 M2 判定的最大视觉短板，
+    # 每样只花几十个面。GLB 里三栋房子摆在 x = -9 / 0 / 9，
+    # 用一个偏移把需要的那栋挪到父节点原点，其余两栋跟着挪出画面外。
+    for nm, px, pz, ry, src in [
+            ("HouseA", -14.5, -14.5, -8.0, "house_large"),
+            ("HouseB", -4.0, -18.5, 22.0, "house_small"),
+            ("HouseC", -21.5, -6.5, 22.0, "house_tall")]:
+        instance(nm, bl, ext("PackedScene", MESH(src + ".glb")),
+                 T((px, 0.0, pz), ry=ry), child=src, override=MAT["prophouse"])
+
+    mesh("ShedFloor", bl, box, MAT["woodlt"], (2.6, 0.6, -17.6), ry=6.0,
+         scale=(3.6, 0.2, 3.0))
+    for i, (dx, dz) in enumerate(((-1.6, -1.3), (1.6, -1.3),
+                                  (-1.6, 1.3), (1.6, 1.3))):
+        mesh("ShedPost%d" % i, bl, box, MAT["wood"],
+             (2.6 + dx, 1.2, -17.6 + dz), scale=(0.2, 1.4, 0.2))
+    mesh("ShedRoof", bl, box, MAT["wood"], (2.6, 2.0, -17.6), ry=6.0,
+         scale=(4.0, 0.2, 3.4))
+
+    # ------------------------------------------------------------------ props
+    pr = node("Props", "Node3D", ".")
+    for i, (px, pz, s, ry) in enumerate([
+            (-18.6, -9.0, 1.0, 12.0), (-17.4, -10.2, 0.8, -20.0),
+            (-18.3, -10.5, 0.7, 35.0), (-6.9, -15.9, 0.9, 8.0),
+            (6.0, -12.6, 0.8, -14.0), (-14.4, -6.9, 0.75, 25.0),
+            (-24.0, -3.0, 0.9, -8.0), (5.4, -16.5, 0.7, 18.0),
+            (-9.0, -17.4, 0.85, 30.0)]):
+        mesh("Crate%d" % i, pr, box, MAT["woodlt"], (px, s * 0.5, pz), ry=ry,
+             scale=(s, s, s))
+    for i in range(14):                                    # fence line
+        mesh("Fence%d" % i, pr, box, MAT["wood"],
+             (-20.4 + i * 1.35, 0.6, -3.6 + i * 0.42), ry=-16.0,
+             scale=(0.14, 1.2, 0.14))
+    for i in range(9):                                     # second fence
+        mesh("FenceB%d" % i, pr, box, MAT["wood"],
+             (-16.0 + i * 1.3, 0.6, -18.6 - i * 0.2), ry=8.0,
+             scale=(0.14, 1.2, 0.14))
+    # ------------------------------------------------- scatter (rejection map)
+    # Shared occupancy list so rocks/trees/bushes never pile into each other or
+    # into gameplay space (roads, meadow, bridge approach, player).
+    # 这张表里的坐标必须和实际摆放一致。上一轮挪了房子却没改这里，
+    # 于是石头树木照着**旧位置**避让 —— 新位置周围反而堆满了散布物。
+    taken = [(-14.5, -14.5, 6.4), (-4.0, -18.5, 5.0), (-21.5, -6.5, 5.2),
+             (2.6, -17.6, 3.4), (-1.2, 3.6, 7.5), (bcx, bz, 11.0),
+             ]
+
+    def blocked(px, pz, r):
+        if abs(px - river_x(pz)) < RIVER_W / 2.0 + 1.0 + r * 0.3:
+            return True                                    # in the gorge
+        ex = (px - LOOP_C[0]) / LOOP_A
+        ez = (pz - LOOP_C[1]) / LOOP_B
+        if math.hypot(ex, ez) < 1.20:                      # road + open meadow
+            return True
+        for tx, tz, tr_ in taken:
+            if math.hypot(px - tx, pz - tz) < tr_ + r:
+                return True
+        return False
+
+    def claim(px, pz, r):
+        taken.append((px, pz, r))
+
+    def bank_y(px, pz):
+        return FAR_BANK_Y if px > river_x(pz) + RIVER_W / 2.0 else 0.0
+
+    def cluster(n, cx, cz, spread, sr, r_mul=1.0, tries=30):
+        """Gaussian clump: the reference art clumps props, it never scatters
+        them uniformly."""
+        out = []
+        for _ in range(n):
+            for _t in range(tries):
+                px = cx + random.gauss(0.0, spread)
+                pz = cz + random.gauss(0.0, spread)
+                s = random.uniform(*sr)
+                if not blocked(px, pz, s * r_mul):
+                    claim(px, pz, s * r_mul)
+                    out.append((px, pz, s))
+                    break
+        return out
+
+    # rocks: boulder field lower-left, gorge lip, far bank, frame-filling clumps
+    spots = []
+    for cx, cz, n, sp in [(-17.0, 12.0, 11, 3.6), (-11.0, 19.5, 8, 3.4),
+                          (-22.0, 3.0, 6, 3.0), (-20.0, -8.0, 4, 2.6),
+                          (-5.0, 22.0, 5, 3.2), (-28.0, 16.0, 5, 3.4)]:
+        spots += cluster(n, cx, cz, sp, (0.62, 1.55), r_mul=0.9)
+    # 少数几块显眼的大石，作为视觉锚点 —— 参考图也是这个结构
+    for cx, cz in ((-15.5, 14.5), (-8.0, 20.5), (-24.0, 6.0)):
+        spots += cluster(1, cx, cz, 1.0, (2.1, 2.6), r_mul=1.2)
+    # 岸线：参考图的水陆边界**整条被石头砌满** —— 大块的半沉在水里，
+    # 草皮直接压到石头上，没有一段裸露的土坡。这是目标图和我们差得最远的地方，
+    # 也是最有效的一招：石头一铺，岸线是否规则就不再由挖槽的曲线决定了。
+    #
+    # 关键是按 bank_point() 摆，也就是**实际**岸线（带两岸独立抖动），
+    # 而不是名义半宽 river_w/2 —— 后者在河道倾斜时本身就有 cos 误差，
+    # 石头会整体偏进水里。
+    zb = -26.0
+    while zb <= 26.0:
+        for side in (-1.0, 1.0):
+            ex, ez = river_perp(zb)
+            # 立面主要靠贴图（见 ground.gdshader 的岩石分支），
+            # 石头只是点缀 —— 参考图也是这样：有明显的单块石头，
+            # 但大部分立面是石质纹理，不是一块块堆出来的
+            for _k in range(2):
+                off = random.uniform(-1.3, 1.9)      # 负值 = 探进水里
+                bx, bz = bank_point(zb, side)
+                px = bx + side * off * ex + random.uniform(-0.4, 0.4)
+                pz = bz + side * off * ez + random.uniform(-0.7, 0.7)
+                sc = random.uniform(0.70, 1.9)
+                if off < 0.0 or not blocked(px, pz, sc * 0.55):
+                    if off >= 0.0:
+                        claim(px, pz, sc * 0.55)
+                    spots.append((px, pz, sc if off >= 0.0 else -sc))
+        zb += 2.1
+    for cz in (-17.0, -2.0, 13.0):                         # far bank
+        spots += cluster(4, river_x(cz) + 9.0, cz, 4.0, (0.6, 1.6), r_mul=0.9)
+    for cx, cz in ((-40.0, 20.0), (30.0, -34.0), (-42.0, -22.0), (38.0, 22.0),
+                   (0.0, 34.0), (-30.0, -34.0)):
+        spots += cluster(6, cx, cz, 6.0, (0.7, 1.9), r_mul=0.9)
+    rock_pl = []
+    for px, pz, s in spots:
+        in_water = s < 0.0
+        s = abs(s)
+        sy = s * random.uniform(0.55, 0.85)
+        base = WATER_Y + 0.10 if in_water else bank_y(px, pz) - 0.18 * sy
+        rock_pl += [px, base, pz,
+                    random.uniform(0.0, 360.0),
+                    s, sy, s * random.uniform(0.7, 1.2)]
+    node("Rocks", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+        "kind": '"rock"',
+        "source_scene": ext("PackedScene", MESH("rocks_lp.glb")),
+        "variants": "8",
+        "material": MAT["proprock"],
+        "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in rock_pl),
+    })
+
+    # 碎石：参考图的地面几乎没有空白，除了大石块还有满地小石子。
+    # 单独一层、不投影、成簇跟着大石块和路边走。
+    pebble_pl = []
+    # 碎石整体减量约四成，并砍掉几处铺在空地上的簇 ——
+    # 实测安静块占比只有目标图的 5/13，小装饰物铺得太满是主因之一。
+    for cx, cz, n, sp in [(-17.0, 11.0, 13, 5.0), (-10.0, 19.0, 10, 4.5),
+                          (-21.0, 2.0, 8, 4.0), (-4.0, 21.0, 7, 4.5),
+                          (-27.0, 16.0, 7, 4.5), (-19.5, -8.0, 6, 3.5),
+                          (12.0, 6.0, 7, 5.0), (16.0, -12.0, 6, 5.0)]:
+        for px, pz, sc in cluster(n, cx, cz, sp, (0.35, 0.95), r_mul=0.2):
+            pebble_pl += [px, bank_y(px, pz) - 0.04, pz,
+                          random.uniform(0.0, 360.0),
+                          sc, sc * random.uniform(0.6, 1.0), sc]
+    node("Pebbles", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+        "kind": '"rock"',
+        "source_scene": ext("PackedScene", MESH("pebbles.glb")),
+        "variants": "6",
+        "material": MAT["proprock"],
+        "cast_shadows": "false",
+        "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in pebble_pl),
+    })
+
+    # trees: authored singles inside the core, groves filling the frame edges
+    tree_spots = []
+    for px, pz, s in [(-3.0, 17.0, 1.1), (2.4, 20.0, 0.9), (-20.0, -19.0, 1.05),
+                      (-14.4, -20.7, 0.9), (12.0, 21.0, 0.95), (-23.0, 6.0, 0.95),
+                      (23.0, -19.0, 1.1), (20.0, 16.0, 1.0), (-28.0, -12.0, 1.0),
+                      (16.0, 8.0, 0.95), (-9.0, 23.0, 1.0)]:
+        claim(px, pz, 2.4 * s)
+        tree_spots.append((px, pz, s))
+    for cx, cz, n in [(-40.0, -3.0, 7), (-28.0, -32.0, 6), (9.0, -38.0, 6),
+                      (40.0, -9.0, 7), (34.0, 25.0, 6), (-12.0, 32.0, 5),
+                      (-44.0, 25.0, 5), (26.0, 34.0, 5), (44.0, 6.0, 5)]:
+        tree_spots += cluster(n, cx, cz, 7.0, (0.85, 1.25), r_mul=2.4)
+    tree_pl = []
+    for px, pz, s in tree_spots:
+        tree_pl += [px, bank_y(px, pz), pz, random.uniform(0.0, 360.0), s, s, s]
+    node("Trees", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+        "kind": '"tree"',
+        "source_scene": ext("PackedScene", MESH("trees.glb")),
+        "variants": "4",
+        "material": MAT["leafA"],
+        "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in tree_pl),
+    })
+
+    # bushes: skirt the rock clumps and the gorge, never the open meadow
+    bush_spots = []
+    for cx, cz, n, sp in [(-16.5, 12.0, 8, 5.0), (-8.0, 19.5, 6, 4.4),
+                          (-20.0, -6.0, 6, 4.0), (4.5, -16.5, 5, 4.0),
+                          (20.0, 6.0, 7, 5.5), (18.5, -13.5, 6, 5.0),
+                          (-33.0, 9.0, 7, 7.0), (24.0, -27.0, 7, 7.0),
+                          (-26.0, 24.0, 6, 6.0), (6.0, 28.0, 6, 6.0)]:
+        bush_spots += cluster(n, cx, cz, sp, (0.6, 1.2), r_mul=1.1)
+    bush_pl = []
+    for px, pz, s in bush_spots:
+        bush_pl += [px, bank_y(px, pz), pz, random.uniform(0.0, 360.0),
+                    s * 1.7, s * 1.1, s * 1.5]
+    node("Bushes", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+        "kind": '"bush"',
+        "source_scene": ext("PackedScene", MESH("bushes.glb")),
+        "variants": "6",
+        "material": MAT["bush"],
+        "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in bush_pl),
+    })
+
+    # ------------------------------------------------------- ground clutter
+    # One MultiMesh of real (tiny) blade geometry -- no alpha, no overdraw.
+    # `taken` at this point holds every prop already placed, so tufts never
+    # grow through a rock or a wall.
+    excl = ", ".join("%.2f, %.2f, %.2f" % (tx, tz, max(tr_ * 0.8, 0.6))
+                     for tx, tz, tr_ in taken)
+    node("GrassField", "MultiMeshInstance3D", ".",
+         {"script": ext("Script", "res://scripts/environment/GrassField.gd"),
+          "material_override": MAT["tuft"],
+          "cast_shadow": "0",
+          "tuft_count": "2600",
+          "area_min": "Vector2(-36, -32)",
+          "area_max": "Vector2(32, 24)",
+          "far_bank_y": "%g" % FAR_BANK_Y,
+          "river_x0": "%g" % RX0,
+          "river_slope": "%g" % RSLOPE,
+          "river_half": "%g" % (RIVER_W / 2.0 + 0.7),
+          "loop_center": "Vector2(%g, %g)" % LOOP_C,
+          "loop_radii": "Vector2(%g, %g)" % (LOOP_A, LOOP_B),
+          "loop_band": "Vector2(0.80, 1.20)",
+          "exclusions": "PackedVector3Array(%s)" % excl,
+          "blade_height": "0.42",
+          "rng_seed": "20260820"})
+
+    # ------------------------------------------------------ player placeholder
+    pl = node("Player", "Node3D", ".", None, T((-1.2, 0.0, 3.6), ry=28.0))
+    mesh("Torso", pl, box, MAT["player"], (0.0, 1.55, 0.0), scale=(1.9, 1.2, 2.3))
+    mesh("Turret", pl, cyl, MAT["player"], (0.0, 2.35, -0.2), scale=(1.3, 0.7, 1.3))
+    mesh("Gun", pl, cyl, MAT["metal"], (0.45, 2.3, -1.7), rx=90.0,
+         scale=(0.28, 2.4, 0.28))
+    mesh("Gun2", pl, cyl, MAT["metal"], (-0.45, 2.3, -1.5), rx=90.0,
+         scale=(0.24, 2.0, 0.24))
+    for i, dx in enumerate((-0.95, 0.95)):
+        mesh("Hip%d" % i, pl, box, MAT["metal"], (dx, 1.0, 0.0),
+             scale=(0.5, 0.7, 1.2))
+        mesh("Leg%d" % i, pl, box, MAT["metal"], (dx, 0.45, 0.1),
+             scale=(0.42, 0.9, 0.5))
+        mesh("Foot%d" % i, pl, box, MAT["metal"], (dx, 0.12, 0.15),
+             scale=(0.6, 0.25, 1.5))
+
+    if performance:
+        # ------------------------------------------------------ crowd benchmark
+        node("Crowd", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/units/EnemyCrowd.gd"),
+            "target_path": 'NodePath("../Player")',
+            "count": "0",
+            "spawn_radius": "%.1f" % spawn_radius(),
+            "move_speed": "1.6",
+            "stop_radius": "6.0",
+            "churn_per_sec": "10.0",
+            "shadow_mode": '"B"',
+        })
+        node("CrowdMM", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/units/EnemyCrowdMM.gd"),
+            "target_path": 'NodePath("../Player")',
+            "variant": '"merged"',
+            "count": "0",
+            "spawn_radius": "%.1f" % spawn_radius(),
+            "move_speed": "1.6",
+            "stop_radius": "6.0",
+            "churn_per_sec": "10.0",
+            "shadow_mode": '"B"',
+        })
+        node("Vfx", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/vfx/VfxManager.gd"),
+            "explosion_light": "false",
+            # 只有压测场景需要大容量手动投放池（见 VfxManager.mass_pool）
+            "mass_pool": "8192",
+        })
+        node("VfxStress", "Node3D", ".", {
+            "script": ext("Script", "res://scripts/vfx/VfxStress.gd"),
+            "vfx_path": 'NodePath("../Vfx")',
+            "center_path": 'NodePath("../Player")',
+            "target_projectiles": "0",
+            "explosions_per_sec": "0.0",
+            "radius": "22.0",
+        })
+        node("Benchmark", "Node", ".", {
+            "script": ext("Script", "res://benchmark/BenchmarkManager.gd"),
+            "crowd_path": 'NodePath("../Crowd")',
+            "crowd_mm_path": 'NodePath("../CrowdMM")',
+            "stress_path": 'NodePath("../VfxStress")',
+            "warmup_sec": "5.0",
+            "measure_sec": "20.0",
+            "label": '"M4-node"',
+        })
+        return
+
+    # ----------------------------------------------------- enemy placeholders
+    en = node("Enemies", "Node3D", ".")
+    for i, (px, pz) in enumerate([
+            (-9.3, -5.1), (-6.6, -7.8), (-3.0, -3.9), (0.9, -1.8), (3.3, -5.7),
+            (-12.0, 0.6), (-9.0, 4.2), (-4.5, 6.9), (2.1, 4.8), (5.4, 1.5),
+            (6.9, -9.6), (-15.6, -3.0), (-2.4, 10.5), (-13.5, 9.0), (3.0, 12.6),
+            (8.1, 7.5), (-18.0, 2.4), (-7.5, 14.7), (10.5, -3.0), (-19.5, 12.0),
+            (1.5, 17.0), (-11.0, 18.0), (12.5, 3.0), (-16.0, 6.5), (6.5, -2.0),
+            (-5.0, 20.0)]):
+        g = node("Enemy%d" % i, "Node3D", en, None,
+                 T((px, 0.0, pz), ry=random.uniform(0.0, 360.0)))
+        # ~1.6 m tall: readable as a silhouette from the gameplay camera
+        mesh("Body", g, cap, MAT["enemy"], (0.0, 0.92, 0.0),
+             scale=(0.78, 0.62, 0.78))
+        mesh("Head", g, box, MAT["metal"], (0.0, 1.44, 0.0), scale=(0.5, 0.36, 0.5))
+        mesh("Gun", g, box, MAT["metal"], (0.3, 1.02, -0.62), scale=(0.18, 0.18, 1.1))
+        for j, dx in enumerate((-0.3, 0.3)):
+            mesh("Leg%d" % j, g, box, MAT["metal"], (dx, 0.26, 0.0),
+                 scale=(0.24, 0.52, 0.3))
+
+    # ------------------------------------------------------------ combat VFX
+    # Milestone 3: presentation only -- pooled/batched VFX plus a director that
+    # fires the three reference weapons at the rates from doc section 22.
+    node("Vfx", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/vfx/VfxManager.gd"),
+        "explosion_light": "false",
+    })
+    node("Combat", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/units/CombatDirector.gd"),
+        "vfx_path": 'NodePath("../Vfx")',
+        "player_path": 'NodePath("../Player")',
+        "enemies_path": 'NodePath("../Enemies")',
+        "mg_rate": "10.0",
+        "rocket_rate": "2.0",
+        "tesla_rate": "1.0",
+    })
+
+    # One mid-sized enemy on the bridge, for scale reference.
+    md = node("MidEnemy", "Node3D", ".", None,
+              T((bcx + 4.5, DECK_Y + 0.15, bz), ry=-108.0))
+    mesh("Hull", md, box, MAT["enemy"], (0.0, 1.1, 0.0), scale=(2.6, 1.5, 3.2))
+    mesh("Turret", md, cyl, MAT["metal"], (0.0, 2.1, 0.0), scale=(1.8, 0.8, 1.8))
+    mesh("Barrel", md, cyl, MAT["metal"], (0.0, 2.1, -2.0), rx=90.0,
+         scale=(0.3, 3.0, 0.3))
+    for j, dx in enumerate((-1.5, 1.5)):
+        mesh("Track%d" % j, md, box, MAT["metal"], (dx, 0.45, 0.0),
+             scale=(0.7, 0.9, 3.4))
+
+
+
+def clearance_items():
+    """作者手摆的大件，交给 check_clearance()。见 docs/环境表面制作方法.md §2。"""
+    return [
+        ("Bridge", footprint(river_x(BRIDGE_Z), BRIDGE_Z, DECK_L, DECK_W, RANG)),
+        ("HouseA", footprint(-14.5, -14.5, 7.6, 5.6, -8.0)),
+        ("HouseB", footprint(-4.0, -18.5, 5.4, 4.6, 22.0)),
+        ("HouseC", footprint(-21.5, -6.5, 5.8, 5.0, 22.0)),
+        ("Shed", footprint(2.6, -17.6, 4.0, 3.4, 6.0)),
+        ("Ramp", footprint(
+            river_x(BRIDGE_Z) - DECK_L / 2.0 + 0.6
+            - RAMP_LEN * 0.5 * (1.0 - (1.0 - RAMP_SOLID[0]) * 0.6),
+            BRIDGE_Z, RAMP_LEN * RAMP_SOLID[0],
+            (DECK_W + 4.4) * RAMP_SOLID[1], RANG)),
+    ]

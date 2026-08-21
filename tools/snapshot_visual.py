@@ -4,9 +4,9 @@
 每次视觉迭代都会覆盖 m2_visual.png，所以"上一版长什么样"其实一直躺在 git 里，
 只是看不见。这个脚本把它们摊开：
 
-    docs/reference/history/NN_<hash>.png   每次提交时的那一版
-    docs/reference/history/contact_sheet.png  拼图总览，一眼看完全过程
-    docs/reference/history/README.md       序号 / 提交 / 日期 / 那一版做了什么
+    styles/<风格>/history/NN_<hash>.png        每次提交时的那一版
+    styles/<风格>/history/contact_sheet.png    拼图总览，一眼看完全过程
+    styles/<风格>/history/README.md            序号 / 提交 / 日期 / 那一版做了什么
 
 工作区里如果有还没提交的改动，会额外排在最后一格，标成"未提交"。
 提交之后重跑一次，它就会归位成正式的一版。
@@ -19,8 +19,15 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TRACKED = "docs/reference/m2_visual.png"
-OUT_DIR = os.path.join(REPO, "docs", "reference", "history")
+# 每个美术风格一份迭代记录。gatling 沿用原来的路径，
+# 这样 git --follow 能一路取到最早那一版。
+STYLE = "gatling"
+for _i, _a in enumerate(sys.argv[1:]):
+    if _a == "--style":
+        STYLE = sys.argv[_i + 2]
+TRACKED = ("docs/reference/m2_visual.png" if STYLE == "gatling"
+           else "docs/reference/m2_visual_%s.png" % STYLE)
+OUT_DIR = os.path.join(REPO, "styles", STYLE, "history")
 
 CELL_W, CELL_H = 480, 270
 COLS, PAD, HDR = 3, 10, 26
