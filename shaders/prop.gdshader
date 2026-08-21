@@ -40,6 +40,24 @@ uniform vec3 uv_tex_mean = vec3(1.0);
 uniform sampler2D albedo_tex_b : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec3 uv_tex_mean_b = vec3(1.0);
 uniform float uv_tex_scale_b = 1.0;
+// UV 是在资产的**局部**尺寸上铺的（uv_planar），实例被缩放之后
+// 纹理密度会跟着变：石头的实例缩放在 0.7-1.9 之间，密度差近 3 倍，
+// 小石头上就出现大块斑。打开这个开关，UV 乘上实例的缩放量，
+// 纹理密度就变成按世界米恒定。
+uniform float uv_world_density = 0.0;
+// 贴图的取样方式。
+//
+// UV 平面投影（默认）适合**平面为主**的资产：房屋、桥板、梁柱。
+// 它还能控制方向（茅草顺坡、木纹顺长边），三平面做不到这一点。
+//
+// 但它在**凸包**上不能用：uv_planar 是逐面按法线主轴投影的，
+// 相邻面的投影轴不同，UV 在每条棱上都断开。面少的盒子看不出来，
+// 二十多个面的石头就成了一身错位的豹纹斑。
+// 石头改走世界空间三平面：跨面连续，而且天然按世界米取样，
+// 实例缩放也不影响密度。代价是 3 次取样。
+uniform float use_triplanar = 0.0;
+uniform float triplanar_scale = 0.8;
+uniform float triplanar_sharpness = 4.0;
 
 // 两套参数，按 COLOR.a 混合：0 = 石/灰泥，1 = 木/茅草。
 //
@@ -75,6 +93,8 @@ void fragment() {
 	th = tl > 0.001 ? th / tl : vec3(1.0, 0.0, 0.0);
 	vec3 tv = normalize(cross(n, th));
 
+	// 实例缩放量（取 X 轴基向量的长度；这些资产都是等比缩放的）
+	float inst = mix(1.0, length(MODEL_MATRIX[0].xyz), uv_world_density);
 	float sc = mix(scale_stone, scale_wood, COLOR.a);
 	float contrast = mix(contrast_stone, contrast_wood, COLOR.a);
 	float bump = mix(bump_stone, bump_wood, COLOR.a);
@@ -86,10 +106,21 @@ void fragment() {
 	vec3 base = COLOR.rgb * (1.0 - contrast * 0.5 + contrast * h0);
 	// 外部贴图叠在顶点色之上：贴图给花纹，顶点色给每个部件的色调，
 	// 两者相乘 —— 这样一张木纹图能长出深浅不同的所有木件。
-	vec3 tex_a = texture(albedo_tex, UV * uv_tex_scale).rgb
-			/ max(uv_tex_mean, vec3(0.001));
-	vec3 tex_b = texture(albedo_tex_b, UV * uv_tex_scale_b).rgb
-			/ max(uv_tex_mean_b, vec3(0.001));
+	vec2 uv_a = UV * uv_tex_scale * inst;
+	vec2 uv_b = UV * uv_tex_scale_b * inst;
+	vec3 tex_a = texture(albedo_tex, uv_a).rgb;
+	vec3 tex_b = texture(albedo_tex_b, uv_b).rgb;
+	if (use_triplanar > 0.5) {
+		vec3 bl = pow(abs(n), vec3(triplanar_sharpness));
+		bl /= max(bl.x + bl.y + bl.z, 0.001);
+		vec3 p = w_pos * triplanar_scale;
+		tex_a = texture(albedo_tex, p.zy).rgb * bl.x
+				+ texture(albedo_tex, p.xz).rgb * bl.y
+				+ texture(albedo_tex, p.xy).rgb * bl.z;
+		tex_b = tex_a;
+	}
+	tex_a /= max(uv_tex_mean, vec3(0.001));
+	tex_b /= max(uv_tex_mean_b, vec3(0.001));
 	vec3 tex = mix(tex_a, tex_b, COLOR.a);
 	tex = mix(vec3(1.0), tex, uv_tex_strength);
 	ALBEDO = mix(base, base * tex, use_uv_tex);

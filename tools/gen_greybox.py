@@ -300,6 +300,28 @@ def materials():
         bump_stone="1.10", bump_wood="0.80",
         epsilon="0.06", surface_roughness="0.94")
 
+    # 石头：颗粒 + 裂纹的岩石贴图，颜色来自顶点色（逐块抖过）。
+    # MultiMesh 上必须挂 material_override，否则用的是 GLB 自带的纯色材质 ——
+    # 这个坑在树、房屋、石头上各踩了一次。
+    MAT["proprock"] = shader_mat(
+        "MatPropRock", "res://shaders/prop.gdshader",
+        detail_noise=detail,
+        albedo_tex=ext("Texture2D", "res://assets/textures/rock.png"),
+        albedo_tex_b=ext("Texture2D", "res://assets/textures/rock.png"),
+        uv_tex_mean=tex_mean("assets/textures/rock.png"),
+        uv_tex_mean_b=tex_mean("assets/textures/rock.png"),
+        use_uv_tex="1.0", uv_tex_scale="1.0", uv_tex_scale_b="1.0",
+        uv_tex_strength="0.55",
+        use_triplanar="1.0", triplanar_scale="0.85",
+        triplanar_sharpness="4.0",
+        scale_stone="0.60", scale_wood="0.60",
+        contrast_stone="0.26", contrast_wood="0.26",
+        # 法线扰动对凸包不能开：它用的是逐面切平面投影，
+        # 相邻面的坐标系不同，扰动图案在每条棱上跳变 ——
+        # 小石头上就是一身黑白斑。石头的立体感交给三平面 albedo 和倒角。
+        bump_stone="0.0", bump_wood="0.0",
+        epsilon="0.06", surface_roughness="0.90")
+
     MAT["prop"] = shader_mat("MatProp", "res://shaders/prop.gdshader",
                              detail_noise=detail,
                              scale_stone="0.55", scale_wood="0.75",
@@ -970,7 +992,7 @@ def build():
     for cx, cz, n, sp in [(-17.0, 12.0, 11, 3.6), (-11.0, 19.5, 8, 3.4),
                           (-22.0, 3.0, 6, 3.0), (-20.0, -8.0, 4, 2.6),
                           (-5.0, 22.0, 5, 3.2), (-28.0, 16.0, 5, 3.4)]:
-        spots += cluster(n, cx, cz, sp, (0.45, 1.55), r_mul=0.9)
+        spots += cluster(n, cx, cz, sp, (0.62, 1.55), r_mul=0.9)
     # 少数几块显眼的大石，作为视觉锚点 —— 参考图也是这个结构
     for cx, cz in ((-15.5, 14.5), (-8.0, 20.5), (-24.0, 6.0)):
         spots += cluster(1, cx, cz, 1.0, (2.1, 2.6), r_mul=1.2)
@@ -993,7 +1015,7 @@ def build():
                 bx, bz = bank_point(zb, side)
                 px = bx + side * off * ex + random.uniform(-0.4, 0.4)
                 pz = bz + side * off * ez + random.uniform(-0.7, 0.7)
-                sc = random.uniform(0.55, 1.9)
+                sc = random.uniform(0.70, 1.9)
                 if off < 0.0 or not blocked(px, pz, sc * 0.55):
                     if off >= 0.0:
                         claim(px, pz, sc * 0.55)
@@ -1018,17 +1040,19 @@ def build():
         "kind": '"rock"',
         "source_scene": ext("PackedScene", "res://assets/environment/rocks_lp.glb"),
         "variants": "8",
+        "material": MAT["proprock"],
         "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in rock_pl),
     })
 
     # 碎石：参考图的地面几乎没有空白，除了大石块还有满地小石子。
     # 单独一层、不投影、成簇跟着大石块和路边走。
     pebble_pl = []
-    for cx, cz, n, sp in [(-17.0, 11.0, 22, 5.0), (-10.0, 19.0, 18, 4.5),
-                          (-21.0, 2.0, 14, 4.0), (-4.0, 21.0, 12, 4.5),
-                          (-27.0, 16.0, 12, 4.5), (-19.5, -8.0, 10, 3.5),
-                          (12.0, 6.0, 12, 5.0), (16.0, -12.0, 10, 5.0),
-                          (-8.0, -3.0, 9, 6.0), (2.0, 8.0, 9, 6.0)]:
+    # 碎石整体减量约四成，并砍掉几处铺在空地上的簇 ——
+    # 实测安静块占比只有目标图的 5/13，小装饰物铺得太满是主因之一。
+    for cx, cz, n, sp in [(-17.0, 11.0, 13, 5.0), (-10.0, 19.0, 10, 4.5),
+                          (-21.0, 2.0, 8, 4.0), (-4.0, 21.0, 7, 4.5),
+                          (-27.0, 16.0, 7, 4.5), (-19.5, -8.0, 6, 3.5),
+                          (12.0, 6.0, 7, 5.0), (16.0, -12.0, 6, 5.0)]:
         for px, pz, sc in cluster(n, cx, cz, sp, (0.35, 0.95), r_mul=0.2):
             pebble_pl += [px, bank_y(px, pz) - 0.04, pz,
                           random.uniform(0.0, 360.0),
@@ -1038,6 +1062,7 @@ def build():
         "kind": '"rock"',
         "source_scene": ext("PackedScene", "res://assets/environment/pebbles.glb"),
         "variants": "6",
+        "material": MAT["proprock"],
         "cast_shadows": "false",
         "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in pebble_pl),
     })

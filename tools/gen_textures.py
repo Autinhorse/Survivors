@@ -7,7 +7,7 @@
 
     python tools/gen_textures.py                 # 全部
     python tools/gen_textures.py wood            # 只生成木纹
-                                                 # 可选: wood / thatch / plaster
+                                                 # 可选: wood / thatch / plaster / rock
 
 改完之后：
     Godot_v4.7-stable_win64_console.exe --path . --import --headless
@@ -150,9 +150,44 @@ def plaster(size=512, seed=23):
     return im.filter(ImageFilter.GaussianBlur(0.9))
 
 
+def rock(size=512, seed=31):
+    """岩石表面：大块斑驳 + 细颗粒 + 几道裂纹。
+
+    石头之前"太光"的直接原因是贴图根本没挂上（MultiMesh 没有 material_override），
+    但即使挂上，各向同性的值噪声也只是让它变脏。
+    真正让石头读成石头的是**颗粒感 + 少量裂纹**这两个不同尺度的东西。
+    """
+    rng = random.Random(seed)
+    im = Image.new("RGB", (size, size), (150, 143, 136))
+    px = im.load()
+    blotch = _tile_noise(size, rng, 6, 0.82, 1.18).load()
+    mid = _tile_noise(size, rng, 22, 0.90, 1.10).load()
+    grain = _tile_noise(size, rng, 96, -1.0, 1.0).load()
+    for y in range(size):
+        for x in range(size):
+            k = blotch[x, y] * mid[x, y] * (1.0 + grain[x, y] * 0.11)
+            k = max(0.55, min(1.35, k))
+            px[x, y] = (int(150 * k), int(143 * k), int(136 * k * 0.99))
+
+    # 裂纹：几条折线，两侧各有一点点亮边（受光的破口）
+    dr = ImageDraw.Draw(im)
+    for _ in range(4):
+        x0, y0 = rng.randrange(size), rng.randrange(size)
+        pts = [(x0, y0)]
+        for _seg in range(rng.randint(3, 6)):
+            x0 += rng.randint(-90, 90)
+            y0 += rng.randint(-90, 90)
+            pts.append((x0, y0))
+        # 别太黑：这张图会被缩到每块石头几十像素，
+        # 重线在那个尺度下读成黑斑，而不是裂纹
+        dr.line(pts, fill=(124, 119, 114), width=1, joint="curve")
+    return im.filter(ImageFilter.GaussianBlur(0.55))
+
+
 TEXTURES = {"wood": ("wood_planks.png", wood),
             "thatch": ("thatch.png", thatch),
-            "plaster": ("plaster.png", plaster)}
+            "plaster": ("plaster.png", plaster),
+            "rock": ("rock.png", rock)}
 
 
 def main(names):

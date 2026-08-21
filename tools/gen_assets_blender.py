@@ -44,7 +44,9 @@ PALETTE = {
     "ThatchDark": (0.116, 0.094, 0.050),
     "Wood":      (0.286, 0.192, 0.110),
     "WoodLight": (0.355, 0.255, 0.146),
-    "Stone":     (0.255, 0.235, 0.231),
+    "Stone":     (0.216, 0.199, 0.196),
+    "StoneWarm": (0.252, 0.219, 0.183),
+    "StoneCool": (0.196, 0.192, 0.199),
     "Metal":     (0.298, 0.310, 0.337),
     "Dark":      (0.102, 0.086, 0.075),
     "LeafA":     (0.180, 0.271, 0.098),
@@ -401,12 +403,16 @@ def building(name, w, d, wall_h, loc, roof_h=1.9, eaves=0.45, storeys=1,
 # 参考图的石头是"十几个面的敦实块体"，所以点数要够、半径抖动要小。
 ROCK_ARCHETYPES = {
     #            轴比 (x, y, z)        点数   垂直偏置
-    "chunky":   ((1.00, 0.95, 0.68), 17, 0.0),
-    "slab":     ((1.15, 1.30, 0.34), 16, 0.0),
-    "column":   ((0.72, 0.78, 1.05), 15, 0.20),
-    "wedge":    ((1.08, 0.76, 0.58), 15, -0.20),
-    "block":    ((0.95, 0.90, 0.78), 14, 0.0),
-    "pebble":   ((1.00, 0.92, 0.52), 10, 0.0),
+    # 点数是这里唯一真正决定"棱角软硬"的参数。
+    # 14-17 个点的凸包只有二十来个面，轮廓上必然出现几条很长的直边。
+    # 但也不能一味加：点太多会退回圆润的多面体（第一版位移球体的老问题）。
+    # 22-28 是这个机位下的平衡点。
+    "chunky":   ((1.00, 0.95, 0.68), 26, 0.0),
+    "slab":     ((1.15, 1.30, 0.34), 24, 0.0),
+    "column":   ((0.72, 0.78, 1.05), 23, 0.20),
+    "wedge":    ((1.08, 0.76, 0.58), 23, -0.20),
+    "block":    ((0.95, 0.90, 0.78), 22, 0.0),
+    "pebble":   ((1.00, 0.92, 0.52), 14, 0.0),
 }
 
 
@@ -518,6 +524,15 @@ def rock_hull(name, archetype, seed, loc=(0, 0, 0), bevel=0.05,
         bpy.ops.object.modifier_apply(modifier=m.name)
 
     finalize(o, loc, smooth_angle=smooth_angle)
+    # UV 是"石头太光"的前提：MultiMesh 上挂的 StandardMaterial3D 法线贴图
+    # 在没有 UV 的网格上静默失效（没 UV 就没切线）。铺了 UV 之后
+    # 改走 prop.gdshader，贴图和法线扰动都在着色器里算，不依赖切线。
+    uv_planar(o, uv_scale=0.85,
+              offset=(rng.uniform(0.0, 4.0), rng.uniform(0.0, 4.0)))
+    base = PALETTE[rng.choice(("Stone", "StoneWarm", "StoneCool"))]
+    k = rng.uniform(0.82, 1.18)
+    set_vcol(o, tuple(min(1.0, c * k) for c in base),
+             material="Surface", alpha=0.0)
     return o
 
 
