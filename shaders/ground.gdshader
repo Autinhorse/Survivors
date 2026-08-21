@@ -14,6 +14,9 @@ uniform sampler2D detail_noise : hint_default_white, filter_linear_mipmap, repea
 // open field as a textured plane -- 3D blades at this camera distance cost a
 // third of the scene's triangle budget and read as noise anyway.
 uniform sampler2D grass_detail : hint_default_white, filter_linear_mipmap, repeat_enable;
+// 岸壁立面的石块纹理（元胞噪声）。参考图的河岸立面**大部分是石质纹理**，
+// 只有少数几块是独立的石头模型 —— 靠堆石头去铺满整面墙既贵又假。
+uniform sampler2D rock_cells : hint_default_white, filter_linear_mipmap, repeat_enable;
 
 uniform vec3 grass_dark : source_color = vec3(0.16, 0.22, 0.07);
 uniform vec3 grass_light : source_color = vec3(0.42, 0.44, 0.16);
@@ -30,6 +33,9 @@ uniform float rock_scale = 0.14;      // 岩壁细节的横向密度
 uniform float rock_stretch = 4.5;     // 竖向拉伸倍数 = 层理
 uniform float rock_contrast = 0.95;
 uniform float rock_bump = 1.8;
+uniform float cell_scale = 0.085;   // 石块纹理的密度（repeats per metre）
+uniform float cell_mix = 0.62;      // 石块 vs 层理噪声的比重
+uniform float cell_bump = 1.35;
 uniform float dirt_threshold = 0.66;
 uniform float slope_grass = 0.82;   // normal.y above this = fully ground
 uniform float slope_rock = 0.48;    // normal.y below this = fully rock
@@ -37,9 +43,13 @@ uniform float slope_rock = 0.48;    // normal.y below this = fully rock
 varying vec3 w_pos;
 varying vec3 w_nrm;
 
-float rock_height(vec2 uv) {
-	return texture(detail_noise, uv).r * 0.65
+float rock_height(vec2 uv, vec2 cuv) {
+	// 层理（细）+ 石块（粗）。石块那一层给了更大的权重和更强的法线，
+	// 因为它才是"这是石头砌的岸"的读法来源。
+	float strata = texture(detail_noise, uv).r * 0.65
 			+ texture(detail_noise, uv * 3.3 + vec2(0.37, 0.11)).r * 0.35;
+	float cells = texture(rock_cells, cuv).r;
+	return mix(strata, cells, cell_mix);
 }
 
 
@@ -74,9 +84,12 @@ void fragment() {
 	// 两个倍频而不是一个 —— 单octave 的平滑值噪声在这个尺度下几乎看不出来。
 	vec2 ruv = vec2((w_pos.x + w_pos.z) * rock_scale,
 			w_pos.y * rock_scale * rock_stretch);
-	float rh0 = rock_height(ruv);
-	float rhx = rock_height(ruv + vec2(bump_epsilon, 0.0));
-	float rhy = rock_height(ruv + vec2(0.0, bump_epsilon));
+	// 石块层不做竖向拉伸：石头是各向同性的，拉长了就成了木纹
+	vec2 cuv = vec2((w_pos.x + w_pos.z) * cell_scale, w_pos.y * cell_scale);
+	float ce = bump_epsilon * cell_scale / max(rock_scale, 0.001);
+	float rh0 = rock_height(ruv, cuv);
+	float rhx = rock_height(ruv + vec2(bump_epsilon, 0.0), cuv + vec2(ce, 0.0));
+	float rhy = rock_height(ruv + vec2(0.0, bump_epsilon), cuv + vec2(0.0, ce));
 	vec3 rock = rock_color * (1.0 - rock_contrast * 0.5 + rock_contrast * rh0);
 
 	float slope = clamp((w_nrm.y - slope_rock) / (slope_grass - slope_rock), 0.0, 1.0);
@@ -104,7 +117,7 @@ void fragment() {
 		t_h /= t_len;
 		vec3 t_v = normalize(cross(w_nrm, t_h));
 		wn_rock = normalize(w_nrm - (t_h * (rhx - rh0) + t_v * (rhy - rh0))
-				* rock_bump);
+				* (rock_bump + cell_bump));
 	}
 
 	vec3 wn = normalize(mix(wn_rock, wn_flat, slope));

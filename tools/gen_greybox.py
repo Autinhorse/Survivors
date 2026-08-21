@@ -137,6 +137,13 @@ def materials():
     # alpha 是叶片形状。颜色来自顶点色，所以一张灰度图集能长出所有色系变体。
     leaf_atlas = ext("Texture2D", "res://assets/environment/leaf_atlas.png")
     rock_n = noise_tex("NoiseRock", 0.055, lo=0.62, hi=1.05, octaves=4)
+    # 岸壁立面的石块纹理。用**元胞噪声**而不是值噪声：
+    # 值噪声只有各向同性的斑点，出不来"一块块石头"的读法。
+    # cellular_return_type=4（Distance2Sub）在胞边趋近 0、胞心较大，
+    # 得到的是圆润的石块 + 石缝，正好是参考图河岸的样子。
+    rock_cells = noise_tex("NoiseCells", 0.085, lo=0.34, hi=1.10, octaves=2,
+                           size=512, noise_type="2", cellular_return_type="4",
+                           cellular_jitter="1.0")
     rock_nn = noise_normal("NrmRock", 0.055, octaves=4, strength=16.0)
     wood_nn = noise_normal("NrmWood", 0.090, octaves=2, strength=12.0)
     plaster_nn = noise_normal("NrmPlaster", 0.030, octaves=3, strength=14.0)
@@ -156,6 +163,7 @@ def materials():
     MAT["grass"] = shader_mat("MatTerrain", "res://shaders/ground.gdshader",
                               macro_noise=macro, detail_noise=detail,
                               grass_detail=grass_n,
+                              rock_cells=rock_cells,
                               grass_scale="0.85", grass_contrast="0.70",
                               bump_strength="1.5", bump_epsilon="0.055",
                               grass_dark=col(0.145, 0.141, 0.063),
@@ -166,6 +174,8 @@ def materials():
                               dirt_threshold="0.74",
                               rock_scale="0.14", rock_stretch="4.5",
                               rock_contrast="0.30", rock_bump="0.38",
+                              cell_scale="0.085", cell_mix="0.62",
+                              cell_bump="1.35",
                               slope_grass="0.82", slope_rock="0.48")
     MAT["cliff"] = MAT["grass"]
 
@@ -600,6 +610,47 @@ def build():
         zi += step
         i += 1
 
+    # 岸口倒角。
+    #
+    # 单个圆柱挖出来的是**纯竖直的墙 + 90° 硬棱**，草地和岸壁之间没有任何过渡，
+    # 一眼就是被铣刀切出来的槽。
+    #
+    # 试过用一圈圈更宽更浅的圆柱做台阶：**不行，原理上就不行。**
+    # 叠圆柱必然在每一级留下一个水平台面，3 级读成梯田、7 级读成灯芯绒，
+    # 台阶数量再多也只是把平行条纹变密。
+    #
+    # 正确的做法是 CSGPolygon3D 的**旋转扫掠**（mode=1，把 2D 剖面绕 Y 轴转一圈）：
+    # 剖面本身就是斜的，转出来是真正连续的斜面，没有台阶可言。
+    #
+    # 剖面有**两处外扩**，因为两岸的地面标高不同：
+    # 近岸地面在 y=0，远岸高台在 y=+2，一处外扩只能照顾其中一岸。
+    #
+    # 扫掠只负责岸口这一段软特征，步长可以粗（2.0 m）；
+    # 水线的轮廓仍然由上面步长 0.9 m 的圆柱挖槽决定，细节不丢。
+    zi = -48.0
+    i = 0
+    while zi <= 48.0:
+        hwl, hwr = river_hw(zi, -1.0), river_hw(zi, 1.0)
+        ex, ez = river_perp(zi)
+        coff = (hwr - hwl) * 0.5
+        hw = (hwl + hwr) * 0.5
+        prof = [(0.0, -1.05), (hw, -1.05),
+                (hw + 0.26, -0.62), (hw + 0.56, -0.28),
+                (hw + 0.80, 0.04), (hw + 0.93, 0.44),   # 近岸岸口
+                (hw + 1.02, 1.30),                      # 高台的墙，近乎竖直
+                (hw + 1.28, 1.72), (hw + 1.62, 2.08),
+                (hw + 1.88, 2.48),                      # 远岸高台岸口
+                (hw + 1.98, 6.0), (0.0, 6.0)]
+        node("RiverLip%d" % i, "CSGPolygon3D", ter,
+             {"polygon": "PackedVector2Array(%s)"
+                         % ", ".join("%.3f, %.3f" % p for p in prof),
+              "mode": "1", "spin_degrees": "360.0", "spin_sides": "20",
+              "smooth_faces": "true", "operation": "2",
+              "material": MAT["cliff"]},
+             T((river_x(zi) + coff * ex, 0.0, zi + coff * ez)))
+        zi += 2.0
+        i += 1
+
     # ------------------------------------------------------------------ water
     # 一条沿河道生成的带状网格，UV 顺流。
     # 之前是一片片独立 plane，着色器只能按世界坐标滚动噪声 ——
@@ -804,7 +855,10 @@ def build():
     while zb <= 26.0:
         for side in (-1.0, 1.0):
             ex, ez = river_perp(zb)
-            for _k in range(3):
+            # 立面主要靠贴图（见 ground.gdshader 的岩石分支），
+            # 石头只是点缀 —— 参考图也是这样：有明显的单块石头，
+            # 但大部分立面是石质纹理，不是一块块堆出来的
+            for _k in range(2):
                 off = random.uniform(-1.3, 1.9)      # 负值 = 探进水里
                 bx, bz = bank_point(zb, side)
                 px = bx + side * off * ex + random.uniform(-0.4, 0.4)
@@ -814,7 +868,7 @@ def build():
                     if off >= 0.0:
                         claim(px, pz, sc * 0.55)
                     spots.append((px, pz, sc if off >= 0.0 else -sc))
-        zb += 1.6
+        zb += 2.1
     for cz in (-17.0, -2.0, 13.0):                         # far bank
         spots += cluster(4, river_x(cz) + 9.0, cz, 4.0, (0.6, 1.6), r_mul=0.9)
     for cx, cz in ((-40.0, 20.0), (30.0, -34.0), (-42.0, -22.0), (38.0, 22.0),
