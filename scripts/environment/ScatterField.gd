@@ -74,8 +74,10 @@ func _build() -> void:
 		for v in variants:
 			if buckets[v].is_empty():
 				continue
+			# 传 material 而不是 null。GLB 自带的材质只是个白色载体 ——
+			# 真正的颜色烘在顶点色里，得靠这里挂上的着色器读出来。
 			_add_layer("Src%d" % v, src_meshes[v % src_meshes.size()],
-					null, buckets[v])
+					material, buckets[v])
 		return
 
 	for v in variants:

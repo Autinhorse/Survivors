@@ -20,14 +20,7 @@ config/features=PackedStringArray("4.7", "Mobile")
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-; 固定可见范围 + 左右黑边（pillarbox）。
-; 理由不是画面而是玩法：敌人必须在屏幕外生成。可见范围随分辨率变化的话，
-; 要么按屏幕决定生成位置（不同分辨率玩到不同的游戏），
-; 要么按最宽屏幕统一生成（窄屏玩家白等敌人走进来）。
-; 吸血鬼幸存者在 21:9 上也是这么做的。
-; mode=viewport 会让 3D 也一起走拉伸系统（canvas_items 只管 2D，3D 仍会铺满窗口）。
 window/stretch/mode="viewport"
-window/stretch/aspect="keep"
 
 [rendering]
 

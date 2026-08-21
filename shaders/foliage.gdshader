@@ -14,6 +14,7 @@ uniform float wind_strength = 0.10;
 uniform float wind_speed = 1.1;
 uniform float ao_strength = 0.45;   // darken the underside for volume
 uniform float sway_height = 4.4;    // model height the sway ramps over
+uniform float use_vertex_colour = 0.0;
 
 varying vec3 w_pos;
 varying float v_up;
@@ -33,7 +34,11 @@ void vertex() {
 
 void fragment() {
 	float n = texture(detail_noise, w_pos.xz * noise_scale + w_pos.y * 0.15).r;
+	// use_vertex_colour: 资产把每个叶簇的颜色烘进了顶点色（见
+	// tools/gen_assets_blender.py），这样"一个材质 + 一个着色器"就能同时
+	// 保住颜色多样性和风摆。为 0 时退回 leaf_dark/leaf_light 的双色混合。
 	vec3 leaf = mix(leaf_dark, leaf_light, clamp(n * 1.3 - 0.15, 0.0, 1.0));
+	leaf = mix(leaf, COLOR.rgb * (0.82 + 0.36 * n), use_vertex_colour);
 	ALBEDO = leaf * mix(1.0 - ao_strength, 1.0, v_up);
 	ROUGHNESS = 1.0;
 }

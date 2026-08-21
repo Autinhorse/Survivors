@@ -161,7 +161,7 @@ def materials():
                               leaf_light=col(0.349, 0.427, 0.161),
                               noise_scale="0.55", wind_strength="0.10",
                               wind_speed="1.1", ao_strength="0.45",
-                              sway_height="4.4")
+                              sway_height="4.4", use_vertex_colour="1.0")
     MAT["leafB"] = shader_mat("MatLeafB", "res://shaders/foliage.gdshader",
                               detail_noise=detail,
                               leaf_dark=col(0.110, 0.165, 0.055),
@@ -175,7 +175,7 @@ def materials():
                              leaf_light=col(0.318, 0.353, 0.125),
                              noise_scale="0.95", wind_strength="0.07",
                              wind_speed="1.6", ao_strength="0.35",
-                             sway_height="0.7")
+                             sway_height="0.7", use_vertex_colour="1.0")
     MAT["tuft"] = shader_mat("MatTuft", "res://shaders/grass_tuft.gdshader",
                              base_color=col(0.216, 0.259, 0.094),
                              tip_color=col(0.392, 0.427, 0.169),
@@ -767,7 +767,8 @@ def build():
         "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
         "kind": '"tree"',
         "source_scene": ext("PackedScene", "res://assets/environment/trees.glb"),
-        "variants": "3",
+        "variants": "4",
+        "material": MAT["leafA"],
         "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in tree_pl),
     })
 
@@ -786,7 +787,8 @@ def build():
     node("Bushes", "Node3D", ".", {
         "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
         "kind": '"bush"',
-        "variants": "4",
+        "source_scene": ext("PackedScene", "res://assets/environment/bushes.glb"),
+        "variants": "6",
         "material": MAT["bush"],
         "placements": "PackedFloat32Array(%s)" % ", ".join("%.3f" % v for v in bush_pl),
     })

@@ -49,6 +49,14 @@ PALETTE = {
     "Dark":      (0.102, 0.086, 0.075),
     "LeafA":     (0.180, 0.271, 0.098),
     "LeafB":     (0.243, 0.337, 0.129),
+    "LeafDark":  (0.106, 0.161, 0.063),
+    "LeafMid":   (0.220, 0.286, 0.102),
+    "LeafLight": (0.353, 0.404, 0.145),
+    "LeafDry":   (0.373, 0.263, 0.122),
+    "LeafRust":  (0.325, 0.192, 0.102),
+    "Flower":    (0.365, 0.310, 0.502),
+    # 顶点色承载真实颜色，这个材质只是个载体，白色以免二次着色
+    "Foliage":   (1.0, 1.0, 1.0),
 }
 _mats = {}
 
@@ -354,63 +362,205 @@ def build_rocks(out_dir):
     export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
 
 
-# -------------------------------------------------------------------- 树 --
-def tree(name, loc, height=5.4, trunk_r=0.17, canopy_layers=3, seed=0):
-    """比 M2 的"两个球"多做的事：树干有锥度和弯曲、树冠是分层收拢的多面体、
-    底层带几根粗枝。轮廓上立刻从"西兰花"变成"树"。"""
+# ------------------------------------------------------------ 叶簇 / 灌木 --
+# 参考图的灌木和树冠是**许多小叶簇堆成的**：轮廓有明显锯齿和缺口，
+# 而且同一丛里颜色深浅不一。光滑的球（M2 的做法）从原理上出不来这个 ——
+# 它的轮廓永远是连续曲线。
+#
+# 做法：每个小叶簇是一个 6-8 点的凸包（和石头同一套原理，只是很小、压扁），
+# 若干个撒在半球壳上。凸包天然给出棱角，堆积天然给出缺口。
+# 不用 alpha 贴片：M2 已经量过，真几何在这个机位下比透明层便宜
+# （§15 点名的 overdraw 才是风险）。
+
+
+def leaf_blob(rng, radius, squash=0.75):
+    """一个小叶簇。返回 bmesh，调用方负责摆位和材质。"""
+    bm = bmesh.new()
+    n = rng.randint(12, 15)
+    for i in range(n):
+        z = rng.uniform(-1.0, 1.0)
+        r = math.sqrt(max(0.0, 1.0 - z * z))
+        a = rng.uniform(0.0, math.tau)
+        k = rng.uniform(0.88, 1.0)
+        bm.verts.new((math.cos(a) * r * radius * k,
+                      math.sin(a) * r * radius * k,
+                      z * radius * squash * k))
+    bmesh.ops.convex_hull(bm, input=bm.verts[:])
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+def set_vcol(obj, colour_name, material="Foliage"):
+    """把颜色烘进顶点色，并统一材质。
+
+    统一材质有两个作用：合并后只剩一个 surface（一次 draw call），
+    以及 Godot 侧可以用一个 material_override 挂着色器而不冲掉任何东西。
+    树干也必须走这条路 —— 否则 material_override 会把它一起冲成白色。"""
+    me = obj.data
+    c = [srgb_to_linear(x) for x in PALETTE[colour_name]]
+    attr = me.color_attributes.get("Color")
+    if attr is None:
+        attr = me.color_attributes.new(name="Color", type="BYTE_COLOR",
+                                       domain="CORNER")
+    for i in range(len(attr.data)):
+        attr.data[i].color = (c[0], c[1], c[2], 1.0)
+    me.materials.clear()
+    me.materials.append(mat(material))
+    return obj
+
+
+def _blob_object(rng, radius, loc, colour_name, squash=0.75):
+    """叶簇的颜色烘进**顶点色**，不是每簇一个材质。
+
+    每簇一个材质的话，Godot 侧就只能用 GLB 自带材质，
+    风摆着色器（scripts 的 foliage.gdshader）无从挂载 ——
+    要么有颜色没风摆，要么用 material_override 把颜色全冲掉。
+    顶点色让"一个材质 + 一个着色器"同时保住两者。"""
+    bm = leaf_blob(rng, radius, squash)
+    me = bpy.data.meshes.new("clump")
+    bm.to_mesh(me)
+    bm.free()
+
+    o = bpy.data.objects.new("clump", me)
+    bpy.context.collection.objects.link(o)
+    o.location = loc
+    return set_vcol(o, colour_name)
+
+
+def bush(name, seed, loc=(0, 0, 0), radius=0.95, height=0.85, clumps=13,
+         palette=("LeafDark", "LeafMid", "LeafLight")):
+    """一丛灌木：**实心核 + 外圈叶簇**。
+
+    只做外圈是第一版的错误 —— 叶簇撒在半球壳上、彼此不重叠，
+    渲染出来是一地互不相连的碎片，完全没有体积。
+    正确的读法是：核负责"这是一团东西"，外圈只负责把轮廓咬出缺口。"""
     import random
     rng = random.Random(seed)
     parts = []
 
+    # 核：两三个大blob，把内部填实
+    for i in range(2):
+        parts.append(_blob_object(
+            rng, radius * rng.uniform(0.58, 0.70),
+            (rng.uniform(-0.18, 0.18) * radius, rng.uniform(-0.18, 0.18) * radius,
+             height * rng.uniform(0.30, 0.45)),
+            palette[min(len(palette) - 1, 1)], squash=height / max(radius, 0.01)))
+
+    # 外圈：咬出缺口的叶簇，必须和核有重叠，否则又变成碎片
+    for i in range(clumps):
+        u = rng.uniform(0.0, 1.0)
+        zt = u ** 0.7
+        rr = math.sqrt(max(0.0, 1.0 - zt * zt))
+        a = rng.uniform(0.0, math.tau)
+        p = (math.cos(a) * rr * radius * rng.uniform(0.45, 0.92),
+             math.sin(a) * rr * radius * rng.uniform(0.45, 0.92),
+             zt * height * rng.uniform(0.5, 1.0))
+        idx = min(len(palette) - 1, int(zt * len(palette) + rng.uniform(-0.4, 0.6)))
+        parts.append(_blob_object(rng, radius * rng.uniform(0.22, 0.36), p,
+                                  palette[max(0, idx)]))
+    o = join_as(parts, name)
+    finalize(o, loc, smooth_angle=50.0)
+    return o
+
+
+def build_bushes(out_dir):
+    """多个色系的变体：参考图里同一片地上深绿、黄绿、红褐、紫花都有，
+    颜色差异比形状差异更能打破重复感。"""
+    clear()
+    specs = [
+        ("bush_green", ("LeafDark", "LeafMid", "LeafLight"), 0.95, 0.80, 22),
+        ("bush_dark", ("LeafDark", "LeafDark", "LeafMid"), 1.10, 0.70, 26),
+        ("bush_yellow", ("LeafMid", "LeafLight", "LeafLight"), 0.85, 0.90, 20),
+        ("bush_rust", ("LeafRust", "LeafDry", "LeafLight"), 0.90, 0.75, 20),
+        ("bush_flower", ("LeafDark", "LeafMid", "Flower"), 0.80, 0.85, 22),
+        ("bush_small", ("LeafDark", "LeafMid", "LeafMid"), 0.55, 0.45, 14),
+    ]
+    for i, (nm, pal, r, h, c) in enumerate(specs):
+        bush(nm, seed=900 + i * 41, loc=(i * 3.0 - 7.5, 0, 0),
+             radius=r, height=h, clumps=c, palette=pal)
+    export(os.path.join(out_dir, "bushes.glb"), "bushes")
+
+
+# -------------------------------------------------------------------- 树 --
+def tree(name, loc, height=5.4, trunk_r=0.17, seed=0, clumps=22,
+         palette=("LeafDark", "LeafMid", "LeafLight"), crown_ratio=0.34):
+    """树 = 有锥度和弯曲的树干 + 粗枝 + **由叶簇堆成的树冠**。
+
+    M2 的"两个球"轮廓是连续曲线，一眼假。参考图的树冠边缘全是缺口和锯齿 ——
+    那来自叶簇的堆积，不是来自把球体细分得更密。"""
+    import random
+    rng = random.Random(seed)
+    parts = []
+
+    # 树干：分段、带锥度和轻微弯曲（笔直圆柱是"棒棒糖树"的主因）
     segs = 4
-    trunk_h = height * 0.42
-    lean = Vector((rng.uniform(-0.2, 0.2), rng.uniform(-0.2, 0.2), 0.0))
+    trunk_h = height * 0.44
+    lean = Vector((rng.uniform(-0.22, 0.22), rng.uniform(-0.22, 0.22), 0.0))
     prev = None
     for i in range(segs + 1):
         t = i / float(segs)
-        r = trunk_r * (1.35 - 0.75 * t)
+        r = trunk_r * (1.4 - 0.8 * t)
         c = Vector((0, 0, trunk_h * t)) + lean * (t * t)
         if prev is not None:
-            mid = (prev[0] + c) * 0.5
-            seg_h = (c - prev[0]).length + 0.02
-            parts.append(cyl(max(r, 0.04), seg_h, mid, "Wood", verts=6))
-        prev = (c, r)
+            mid = (prev + c) * 0.5
+            seg_h = (c - prev).length + 0.02
+            parts.append(set_vcol(
+                cyl(max(r, 0.045), seg_h, mid, "Wood", verts=6), "Wood"))
+        prev = c
 
-    # 粗枝
+    # 粗枝：伸进树冠，让树冠不是"浮在树干上"
     for i in range(3):
         a = rng.uniform(0, math.tau)
-        parts.append(cyl(0.07, 0.9,
-                         (math.cos(a) * 0.3, math.sin(a) * 0.3, trunk_h * 0.82),
-                         "Wood", verts=5,
-                         rot=(math.radians(rng.uniform(35, 55)), 0, a)))
+        parts.append(set_vcol(
+            cyl(0.075, height * 0.22,
+                (math.cos(a) * 0.35, math.sin(a) * 0.35, trunk_h * 0.9),
+                "Wood", verts=5,
+                rot=(math.radians(rng.uniform(38, 58)), 0, a)), "Wood"))
 
-    # 树冠：分层收拢，每层是低面数多面体而不是球
-    base_z = trunk_h * 0.86
-    for i in range(canopy_layers):
-        t = i / float(max(canopy_layers - 1, 1))
-        r = (height * 0.30) * (1.0 - 0.42 * t)
-        z = base_z + (height - base_z) * (0.18 + 0.62 * t)
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=r,
-                                              location=(0, 0, z))
-        o = bpy.context.active_object
-        o.scale = (1.0 + rng.uniform(-0.12, 0.12),
-                   1.0 + rng.uniform(-0.12, 0.12),
-                   0.66 + rng.uniform(-0.08, 0.08))
-        o.rotation_euler = (0, 0, rng.uniform(0, math.tau))
-        o.data.materials.append(mat("LeafA" if i % 2 == 0 else "LeafB"))
-        parts.append(o)
+    # 树冠：叶簇撒在一个压扁的椭球壳上，越靠上越亮
+    crown_r = height * crown_ratio
+    crown_h = height - trunk_h * 0.82
+    base_z = trunk_h * 0.82
+
+    # 树冠的核：撑起体积，否则外圈叶簇之间全是洞，树看着是"一把撒开的碎叶"
+    for i in range(3):
+        parts.append(_blob_object(
+            rng, crown_r * rng.uniform(0.60, 0.74),
+            (rng.uniform(-0.22, 0.22) * crown_r,
+             rng.uniform(-0.22, 0.22) * crown_r,
+             base_z + crown_h * rng.uniform(0.30, 0.62)),
+            palette[min(len(palette) - 1, 1)], squash=0.9))
+
+    for i in range(clumps):
+        u = rng.uniform(-0.85, 1.0)
+        zt = (u + 0.85) / 1.85
+        rr = math.sqrt(max(0.0, 1.0 - (zt * 2.0 - 1.0) ** 2))
+        a = rng.uniform(0.0, math.tau)
+        p = (math.cos(a) * rr * crown_r * rng.uniform(0.55, 0.95),
+             math.sin(a) * rr * crown_r * rng.uniform(0.55, 0.95),
+             base_z + zt * crown_h * rng.uniform(0.75, 1.0))
+        idx = min(len(palette) - 1,
+                  int(zt * len(palette) + rng.uniform(-0.5, 0.6)))
+        parts.append(_blob_object(rng, crown_r * rng.uniform(0.21, 0.34), p,
+                                  palette[max(0, idx)], squash=0.85))
 
     o = join_as(parts, name)
-    finalize(o, loc)
+    finalize(o, loc, smooth_angle=50.0)
     return o
 
 
 # ------------------------------------------------------------------ 导出 --
 def export(path, label):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB",
-                              use_selection=False, export_apply=True,
-                              export_yup=True)
+    # export_vertex_color 默认是 "MATERIAL"：只有材质引用了颜色属性才导出。
+    # 叶簇的颜色全靠顶点色承载，漏掉就是一片白 —— 必须显式改成 "ACTIVE"。
+    kw = dict(filepath=path, export_format="GLB", use_selection=False,
+              export_apply=True, export_yup=True)
+    try:
+        bpy.ops.export_scene.gltf(export_vertex_color="ACTIVE", **kw)
+    except TypeError:
+        bpy.ops.export_scene.gltf(**kw)
     total = sum(tris(o) for o in bpy.context.scene.objects if o.type == "MESH")
     n = len([o for o in bpy.context.scene.objects if o.type == "MESH"])
     print("[assets] %-10s %d objects, %d tris -> %s (%.1f KB)"
@@ -436,9 +586,15 @@ def build_buildings(out_dir):
 
 def build_trees(out_dir):
     clear()
-    tree("tree_a", (-7, 0, 0), height=5.6, canopy_layers=3, seed=1)
-    tree("tree_b", (0, 0, 0), height=6.8, canopy_layers=4, seed=2)
-    tree("tree_c", (7, 0, 0), height=4.4, canopy_layers=3, seed=3)
+    specs = [
+        ("tree_a", 5.6, 34, ("LeafDark", "LeafMid", "LeafLight")),
+        ("tree_b", 6.9, 42, ("LeafDark", "LeafDark", "LeafMid")),
+        ("tree_c", 4.5, 28, ("LeafMid", "LeafLight", "LeafLight")),
+        ("tree_d", 5.2, 30, ("LeafRust", "LeafDry", "LeafLight")),
+    ]
+    for i, (nm, h, c, pal) in enumerate(specs):
+        tree(nm, (i * 7.0 - 10.5, 0, 0), height=h, seed=1 + i * 17,
+             clumps=c, palette=pal)
     export(os.path.join(out_dir, "trees.glb"), "trees")
 
 
@@ -446,9 +602,11 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", required=True)
-    ap.add_argument("--only", default="buildings,trees,rocks")
+    ap.add_argument("--only", default="buildings,trees,rocks,bushes")
     args = ap.parse_args(argv)
     only = [s.strip() for s in args.only.split(",")]
+    if "bushes" in only:
+        build_bushes(args.out_dir)
     if "rocks" in only:
         build_rocks(args.out_dir)
     if "buildings" in only:
