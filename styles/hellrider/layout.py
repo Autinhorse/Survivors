@@ -220,6 +220,14 @@ def build(MAT, MESH, performance=False):
         instance(nm, bl, ext("PackedScene", MESH("%s.glb" % src)),
                  T((px, 0.0, pz), ry=ry), child=src, override=MAT["flat"])
 
+    # 房屋的 blob 阴影（它们是单独实例，不走 ScatterField）
+    for nm, _src, px, pz, _ry, bs in (("HouseA", "", -11.0, -8.0, 0, 8.0),
+                                      ("HouseB", "", -4.0, -16.0, 0, 6.6),
+                                      ("HouseC", "", -13.5, 4.0, 0, 8.6),
+                                      ("HouseD", "", -3.0, 2.0, 0, 7.6)):
+        mesh("Blob" + nm, bl, plane, MAT["blob"], (px, 0.03, pz),
+             scale=(bs, 1.0, bs * 0.85), cast_shadow="0")
+
     # --------------------------------------------------------- 散布 --
     # 疏密：参考图有大片空地，物件成组出现。上一个风格实测"安静块占比"只有
     # 目标的 5/13，这次一开始就按成组 + 留空来摆。
@@ -239,7 +247,7 @@ def build(MAT, MESH, performance=False):
         return True
 
     def cluster(node_name, parent, src, child_names, spots, scale_range,
-                y=0.0):
+                y=0.0, blob=2.1):
         pl = []
         for cx, cz, n, spread in spots:
             for _k in range(n):
@@ -257,6 +265,8 @@ def build(MAT, MESH, performance=False):
             "source_scene": ext("PackedScene", MESH(src)),
             "variants": str(len(child_names)),
             "material": MAT["flat"],
+            "blob_material": MAT["blob"],
+            "blob_scale": "%g" % blob,
             "placements": "PackedFloat32Array(%s)"
                           % ", ".join("%.3f" % v for v in pl)})
         return len(pl) // 7
@@ -271,7 +281,7 @@ def build(MAT, MESH, performance=False):
                      [(-15.0, -18.0, 5, 4.0), (-16.0, 12.0, 6, 5.0),
                       (4.0, -30.0, 5, 4.5), (-6.0, 22.0, 5, 4.0),
                       (15.0, -12.0, 4, 3.5)],
-                     (0.85, 1.25))
+                     (0.85, 1.25), blob=2.6)
     n_bush = cluster("Bushes", sc, "bushes.glb", range(6),
                      [(-12.0, -12.0, 6, 4.0), (-2.0, -8.0, 5, 4.0),
                       (-14.0, 16.0, 6, 4.5), (8.0, 14.0, 5, 4.0),
@@ -280,7 +290,7 @@ def build(MAT, MESH, performance=False):
     n_peb = cluster("Pebbles", sc, "pebbles.glb", range(4),
                     [(-16.0, -30.0, 8, 6.0), (-17.0, 20.0, 8, 6.0),
                      (-9.0, -6.0, 6, 5.0), (12.0, 26.0, 6, 5.0)],
-                    (0.6, 1.1))
+                    (0.6, 1.1), blob=1.5)
     print("scatter: %d rocks, %d trees, %d bushes, %d pebbles"
           % (n_rock, n_tree, n_bush, n_peb))
 

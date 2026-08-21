@@ -67,6 +67,13 @@ def materials():
         "MatHrFlat", "res://shaders/hr_flat.gdshader",
         tint="1.0", light_steps="3.0", light_floor="0.52", top_boost="0.10")
 
+    # blob 阴影：贴在地面上的软影贴片，代替真实投影阴影。
+    # 参考图里树/石头下面的影子是居中的软椭圆，没有方向偏移。
+    MAT["blob"] = shader_mat(
+        "MatHrBlob", "res://shaders/hr_blob.gdshader",
+        blob=ext("Texture2D", "res://assets/hellrider/textures/blob.png"),
+        shadow_color=col(0.31, 0.20, 0.13), strength="0.78")
+
     MAT["player"] = shader_mat(
         "MatHrPlayer", "res://shaders/hr_flat.gdshader",
         tint="0.0", base_color=col(0.949, 0.784, 0.220),

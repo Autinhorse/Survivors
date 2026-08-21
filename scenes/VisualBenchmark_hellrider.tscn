@@ -1,19 +1,21 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Shader" path="res://shaders/hr_ground.gdshader" id="ext_1_hr_ground"]
 [ext_resource type="Shader" path="res://shaders/hr_lava.gdshader" id="ext_2_hr_lava"]
 [ext_resource type="Shader" path="res://shaders/hr_flat.gdshader" id="ext_3_hr_flat"]
-[ext_resource type="Script" path="res://scripts/environment/GameplayCameraPolicy.gd" id="ext_4_GameplayCameraPolicy"]
-[ext_resource type="Script" path="res://scripts/environment/HellField.gd" id="ext_5_HellField"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/rocks.glb" id="ext_6_rocks"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/bridge.glb" id="ext_7_bridge"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_c.glb" id="ext_8_house_c"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_b.glb" id="ext_9_house_b"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_a.glb" id="ext_10_house_a"]
-[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_11_ScatterField"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/trees.glb" id="ext_12_trees"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/bushes.glb" id="ext_13_bushes"]
-[ext_resource type="PackedScene" path="res://assets/hellrider/environment/pebbles.glb" id="ext_14_pebbles"]
+[ext_resource type="Texture2D" path="res://assets/hellrider/textures/blob.png" id="ext_4_blob"]
+[ext_resource type="Shader" path="res://shaders/hr_blob.gdshader" id="ext_5_hr_blob"]
+[ext_resource type="Script" path="res://scripts/environment/GameplayCameraPolicy.gd" id="ext_6_GameplayCameraPolicy"]
+[ext_resource type="Script" path="res://scripts/environment/HellField.gd" id="ext_7_HellField"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/rocks.glb" id="ext_8_rocks"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/bridge.glb" id="ext_9_bridge"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_c.glb" id="ext_10_house_c"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_b.glb" id="ext_11_house_b"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/house_a.glb" id="ext_12_house_a"]
+[ext_resource type="Script" path="res://scripts/environment/ScatterField.gd" id="ext_13_ScatterField"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/trees.glb" id="ext_14_trees"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/bushes.glb" id="ext_15_bushes"]
+[ext_resource type="PackedScene" path="res://assets/hellrider/environment/pebbles.glb" id="ext_16_pebbles"]
 
 [sub_resource type="ShaderMaterial" id="MatHrGround"]
 shader = ExtResource("ext_1_hr_ground")
@@ -62,6 +64,12 @@ shader_parameter/tint = 1.0
 shader_parameter/light_steps = 3.0
 shader_parameter/light_floor = 0.52
 shader_parameter/top_boost = 0.10
+
+[sub_resource type="ShaderMaterial" id="MatHrBlob"]
+shader = ExtResource("ext_5_hr_blob")
+shader_parameter/blob = ExtResource("ext_4_blob")
+shader_parameter/shadow_color = Color(0.31, 0.2, 0.13, 1)
+shader_parameter/strength = 0.78
 
 [sub_resource type="ShaderMaterial" id="MatHrPlayer"]
 shader = ExtResource("ext_3_hr_flat")
@@ -133,7 +141,7 @@ directional_shadow_max_distance = 120.0
 
 [node name="GameplayCamera" type="Camera3D" parent="."]
 transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.76604, 0.64279, 0.00000, -0.64279, 0.76604, 0.00000, 44.00000, 52.93716)
-script = ExtResource("ext_4_GameplayCameraPolicy")
+script = ExtResource("ext_6_GameplayCameraPolicy")
 fov = 40.0
 near = 0.5
 far = 300.0
@@ -144,7 +152,7 @@ orthographic = true
 ortho_size = 37.0
 
 [node name="Field" type="Node3D" parent="."]
-script = ExtResource("ext_5_HellField")
+script = ExtResource("ext_7_HellField")
 half_width = 20
 z_start = -46
 z_end = 36
@@ -456,31 +464,31 @@ mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrWaterDeep")
 cast_shadow = 0
 
-[node name="WaterRock0" parent="River" instance=ExtResource("ext_6_rocks")]
+[node name="WaterRock0" parent="River" instance=ExtResource("ext_8_rocks")]
 transform = Transform3D(1.10000, 0.00000, 0.00000, 0.00000, 0.88000, 0.00000, 0.00000, 0.00000, 1.10000, 7.90000, 0.05000, -30.00000)
 
 [node name="rock_block_0" parent="River/WaterRock0" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="WaterRock1" parent="River" instance=ExtResource("ext_6_rocks")]
+[node name="WaterRock1" parent="River" instance=ExtResource("ext_8_rocks")]
 transform = Transform3D(0.63891, 0.00000, 0.48145, 0.00000, 0.64000, 0.00000, -0.48145, 0.00000, 0.63891, 11.40000, 0.05000, -14.00000)
 
 [node name="rock_block_0" parent="River/WaterRock1" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="WaterRock2" parent="River" instance=ExtResource("ext_6_rocks")]
+[node name="WaterRock2" parent="River" instance=ExtResource("ext_8_rocks")]
 transform = Transform3D(0.24807, 0.00000, 0.86514, 0.00000, 0.72000, 0.00000, -0.86514, 0.00000, 0.24807, 8.30000, 0.05000, 4.00000)
 
 [node name="rock_block_0" parent="River/WaterRock2" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="WaterRock3" parent="River" instance=ExtResource("ext_6_rocks")]
+[node name="WaterRock3" parent="River" instance=ExtResource("ext_8_rocks")]
 transform = Transform3D(-0.43004, 0.00000, 1.12030, 0.00000, 0.96000, 0.00000, -1.12030, 0.00000, -0.43004, 11.50000, 0.05000, 18.00000)
 
 [node name="rock_block_0" parent="River/WaterRock3" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="WaterRock4" parent="River" instance=ExtResource("ext_6_rocks")]
+[node name="WaterRock4" parent="River" instance=ExtResource("ext_8_rocks")]
 transform = Transform3D(-0.59363, 0.00000, 0.37094, 0.00000, 0.56000, 0.00000, -0.37094, 0.00000, -0.59363, 7.50000, 0.05000, 28.00000)
 
 [node name="rock_block_0" parent="River/WaterRock4" index="0"]
@@ -489,7 +497,7 @@ material_override = SubResource("MatHrFlat")
 [node name="Bridge" type="Node3D" parent="."]
 
 
-[node name="Deck" parent="Bridge" instance=ExtResource("ext_7_bridge")]
+[node name="Deck" parent="Bridge" instance=ExtResource("ext_9_bridge")]
 transform = Transform3D(0.00000, 0.00000, 1.00000, 0.00000, 1.00000, 0.00000, -1.00000, 0.00000, 0.00000, 9.50000, 0.16000, -6.00000)
 
 [node name="bridge" parent="Bridge/Deck" index="0"]
@@ -498,63 +506,95 @@ material_override = SubResource("MatHrFlat")
 [node name="Buildings" type="Node3D" parent="."]
 
 
-[node name="HouseA" parent="Buildings" instance=ExtResource("ext_8_house_c")]
+[node name="HouseA" parent="Buildings" instance=ExtResource("ext_10_house_c")]
 transform = Transform3D(0.97815, 0.00000, 0.20791, 0.00000, 1.00000, 0.00000, -0.20791, 0.00000, 0.97815, -11.00000, 0.00000, -8.00000)
 
 [node name="house_c" parent="Buildings/HouseA" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="HouseB" parent="Buildings" instance=ExtResource("ext_9_house_b")]
+[node name="HouseB" parent="Buildings" instance=ExtResource("ext_11_house_b")]
 transform = Transform3D(0.99027, 0.00000, -0.13917, 0.00000, 1.00000, 0.00000, 0.13917, 0.00000, 0.99027, -4.00000, 0.00000, -16.00000)
 
 [node name="house_b" parent="Buildings/HouseB" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="HouseC" parent="Buildings" instance=ExtResource("ext_8_house_c")]
+[node name="HouseC" parent="Buildings" instance=ExtResource("ext_10_house_c")]
 transform = Transform3D(0.99452, 0.00000, -0.10453, 0.00000, 1.00000, 0.00000, 0.10453, 0.00000, 0.99452, -13.50000, 0.00000, 4.00000)
 
 [node name="house_c" parent="Buildings/HouseC" index="0"]
 material_override = SubResource("MatHrFlat")
 
-[node name="HouseD" parent="Buildings" instance=ExtResource("ext_10_house_a")]
+[node name="HouseD" parent="Buildings" instance=ExtResource("ext_12_house_a")]
 transform = Transform3D(0.96126, 0.00000, 0.27564, 0.00000, 1.00000, 0.00000, -0.27564, 0.00000, 0.96126, -3.00000, 0.00000, 2.00000)
 
 [node name="house_a" parent="Buildings/HouseD" index="0"]
 material_override = SubResource("MatHrFlat")
 
+[node name="BlobHouseA" type="MeshInstance3D" parent="Buildings"]
+transform = Transform3D(8.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 6.80000, -11.00000, 0.03000, -8.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="BlobHouseB" type="MeshInstance3D" parent="Buildings"]
+transform = Transform3D(6.60000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 5.61000, -4.00000, 0.03000, -16.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="BlobHouseC" type="MeshInstance3D" parent="Buildings"]
+transform = Transform3D(8.60000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 7.31000, -13.50000, 0.03000, 4.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
+[node name="BlobHouseD" type="MeshInstance3D" parent="Buildings"]
+transform = Transform3D(7.60000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 6.46000, -3.00000, 0.03000, 2.00000)
+mesh = SubResource("MeshPlane")
+surface_material_override/0 = SubResource("MatHrBlob")
+cast_shadow = 0
+
 [node name="Scatter" type="Node3D" parent="."]
 
 
 [node name="Rocks" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_11_ScatterField")
+script = ExtResource("ext_13_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_6_rocks")
+source_scene = ExtResource("ext_8_rocks")
 variants = 8
 material = SubResource("MatHrFlat")
+blob_material = SubResource("MatHrBlob")
+blob_scale = 2.1
 placements = PackedFloat32Array(-14.946, 0.000, -33.754, 47.339, 1.822, 1.822, 1.822, -15.878, 0.000, -30.070, 91.680, 1.962, 1.962, 1.962, -12.135, 0.000, -31.251, 230.639, 0.985, 0.985, 0.985, 15.187, 0.000, -33.980, 191.180, 0.961, 0.961, 0.961, 15.016, 0.000, -37.512, 219.822, 1.616, 1.616, 1.616, -13.064, 0.000, 19.591, 57.708, 1.775, 1.775, 1.775, -16.206, 0.000, 19.036, 234.746, 0.926, 0.926, 0.926, -17.205, 0.000, 21.704, 198.615, 0.896, 0.896, 0.896, -7.176, 0.000, -24.945, 155.102, 1.094, 1.094, 1.094, -4.944, 0.000, -25.919, 68.462, 1.314, 1.314, 1.314, 15.541, 0.000, 8.159, 355.371, 1.167, 1.167, 1.167)
 
 [node name="Trees" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_11_ScatterField")
+script = ExtResource("ext_13_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_12_trees")
+source_scene = ExtResource("ext_14_trees")
 variants = 4
 material = SubResource("MatHrFlat")
+blob_material = SubResource("MatHrBlob")
+blob_scale = 2.6
 placements = PackedFloat32Array(-13.106, 0.000, -19.343, 305.397, 1.191, 1.191, 1.191, -15.279, 0.000, -15.064, 171.509, 0.911, 0.911, 0.911, -17.080, 0.000, -18.766, 4.588, 0.851, 0.851, 0.851, -14.149, 0.000, -16.296, 203.060, 0.887, 0.887, 0.887, -16.122, 0.000, 12.876, 338.618, 0.934, 0.934, 0.934, -16.119, 0.000, 9.389, 94.049, 1.096, 1.096, 1.096, -13.578, 0.000, 12.872, 290.805, 0.916, 0.916, 0.916, -8.074, 0.000, 21.166, 346.996, 1.045, 1.045, 1.045, -6.527, 0.000, 22.083, 191.402, 1.033, 1.033, 1.033, -4.512, 0.000, 24.445, 145.384, 1.247, 1.247, 1.247, -7.373, 0.000, 24.852, 148.858, 1.026, 1.026, 1.026, 15.194, 0.000, -10.161, 54.771, 1.116, 1.116, 1.116)
 
 [node name="Bushes" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_11_ScatterField")
+script = ExtResource("ext_13_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_13_bushes")
+source_scene = ExtResource("ext_15_bushes")
 variants = 6
 material = SubResource("MatHrFlat")
+blob_material = SubResource("MatHrBlob")
+blob_scale = 2.1
 placements = PackedFloat32Array(-10.601, 0.000, -14.012, 162.210, 0.963, 0.963, 0.963, -1.958, 0.000, -8.445, 104.392, 0.924, 0.924, 0.924, -4.093, 0.000, -7.073, 338.669, 1.036, 1.036, 1.036, -16.510, 0.000, 16.210, 165.039, 1.072, 1.072, 1.072, -13.729, 0.000, 16.822, 20.353, 1.086, 1.086, 1.086, 2.104, 0.000, -23.794, 249.866, 0.879, 0.879, 0.879, -1.713, 0.000, -23.772, 16.577, 0.776, 0.776, 0.776, 16.919, 0.000, -2.578, 209.099, 0.737, 0.737, 0.737, 17.284, 0.000, -3.873, 73.919, 0.779, 0.779, 0.779)
 
 [node name="Pebbles" type="Node3D" parent="Scatter"]
-script = ExtResource("ext_11_ScatterField")
+script = ExtResource("ext_13_ScatterField")
 kind = "rock"
-source_scene = ExtResource("ext_14_pebbles")
+source_scene = ExtResource("ext_16_pebbles")
 variants = 4
 material = SubResource("MatHrFlat")
+blob_material = SubResource("MatHrBlob")
+blob_scale = 1.5
 placements = PackedFloat32Array(-15.078, 0.000, -25.703, 103.266, 0.792, 0.792, 0.792, -14.840, 0.000, -27.819, 359.544, 0.925, 0.925, 0.925, -14.905, 0.000, 22.460, 31.561, 0.843, 0.843, 0.843, -14.460, 0.000, 14.586, 186.967, 0.693, 0.693, 0.693, 15.751, 0.000, 23.293, 37.276, 1.075, 1.075, 1.075)
 
 [node name="Player" type="Node3D" parent="."]

@@ -28,6 +28,13 @@ const STRIDE := 7
 @export var rng_seed: int = 20260820
 @export var cast_shadows: bool = true
 
+@export_group("Blob 阴影")
+## 贴在地面上的软影贴片（hr_blob.gdshader）。设了才生成。
+## 平面着色风格用它代替真实投影阴影 —— 真影子会把纯色块切出硬边。
+@export var blob_material: Material
+@export var blob_scale: float = 2.1        ## 相对散布物尺度
+@export var blob_y: float = 0.03
+
 @export_group("Materials")
 @export var material: Material                 ## rocks / bushes / tree trunks
 @export var material_secondary: Material       ## tree canopies
@@ -69,6 +76,8 @@ func _build() -> void:
 				Transform3D(basis, Vector3(placements[o], placements[o + 1],
 						placements[o + 2])))
 
+	if blob_material:
+		_blobs(buckets)
 	var src_meshes := _meshes_from_source()
 	if not src_meshes.is_empty():
 		for v in variants:
@@ -97,6 +106,33 @@ func _build() -> void:
 						PM.canopy(salt, canopy_blobs, canopy_radius,
 								trunk_height * 0.85),
 						material_secondary, buckets[v])
+
+
+func _blobs(buckets: Array) -> void:
+	## 所有散布物共用一层 MultiMesh，一次 draw call。
+	var quad := QuadMesh.new()
+	quad.size = Vector2.ONE
+	quad.orientation = PlaneMesh.FACE_Y
+	var xf: Array[Transform3D] = []
+	for b in buckets:
+		for t in b:
+			var s: float = t.basis.get_scale().x * blob_scale
+			xf.append(Transform3D(Basis.IDENTITY.scaled(Vector3(s, 1.0, s)),
+					Vector3(t.origin.x, blob_y, t.origin.z)))
+	if xf.is_empty():
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = quad
+	mm.instance_count = xf.size()
+	for i in xf.size():
+		mm.set_instance_transform(i, xf[i])
+	var mi := MultiMeshInstance3D.new()
+	mi.name = "Blobs"
+	mi.multimesh = mm
+	mi.material_override = blob_material
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
 
 
 func _meshes_from_source() -> Array[Mesh]:
