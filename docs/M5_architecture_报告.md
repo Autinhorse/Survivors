@@ -1,7 +1,7 @@
 # Milestone 5 — 架构 / 优化比较 · 报告
 
 对应需求：`docs/GODOT_3D_可行性验证需求.md` §22 Milestone 5，另见 §6、§7
-数据：`benchmark/results/M5_architecture.csv`（每行都带 `run` 标记它来自哪次测量）
+数据：`benchmark/results/ALL_results.csv`（`run` 列标注每行的测量条件，两组配置不可混用）
 方法与 M4 相同：关 V-Sync，5 秒预热 + 20 秒采样，平均值与 1% low 分开
 
 ---
@@ -25,6 +25,9 @@ CPU 批量 Transform、MultiMesh Instance Transform、Shader、Instance Custom D
 ---
 
 ## 2. 主结果（阴影模式 B，敌人向玩家移动）
+
+> 下表为**早期配置**（`spawn_radius = 30 m`，敌人部分在屏幕内生成）。
+> 出货配置下的复测见本节末尾 —— 结论一致，绝对值不同，两组数据不可混用。
 
 | 数量 | node | mm-parts | mm-merged |
 |---|---|---|---|
@@ -137,8 +140,9 @@ draw call 从 5,135 掉到 3,749，差值里混进了"少画了一批"的部分�
 
 理由：
 
-1. 2000 单位时比传统 Node 快 **10.4 倍**，且加速比随规模继续扩大；
-2. 敌人数量基本不再是约束条件 —— 1000 比 500 只贵 0.05 ms；
+1. 2000 单位时比传统 Node 快 **7.7 倍**（出货配置复测；早期配置下为 10.4 倍），
+   且加速比随规模继续扩大；
+2. 敌人数量基本不再是约束条件 —— 1000 比 500 只贵 0.15 ms；
 3. §7 的猜想被证实：程序化机械动画**应该放进 Shader**，
    靠 `INSTANCE_CUSTOM` 携带每单位相位，CPU 每帧每单位只写一个 Transform。
 
