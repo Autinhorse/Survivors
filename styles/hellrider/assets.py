@@ -135,59 +135,86 @@ def tint(obj, colour, rng=None, jitter=0.0):
 
 
 # ------------------------------------------------------------------ 石头 --
-# 参考图的石头有两个特征，缺一个都不像：
+# 参考图的石头有三个特征，缺一个都不像：
 #
 # 1. **平顶 + 近乎竖直的侧壁**。不是随机点的凸包（那到处都是斜面，
 #    没有那个决定性的大平顶）。
-# 2. **大块的是两层**：一个宽的低平台，上面偏一侧压着一个小锥台，
-#    锥台的顶面还会收窄成脊或尖。单层的棱柱只能做小石头。
+# 2. **大块的是两层**：一个宽的低平台，上面偏一侧压着一个小锥台。
+#    单层棱柱只能做小石头。
+# 3. **成组出现**：一大配两三小，挤在一起、高低错落，共享底边。
+#    孤零零一块是散布器的味道，不是美术摆的味道。
 #
-# 所以生成器是"堆锥台"：每一层给底半径、顶半径、高度和横向偏移。
-# 顶半径 < 底半径就得到锥面，相等就是竖直墙。
-ROCK_TIERS = {
-    # 每层: (底半径, 顶半径, 高度, 偏移x, 偏移y, 边数)
-    # 顺序有意义：ScatterField 按 i % variants 取变体，调参场景只摆 3 个
-    "mesa2": [(1.90, 1.75, 0.80, 0.00, 0.00, 8),
-              (1.15, 0.72, 0.95, 0.38, 0.22, 7)],
-    "wedge": [(1.30, 1.15, 1.05, 0.00, 0.00, 6)],          # 顶面倾斜见 tilt
-    "tall":  [(1.00, 0.92, 1.35, 0.00, 0.00, 6),
-              (0.82, 0.30, 0.75, -0.12, 0.10, 5)],
-    "mesa_low": [(1.85, 1.72, 0.70, 0.00, 0.00, 7)],
-    "block": [(1.10, 1.02, 1.25, 0.00, 0.00, 6),
-              (0.70, 0.52, 0.55, 0.22, -0.18, 5)],
-    "slab":  [(2.05, 1.95, 0.55, 0.00, 0.00, 9)],
+# 第三条决定了这里的做法：**变体本身就是一组**，而不是靠散布器去凑。
+# 散布器随机撒出来的"组"总是间距均匀、朝向随机，读起来还是散的。
+#
+# 比例：参考图的石头总高和顶面宽度大致相当（敦实但不矮墩）。
+# 第一版做得太扁，第二版锥台给了 7 条边读成圆顶 —— 改成 4-5 条边才有方块感。
+
+def _tier(r0, r1, h, ox=0.0, oy=0.0, sides=6):
+    return (r0, r1, h, ox, oy, sides)
+
+
+ROCK_GROUPS = {
+    # 每个变体是一组石头：[(锥台层列表, x, y, 转角), ...]
+    #
+    # 比例是并排比出来的：参考图的底座**宽而低**（宽高比约 3:1），
+    # 顶面很大、侧壁很矮，高度主要来自压在上面那一层。
+    # 我们一度做成"窄而高"，读起来像柱子不像岩体。
+    #
+    # **侧壁严格竖直**（顶半径 = 底半径）。给了锥度就读成圆锥，
+    # 参考图里没有一块石头是锥形的。收窄只发生在最上面那层的顶面（做成坡顶）。
+    "big": [([_tier(1.95, 1.95, 0.72, 0, 0, 6),
+              _tier(1.20, 0.80, 0.75, 0.30, 0.18, 5)], 0.0, 0.0, 0.0),
+            ([_tier(0.85, 0.85, 0.55, 0, 0, 5),
+              _tier(0.55, 0.30, 0.34, 0.05, 0.05, 4)], 2.35, -0.95, 0.7),
+            ([_tier(0.52, 0.52, 0.30, 0, 0, 4)], -2.00, 1.10, 2.1)],
+
+    "twin": [([_tier(1.55, 1.55, 0.66, 0, 0, 6),
+               _tier(0.95, 0.62, 0.62, -0.22, 0.20, 4)], 0.0, 0.0, 0.0),
+             ([_tier(1.10, 1.10, 0.78, 0, 0, 5),
+               _tier(0.62, 0.34, 0.40, 0.10, -0.08, 4)], 2.10, 0.80, 1.2)],
+
+    "spire": [([_tier(1.15, 1.15, 0.78, 0, 0, 5),
+                _tier(0.78, 0.72, 0.72, 0.05, 0.02, 5),
+                _tier(0.55, 0.22, 0.55, 0.02, -0.06, 4)], 0.0, 0.0, 0.0),
+              ([_tier(0.62, 0.62, 0.34, 0, 0, 4)], 1.55, -0.85, 0.4)],
+
+    "low": [([_tier(2.05, 2.05, 0.60, 0, 0, 7)], 0.0, 0.0, 0.0),
+            ([_tier(0.78, 0.78, 0.38, 0, 0, 5)], 2.20, 0.95, 1.8)],
+
+    "block": [([_tier(1.30, 1.30, 0.75, 0, 0, 5),
+                _tier(0.88, 0.55, 0.68, 0.18, 0.14, 4)], 0.0, 0.0, 0.0)],
+
+    "slab": [([_tier(2.20, 2.20, 0.50, 0, 0, 8)], 0.0, 0.0, 0.0),
+             ([_tier(0.50, 0.50, 0.26, 0, 0, 4)], 2.35, -0.70, 0.9)],
 }
-ROCK_TILT = {"wedge": 0.30, "mesa_low": 0.08, "slab": 0.06}
+ROCK_TILT = {"low": 0.10, "slab": 0.08}
 
 
-def _ngon(rng, sides, radius):
-    """不规则凸多边形的角度和半径。半径抖动控制在 ±20% 以内保持凸性。"""
+def _ngon(rng, sides):
+    """不规则凸多边形的角度和半径系数。抖动控制在 ±20% 以内保持凸性。"""
     ang, a = [], rng.uniform(0.0, math.tau)
     for _i in range(sides):
-        a += math.tau / sides * rng.uniform(0.74, 1.26)
+        a += math.tau / sides * rng.uniform(0.84, 1.16)
         ang.append(a)
-    return ang, [radius * rng.uniform(0.82, 1.08) for _ in range(sides)]
+    return ang, [rng.uniform(0.90, 1.06) for _ in range(sides)]
 
 
-def rock(name, shape, loc=(0, 0, 0)):
-    rng = seeded(name)
-    tiers = ROCK_TIERS[shape]
-    tilt = ROCK_TILT.get(shape, 0.04)
-
-    bm = bmesh.new()
+def _stack(bm, rng, tiers, cx, cy, rot, tilt):
+    """在 (cx, cy) 堆一摞锥台。"""
     z = 0.0
     for ti, (r0, r1, h, ox, oy, sides) in enumerate(tiers):
-        ang, jit = _ngon(rng, sides, 1.0)
+        ang, jit = _ngon(rng, sides)
         bot, top = [], []
         for i in range(sides):
-            ca, sa = math.cos(ang[i]), math.sin(ang[i])
+            a = ang[i] + rot
+            ca, sa = math.cos(a), math.sin(a)
             k = jit[i]
-            bot.append(bm.verts.new((ox + ca * r0 * k, oy + sa * r0 * k, z)))
-            # 顶面整体倾斜：参考图里好几块石头的顶是斜的，像被掀起来一块
+            bot.append(bm.verts.new((cx + ox + ca * r0 * k,
+                                     cy + oy + sa * r0 * k, z)))
             tz = z + h + ca * r1 * k * tilt
-            top.append(bm.verts.new((ox + ca * r1 * k, oy + sa * r1 * k, tz)))
-        # 只有最上一层需要封顶：下面几层的顶面会被上一层压住，
-        # 但压不满（上层更小且有偏移），所以每层都封，让露出来的台面可见
+            top.append(bm.verts.new((cx + ox + ca * r1 * k,
+                                     cy + oy + sa * r1 * k, tz)))
         bm.faces.new(top)
         if ti == 0:
             bm.faces.new(list(reversed(bot)))
@@ -196,6 +223,13 @@ def rock(name, shape, loc=(0, 0, 0)):
             bm.faces.new((bot[i], bot[j], top[j], top[i]))
         z += h
 
+
+def rock(name, shape, loc=(0, 0, 0)):
+    rng = seeded(name)
+    tilt = ROCK_TILT.get(shape, 0.05)
+    bm = bmesh.new()
+    for tiers, cx, cy, rot in ROCK_GROUPS[shape]:
+        _stack(bm, rng, tiers, cx, cy, rot, tilt)
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     me = bpy.data.meshes.new(name)
@@ -211,34 +245,40 @@ def rock(name, shape, loc=(0, 0, 0)):
 
 def build_rocks(out_dir):
     clear()
-    for i, shape in enumerate(ROCK_TIERS):
-        rock("rock_%s" % shape, shape, loc=(i * 5.0 - 12.0, 0, 0))
+    for i, shape in enumerate(ROCK_GROUPS):
+        rock("rock_%s" % shape, shape, loc=(i * 7.0 - 17.0, 0, 0))
     export(os.path.join(out_dir, "rocks.glb"), "rocks")
 
+    # 碎石：单块、很小，用来填空
     clear()
-    for i, shape in enumerate(("mesa_low", "slab", "wedge", "block")):
-        o = rock("pebble_%d" % i, shape, loc=(i * 1.6 - 2.4, 0, 0))
-        o.scale = (0.20, 0.20, 0.18)
+    for i, shape in enumerate(("block", "low", "slab", "twin")):
+        o = rock("pebble_%d" % i, shape, loc=(i * 2.0 - 3.0, 0, 0))
+        o.scale = (0.16, 0.16, 0.15)
     export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
 
 
 # -------------------------------------------------------------------- 树 --
 def tree(name, loc=(0, 0, 0), height=4.6, crown=1.9, seed=0):
-    """细杆 + 低面球树冠。参考图就是这么简单 —— 没有枝、没有贴片。"""
+    """细杆 + 低面球树冠。参考图就是这么简单 —— 没有枝、没有贴片。
+
+    第二团要和主团**同色系且大幅重叠**。第一版给了明显更深的 LeafDeep
+    又只压住一点点，读出来是贴在树冠上的一块深色补丁，不是同一团树叶。
+    深浅差异交给着色器的分档光照和 vgrad 去产生，不要在颜色上先分好。
+    """
     rng = seeded(name)
     parts = []
-    th = height * 0.42
-    parts.append(tint(cyl(0.13, th, (0, 0, th * 0.5), "Trunk", verts=5),
+    th = height * 0.44
+    # 树干更细：参考图里树干只有两三个像素宽
+    parts.append(tint(cyl(0.10, th, (0, 0, th * 0.5), "Trunk", verts=5),
                       "Trunk", rng, 0.04))
-    cz = th + crown * 0.72
+    cz = th + crown * 0.66
     c = ico(crown, (0, 0, cz), "Leaf", subdiv=1)
-    c.scale = (1.0, 1.0, 1.18)
-    tint(c, "Leaf", rng, 0.09)
+    c.scale = (1.0, 1.0, 1.12)
+    tint(c, "Leaf", rng, 0.07)
     parts.append(c)
-    # 第二个略小的球错开一点，轮廓才不是一个完美的球
-    c2 = ico(crown * 0.62, (crown * 0.36, crown * 0.16, cz + crown * 0.42),
+    c2 = ico(crown * 0.70, (crown * 0.30, crown * 0.12, cz + crown * 0.26),
              "Leaf", subdiv=1)
-    tint(c2, "LeafDeep", rng, 0.09)
+    tint(c2, "Leaf", rng, 0.07)
     parts.append(c2)
     return flat(parts, name, loc)
 

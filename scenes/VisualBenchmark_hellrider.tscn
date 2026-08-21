@@ -444,19 +444,19 @@ cast_shadow = 0
 
 
 [node name="Blob_Rocks_7" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(4.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.00000, -11.00000, 0.03000, -12.00000)
+transform = Transform3D(4.96000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.96000, -11.00000, 0.03000, -12.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_14" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(3.20000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.20000, -1.00000, 0.03000, 3.00000)
+transform = Transform3D(3.84000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.84000, -1.00000, 0.03000, 3.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
 
 [node name="Blob_Rocks_21" type="MeshInstance3D" parent="Tune"]
-transform = Transform3D(2.72000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 2.72000, 10.00000, 0.03000, -14.00000)
+transform = Transform3D(3.20000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 3.20000, 10.00000, 0.03000, -14.00000)
 mesh = SubResource("MeshPlane")
 surface_material_override/0 = SubResource("MatHrBlob")
 cast_shadow = 0
@@ -467,7 +467,7 @@ kind = "rock"
 source_scene = ExtResource("ext_9_rocks")
 variants = 6
 material = SubResource("MatHrFlat")
-placements = PackedFloat32Array(-11.000, 0.000, -12.000, 0.000, 1.250, 1.250, 1.250, -1.000, 0.000, 3.000, 40.000, 1.000, 1.000, 1.000, 10.000, 0.000, -14.000, -25.000, 0.850, 0.850, 0.850)
+placements = PackedFloat32Array(-11.000, 0.000, -12.000, 0.000, 1.550, 1.550, 1.550, -1.000, 0.000, 3.000, 40.000, 1.200, 1.200, 1.200, 10.000, 0.000, -14.000, -25.000, 1.000, 1.000, 1.000)
 
 [node name="Blob_Trees_7" type="MeshInstance3D" parent="Tune"]
 transform = Transform3D(4.40000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 4.40000, -12.00000, 0.03000, 9.00000)
