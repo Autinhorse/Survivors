@@ -433,6 +433,188 @@ def _fit_ellipse(pts):
 
 
 ROCK_FOOTPRINT = {}      # 变体名 -> [(cx, cy, rx, ry, ang), ...]，导出给布局用
+ROCK_SIZE = {}           # 变体名 -> (占几格宽, 占几格深)
+
+
+# ---------------------------------------------------------- 网格石头 --
+# 参考图的石头是**占格子**的：底面的角就落在地面方格的顶点上，
+# 上面才开始变化。这决定了它们在画面里读起来"稳"——底边和地面网格同频，
+# 不像随机多边形那样和背景打架。同时也是玩法需要：石头要占格挡路。
+#
+# 规则（来自对参考图的观察）：
+#   1. 底环 = 占用格子的**轮廓上所有网格顶点**，不合并共线点 ——
+#      长边上的中间顶点留着，上一环才有足够的节点去变化
+#   2. 第二环 = 底环**整体向内收**，节点**只增不减**，然后才抖动
+#      （只增不减是关键：减节点会让底面的格子感在第二层就断掉）
+#   3. 第三环 = 在第二环基础上再收一半，可增可减，三轴抖 25%
+#
+# 尺寸就按占几格给：1x1 / 1x2 / 1x3 / 2x2 / 2x3 / L 型 1+2 / L 型 2+3
+GRID_TILE = 2.6                      # 必须和 hr_ground 的 tile_size 一致
+
+ROCK_CELLS = {
+    "c11":  ((0, 0),),
+    "c12":  ((0, 0), (0, 1)),
+    "c13":  ((0, 0), (0, 1), (0, 2)),
+    "c22":  ((0, 0), (1, 0), (0, 1), (1, 1)),
+    "c23":  ((0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)),
+    "L12":  ((0, 0), (1, 0), (0, 1)),
+    "L23":  ((0, 0), (1, 0), (2, 0), (0, 1), (0, 2)),
+}
+
+
+def _cell_outline(cells):
+    """占用格子的边界多边形，返回逆时针的网格顶点序列。
+
+    做法是取所有**没有邻居的格子边**（有向，逆时针绕每个格子），
+    再首尾相接串成一个环。L 型有凹角，这样串出来也是对的。
+    """
+    cs = set(cells)
+    seg = {}
+    for i, j in cs:
+        if (i, j - 1) not in cs:
+            seg[(i, j)] = (i + 1, j)
+        if (i + 1, j) not in cs:
+            seg[(i + 1, j)] = (i + 1, j + 1)
+        if (i, j + 1) not in cs:
+            seg[(i + 1, j + 1)] = (i, j + 1)
+        if (i - 1, j) not in cs:
+            seg[(i, j + 1)] = (i, j)
+    start = min(seg)
+    loop, cur = [start], seg[start]
+    while cur != start:
+        loop.append(cur)
+        cur = seg[cur]
+    return loop
+
+
+def _offset_poly(pts, d):
+    """多边形整体向内收 d。凹角也对 —— 用两条平移后的边求交，
+    不是角平分线（角平分线在凹角上会往外跑）。"""
+    n = len(pts)
+    area = sum(pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1]
+               for i in range(n))
+    if area < 0.0:
+        pts = pts[::-1]
+    out = []
+    for i in range(n):
+        p, q, r = pts[i - 1], pts[i], pts[(i + 1) % n]
+        e0 = (q[0] - p[0], q[1] - p[1])
+        e1 = (r[0] - q[0], r[1] - q[1])
+        l0 = math.hypot(*e0) or 1.0
+        l1 = math.hypot(*e1) or 1.0
+        e0 = (e0[0] / l0, e0[1] / l0)
+        e1 = (e1[0] / l1, e1[1] / l1)
+        n0 = (-e0[1], e0[0])            # 逆时针多边形的内法线在左手边
+        n1 = (-e1[1], e1[0])
+        a = (p[0] + n0[0] * d, p[1] + n0[1] * d)
+        b = (q[0] + n1[0] * d, q[1] + n1[1] * d)
+        cr = e0[0] * e1[1] - e0[1] * e1[0]
+        if abs(cr) < 1e-6:              # 共线：直接沿法线平移
+            out.append((q[0] + n0[0] * d, q[1] + n0[1] * d))
+        else:
+            t = ((b[0] - a[0]) * e1[1] - (b[1] - a[1]) * e1[0]) / cr
+            out.append((a[0] + e0[0] * t, a[1] + e0[1] * t))
+    return out
+
+
+def grid_rock(name, shape, loc=(0, 0, 0)):
+    cells = ROCK_CELLS[shape]
+    rng = seeded(name)
+    T = GRID_TILE
+    poly = _cell_outline(cells)
+
+    # 原点放在包围盒中心，这样缩放/旋转不会把石头甩出格子
+    xs = [q[0] for q in poly]
+    ys = [q[1] for q in poly]
+    ox, oy = (min(xs) + max(xs)) * 0.5, (min(ys) + max(ys)) * 0.5
+    base = [((q[0] - ox) * T, (q[1] - oy) * T) for q in poly]
+
+    # 高度按占格数开方长，不是线性 —— 线性的话 6 格的石头会长成塔。
+    H = T * (0.40 + 0.14 * math.sqrt(len(cells)))
+    bm = bmesh.new()
+    lo = [bm.verts.new((x, y, 0.0)) for x, y in base]
+
+    # --- 第二环：向内收，只增不减，再抖 ---
+    mid2 = _offset_poly([((q[0] - ox), (q[1] - oy)) for q in poly], 0.30)
+    ring = []
+    for i, (x, y) in enumerate(mid2):
+        ring.append((x * T, y * T))
+        j = (i + 1) % len(mid2)
+        ex = (mid2[j][0] - x) * T
+        ey = (mid2[j][1] - y) * T
+        # 只在够长的边上加点，而且只加不减
+        if math.hypot(ex, ey) > T * 0.75 and rng.random() < 0.55:
+            ring.append((x * T + ex * rng.uniform(0.40, 0.60),
+                         y * T + ey * rng.uniform(0.40, 0.60)))
+    # 第二环的高度直接决定侧面的斜度：内收 0.30 格 = 0.78 m 是水平位移，
+    # h2 是垂直位移，两者相当时侧面约 45°。第一版 0.66H 侧面太接近垂直。
+    h2 = H * 0.52
+    hi = [bm.verts.new((x + T * rng.uniform(-0.09, 0.09),
+                        y + T * rng.uniform(-0.09, 0.09),
+                        h2 * (1.0 + rng.uniform(-0.18, 0.18))))
+          for x, y in ring]
+
+    bm.faces.new(list(reversed(lo)))
+    _bridge_rings(bm, lo, hi)
+
+    if len(cells) < 2:
+        bm.faces.new(hi)
+    else:
+        # --- 第三环：再收一半，可增可减，三轴抖 25% ---
+        cx = sum(x for x, _ in ring) / len(ring)
+        cy = sum(y for _, y in ring) / len(ring)
+        keep = list(range(len(ring)))
+        for _o in range(rng.randint(1, 2)):
+            if rng.random() < 0.5 and len(keep) > 4:
+                keep.pop(rng.randrange(len(keep)))
+            else:
+                k = rng.randrange(len(keep))
+                keep.insert(k + 1, (keep[k], keep[(k + 1) % len(keep)]))
+        top = []
+        for e in keep:
+            if isinstance(e, tuple):
+                x = (ring[e[0]][0] + ring[e[1]][0]) * 0.5
+                y = (ring[e[0]][1] + ring[e[1]][1]) * 0.5
+            else:
+                x, y = ring[e]
+            x = cx + (x - cx) * 0.5 * (1.0 + rng.uniform(-0.25, 0.25))
+            y = cy + (y - cy) * 0.5 * (1.0 + rng.uniform(-0.25, 0.25))
+            top.append(bm.verts.new((x, y, H * (1.0 + rng.uniform(-0.25, 0.25)))))
+        _bridge_rings(bm, hi, top)
+        bm.faces.new(top)
+
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(o)
+    tint(o, "Rock", rng, 0.04)
+    vgrad(o, 0.24)
+    face_relax(o, low_dark=0.20)
+    finalize(o, loc, smooth_angle=0.0)
+    # 底面是矩形（L 型取外接矩形），直接用包围盒，不要走 _fit_ellipse ——
+    # 那个用二阶矩乘 sqrt(2) 推半径，前提是点均匀分布在圆周上。
+    # 矩形的 4 个角点会把半径高估到 1.41 倍，blob 撑到石头的 2.7 倍，
+    # 软衰减一摊薄就看不见影子了。
+    ROCK_FOOTPRINT[shape] = [(0.0, 0.0, (max(xs) - min(xs)) * T * 0.5,
+                              (max(ys) - min(ys)) * T * 0.5, 0.0)]
+    ROCK_SIZE[shape] = (max(xs) - min(xs), max(ys) - min(ys))
+    print("  %-5s %d 格，底环 %2d 点，二环 %2d 点，高 %.2f m"
+          % (shape, len(cells), len(lo), len(hi), H))
+    return o
+
+
+def _bridge_rings(bm, a, b):
+    """连接两个点数可以不同的闭合环。"""
+    def _edge(u, v):
+        e = bm.edges.get((u, v))
+        return e if e else bm.edges.new((u, v))
+
+    ea = [_edge(a[i], a[(i + 1) % len(a)]) for i in range(len(a))]
+    eb = [_edge(b[i], b[(i + 1) % len(b)]) for i in range(len(b))]
+    bmesh.ops.bridge_loops(bm, edges=ea + eb)
 
 
 def rock(name, shape, loc=(0, 0, 0)):
@@ -459,23 +641,53 @@ def rock(name, shape, loc=(0, 0, 0)):
     return o
 
 
+def _check_glb_order(path, expect):
+    """核对 GLB 里的节点顺序真的等于我们写侧表用的顺序。
+
+    不核对的话，排序规则的差异会无声地让"每变体侧表"错位 ——
+    这个坑踩过两次（一次是声明顺序 vs 字母序，一次是 ASCII 排序
+    vs 大小写不敏感排序），两次都是渲染出来才看出来。
+    """
+    import struct
+    import json as _json
+    with open(path, "rb") as f:
+        d = f.read()
+    ln = struct.unpack_from("<I", d, 12)[0]
+    got = [n["name"] for n in _json.loads(d[20:20 + ln].decode("utf-8"))["nodes"]]
+    if got != list(expect):
+        raise RuntimeError("GLB 节点顺序和侧表顺序不一致： glb=%s 表=%s"
+                           % (got, list(expect)))
+
+
 def build_rocks(out_dir):
     clear()
-    for i, shape in enumerate(ROCK_GROUPS):
-        rock("rock_%s" % shape, shape, loc=(i * 7.0 - 17.0, 0, 0))
+    # **名字带序号前缀**。ScatterField 按 GLB 里的节点顺序取变体，而 glTF
+    # 导出是按名字排序的 —— Blender 用的是大小写不敏感的排序，Python 的
+    # sorted 是 ASCII 排序（'L' < 'c'），两边对不上，影子和石头就错位。
+    # 加了 %02d 前缀之后任何排序规则都给出同一个顺序，这类 bug 直接消失。
+    names = []
+    for i, shape in enumerate(ROCK_CELLS):
+        names.append("rock_%02d_%s" % (i, shape))
+        grid_rock(names[-1], shape, loc=(i * 9.0 - 27.0, 0, 0))
     export(os.path.join(out_dir, "rocks.glb"), "rocks")
-    # 底面椭圆表给布局用来摆假阴影。Blender 的 XY -> Godot 的 X/-Z，
-    # 这里只存 Blender 空间的原始值，坐标系转换留给布局做一次就好。
+    _check_glb_order(os.path.join(out_dir, "rocks.glb"), names)
+
+    # 侧表给布局用：底面椭圆摆假阴影，占格尺寸摆到网格上。
+    # Blender 的 XY -> Godot 的 X/-Z，这里存 Blender 空间的原始值，
+    # 坐标系转换留给布局做一次就好。
     #
-    # **顺序必须按物体名排序**，不能按 ROCK_GROUPS 的声明顺序。
-    # glTF 导出的节点是按名字字母序排的（big/block/low/slab/spire/twin），
-    # 而 ScatterField 是按 GLB 里的节点顺序取变体的。第一版按声明顺序写，
-    # 结果影子和石头对不上号 —— 一块小石头顶着一组大石头的影子。
-    # 凡是给 GLB 配的"每变体侧表"，都得按 GLB 的节点顺序来。
+    # **顺序必须按物体名排序**，不能按声明顺序。glTF 导出的节点是按名字
+    # 字母序排的，而 ScatterField 是按 GLB 里的节点顺序取变体的。
+    # 早先按声明顺序写过一版，结果影子和石头对不上号 ——
+    # 一块小石头顶着一组大石头的影子。凡是给 GLB 配的"每变体侧表"，
+    # 都得按 GLB 的节点顺序来。
     import json
-    order = sorted(ROCK_GROUPS, key=lambda k: "rock_" + k)
+    order = list(ROCK_CELLS)
     with open(os.path.join(out_dir, "rocks_footprint.json"), "w") as fp:
-        json.dump([ROCK_FOOTPRINT[k] for k in order], fp, indent=1)
+        json.dump({"tile": GRID_TILE,
+                   "shapes": order,
+                   "foot": [ROCK_FOOTPRINT[k] for k in order],
+                   "size": [ROCK_SIZE[k] for k in order]}, fp, indent=1)
 
     clear()
     for i, shape in enumerate(("block", "low", "slab", "twin")):
@@ -556,7 +768,7 @@ def _lobe(kind, r, pos, flat_z, rng):
 # (总高, 冠半径, 团数, 树干占总高, 冠的扁平, 树干倾斜, 各团形状)
 TREE_SHAPES = (
     (4.6, 1.70, 3, 0.44, 1.12, 0.00, ("ball", "long", "ball")),
-    (5.8, 1.95, 4, 0.38, 0.92, 0.07, ("drum", "ball", "long", "drum")),
+    (5.8, 1.72, 4, 0.48, 0.92, 0.07, ("drum", "ball", "long", "drum")),
     (3.7, 1.55, 2, 0.52, 1.26, 0.12, ("long", "ball")),
     (5.2, 1.62, 3, 0.46, 1.00, 0.05, ("long", "drum", "ball")),
 )
