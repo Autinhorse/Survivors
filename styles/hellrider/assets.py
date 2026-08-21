@@ -499,14 +499,19 @@ TREE_SHAPES = (
 def tree(name, loc=(0, 0, 0), shape=0, seed=0):
     """细杆 + 几团低面球。参考图就是这么简单 —— 没有枝、没有贴片。
 
-    树冠是**几团明显分开的球**，不是一团加一个几乎重合的小球。
-    第一版第二团只探出主球 0.12 个冠半径，缩小之后根本看不出是两团，
-    只剩交线上一条深色的缝。衡量的量是**探出量** d + r2 - r1
-    （球心距 + 小球半径 - 主球半径），要 0.30-0.45 个冠半径才读得出来。
+    树冠是**几个平等的团围着共同重心**，不是"一个主球在中轴上、其它球
+    从顶上冒出来"。后者读起来是个球上长了两个瘤：中心那团明显是主体，
+    旁边的像多余的附件。正确的读法是几团有大有小、都偏离中轴一点，
+    但**合起来的质心落在树干上**。
 
-    各团同色系。第一版给了明显更深的 LeafDeep 又只压住一点点，读出来是
-    贴在树冠上的一块深色补丁。深浅交给分档光照和 vgrad 去产生，
-    不要在颜色上先分好 —— 而且各团是独立连通块，vgrad 会各给各的渐变。
+    所以生成顺序是反的：先定各团的半径（有大有小）和方位，
+    再按体积加权求质心、整体平移回中轴。没有"主球"这个概念。
+
+    相邻团的心距取 0.55-0.75 倍半径和：小于这个读成一坨，大于就散架。
+    第一版是"主球 + 探出 0.12 冠半径的小球"，缩小之后只剩交线上一条缝。
+
+    各团同色系。深浅交给分档光照和 vgrad 去产生，不要在颜色上先分好 ——
+    各团是独立连通块，vgrad 和 COLOR.a 会各给各的顶亮底暗。
     """
     rng = seeded(name)
     height, crown, lobes, trunk_f, flat_z, lean = TREE_SHAPES[shape]
@@ -518,28 +523,72 @@ def tree(name, loc=(0, 0, 0), shape=0, seed=0):
     tr.rotation_euler = (lean, 0.0, rng.uniform(0.0, math.tau))
     parts.append(tint(tr, "Trunk", rng, 0.04))
 
-    cz = th + crown * 0.62
-    c = ico(crown, (0, 0, cz), "Leaf", subdiv=1)
-    c.scale = (1.0, 1.0, flat_z)
-    parts.append(tint(c, "Leaf", rng, 0.07))
+    # 有大有小，最大的那团定尺度
+    rs = [rng.uniform(0.60, 1.0) for _ in range(lobes)]
+    rs = [crown * r / max(rs) for r in rs]
+
+    if lobes > 1:
+        mean_r = sum(rs) / lobes
+        sep = rng.uniform(0.55, 0.75) * 2.0 * mean_r      # 目标相邻心距
+        ring = sep / (2.0 * math.sin(math.pi / lobes))
+    else:
+        ring = 0.0
 
     a0 = rng.uniform(0.0, math.tau)
-    outs = []
-    for i in range(lobes - 1):
-        # 团均匀铺开一圈再抖，避免全挤在一侧
-        ang = a0 + math.tau * (i + 1) / lobes + rng.uniform(-0.35, 0.35)
-        r2 = crown * rng.uniform(0.58, 0.74)
-        # 由探出量反解球心距：d = 探出量 + r1 - r2
-        out = crown * rng.uniform(0.30, 0.45)
-        outs.append(out / crown)
-        d = out + crown - r2
-        parts.append(tint(ico(r2, (math.cos(ang) * d, math.sin(ang) * d,
-                                   cz + crown * rng.uniform(-0.22, 0.40)),
-                              "Leaf", subdiv=1), "Leaf", rng, 0.07))
-    # 把探出量打出来：这是"能不能看出是几团"的唯一指标，
-    # 而且改比例时很容易无声地掉回去（第一版就是 0.12）
-    print("  %-8s %d 团，探出 %s 冠半径"
-          % (name, lobes, ", ".join("%.2f" % v for v in outs) or "-"))
+    pos = []
+    for i in range(lobes):
+        ang = a0 + math.tau * i / lobes + rng.uniform(-0.30, 0.30)
+        dd = ring * rng.uniform(0.85, 1.15)
+        pos.append([math.cos(ang) * dd, math.sin(ang) * dd,
+                    crown * rng.uniform(-0.26, 0.26)])
+
+    # 相邻团心距松弛到 0.50-0.75 倍半径和。
+    # 半径有大有小时，光按均值算的环半径会让某一对拉到 1.10 ——
+    # 那两个球根本不相交，读出来是飘在旁边的一团。
+    for _it in range(24):
+        moved = 0.0
+        for i in range(lobes):
+            j = (i + 1) % lobes
+            if i == j:
+                break
+            dv = [pos[j][k] - pos[i][k] for k in range(3)]
+            d = max(math.hypot(math.hypot(dv[0], dv[1]), dv[2]), 1e-5)
+            want = min(max(d / (rs[i] + rs[j]), 0.50), 0.75) * (rs[i] + rs[j])
+            f = (want - d) / d * 0.5
+            moved += abs(want - d)
+            for k in range(3):
+                pos[i][k] -= dv[k] * f * 0.5
+                pos[j][k] += dv[k] * f * 0.5
+        if moved < 1e-4:
+            break
+
+    # 按体积加权把质心拉回中轴：整体平衡，没有哪一团是"中心"
+    w = [r ** 3 for r in rs]
+    tw = sum(w)
+    for k in range(3):
+        c0 = sum(p[k] * wi for p, wi in zip(pos, w)) / tw
+        for p in pos:
+            p[k] -= c0
+
+    cz = th + crown * 0.62
+    for r, p in zip(rs, pos):
+        o = ico(r, (p[0], p[1], cz + p[2]), "Leaf", subdiv=1)
+        o.scale = (1.0, 1.0, flat_z)
+        parts.append(tint(o, "Leaf", rng, 0.07))
+
+    # 打印判读用的两个数：相邻团心距/半径和（0.55-0.75 才读得出是几团），
+    # 以及质心偏移（应当≈0，否则树冠是歪的）。改比例时很容易无声地跑掉。
+    gaps = []
+    for i in range(lobes):
+        j = (i + 1) % lobes
+        if lobes < 2:
+            break
+        d = math.dist(pos[i], pos[j])
+        gaps.append(d / (rs[i] + rs[j]))
+    off = math.hypot(sum(p[0] * wi for p, wi in zip(pos, w)) / tw,
+                     sum(p[1] * wi for p, wi in zip(pos, w)) / tw) / crown
+    print("  %-8s %d 团，心距/半径和 %s，质心偏移 %.3f"
+          % (name, lobes, ", ".join("%.2f" % g for g in gaps) or "-", off))
     return flat(parts, name, loc)
 
 
