@@ -152,83 +152,77 @@ def tint(obj, colour, rng=None, jitter=0.0):
 # 三圈之间连三角面。"前后高度有变化"就是中圈那一圈的高度梯度。
 
 def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
-               flare=0.10, cuts=4, top_n=0, mid_ratio=0.0):
-    """一块石头：**棱柱被几个斜面切过**。
+               taper=0.30, jitter=0.20, flare=0.06):
+    """一块石头：**下环 + 上环**，上环三个方向各随机抖动。
 
-    "盒子切几刀"要照字面做。前三版都是在造顶面：
-      v1 随机点凸包      -> 到处斜面，没有平顶
-      v2 两层锥台堆叠    -> 读成"平台上放了个方块"，分层太明显
-      v3/v4 外圈连内圈   -> 顶部收敛成穹顶或土包，没有大平面
-    参考图那种"几个大切面 + 平台 + 台阶"的来源是**平面切割**：
-    一个块体被两三个斜面削掉上部的角，切面自然是大平面，
-    交线自然是锐利的脊，而且高度前后自然不同。
+    结构就两圈顶点，不堆层、不切割：
 
-    切面只落在上部（z > wall_h），所以侧壁那条带保持完整。
+      下环  radius，贴地
+      上环  radius*(1-taper)，高度 H —— **收进去**，所以侧面是斜的，不是垂直
+            每个顶点在 x / y / z 三个方向各随机 ±jitter
+            角度也相对下环错开，所以上下顶点**不垂直对应**
+
+    上环因此不共面，顶面被三角化成几个不同朝向的面；
+    侧面的每个四边形也因为上下不对齐而扭曲成两个朝向不同的三角形 ——
+    明暗自然就碎开了，不需要另外做。
+
+    走过的弯路（都是把简单问题做复杂了）：
+      v1 随机点凸包        到处斜面，没有平顶
+      v2 两层锥台堆叠      读成"平台上放了个方块"，分层太明显
+      v3/v4 外圈连内圈     收敛成穹顶或土包
+      v5-v7 平面切割       切出来太"方"，侧面接近垂直
     """
-    rot = rng.uniform(0.0, math.tau)
-    lift = rng.uniform(0.0, math.tau)
     H = wall_h + cap_h
+    rot = rng.uniform(0.0, math.tau)
 
-    ang, jit = [], []
+    lo, hi = [], []
+    base_ang = []
     a = 0.0
     for _i in range(sides):
-        a += math.tau / sides * rng.uniform(0.90, 1.10)
-        ang.append(a + rot)
-        jit.append(rng.uniform(0.93, 1.05))
+        a += math.tau / sides * rng.uniform(0.86, 1.14)
+        base_ang.append(a + rot)
 
-    def prism(z0, z1, shrink=1.0):
-        m = bmesh.new()
-        lo, hi = [], []
-        for i in range(sides):
-            ca, sa = math.cos(ang[i]), math.sin(ang[i])
-            k = jit[i] * radius * shrink
-            lo.append(m.verts.new((cx + ca * k * (1.0 + flare * (1.0 if z0 == 0.0 else 0.0)),
-                                   cy + sa * k * (1.0 + flare * (1.0 if z0 == 0.0 else 0.0)),
-                                   z0)))
-            hi.append(m.verts.new((cx + ca * k, cy + sa * k, z1)))
-        m.faces.new(list(reversed(lo)))
-        m.faces.new(hi)
-        for i in range(sides):
-            j = (i + 1) % sides
-            m.faces.new((lo[i], lo[j], hi[j], hi[i]))
-        return m
+    for i in range(sides):
+        ca, sa = math.cos(base_ang[i]), math.sin(base_ang[i])
+        k = radius * rng.uniform(0.92, 1.06)
+        lo.append(bm.verts.new((cx + ca * k * (1.0 + flare),
+                                cy + sa * k * (1.0 + flare), 0.0)))
 
-    def merge(m):
-        bmesh.ops.recalc_face_normals(m, faces=m.faces[:])
-        vmap = {v: bm.verts.new(v.co) for v in m.verts}
-        for f in m.faces:
-            try:
-                bm.faces.new([vmap[v] for v in f.verts])
-            except ValueError:
-                pass
-        m.free()
+    for i in range(sides):
+        # 角度错开：上下顶点不垂直对应
+        ta = base_ang[i] + math.tau / sides * rng.uniform(-0.30, 0.30)
+        rt = radius * (1.0 - taper) * (1.0 + rng.uniform(-jitter, jitter))
+        # 三个方向各抖 jitter：x/y 用半径和角度带出来，z 直接抖
+        hz = H * (1.0 + rng.uniform(-jitter, jitter))
+        hi.append(bm.verts.new((cx + math.cos(ta) * rt
+                                + radius * rng.uniform(-jitter, jitter) * 0.35,
+                                cy + math.sin(ta) * rt
+                                + radius * rng.uniform(-jitter, jitter) * 0.35,
+                                hz)))
 
-    # 墙和帽子**分开建，只切帽子**。
-    # 单块棱柱去切的话，斜切面会一路削到地面，把侧壁那条带切断；
-    # 分开之后墙永远完整，帽子被削掉的地方正好露出墙顶 ——
-    # 那就是参考图里绕着石头的那道窄台阶。
-    merge(prism(0.0, wall_h))
-
-    tmp = prism(wall_h, H)
-    merge(tmp)
+    bm.faces.new(list(reversed(lo)))
+    bm.faces.new(hi)                      # 上环不共面，三角化后是几个不同朝向的面
+    for i in range(sides):
+        j = (i + 1) % sides
+        bm.faces.new((lo[i], lo[j], hi[j], hi[i]))
 
 
 # 每个变体是一组石头：(半径, 墙高, 顶高, 边数, x, y)
 # 参考图的石头成组出现：一大配两三小、挤在一起、共享底边。
 # 让**变体本身就是一组** —— 散布器撒出来的"组"间距均匀、朝向随机，读起来还是散的。
 ROCK_GROUPS = {
-    "big":   [(1.90, 0.95, 0.70, 4, 0.00, 0.00),
-              (0.85, 0.45, 0.32, 4, 2.30, -0.95),
-              (0.50, 0.28, 0.18, 4, -1.95, 1.05)],
-    "twin":  [(1.45, 0.82, 0.58, 5, 0.00, 0.00),
-              (1.05, 0.65, 0.45, 4, 2.05, 0.80)],
-    "spire": [(1.05, 1.05, 0.95, 4, 0.00, 0.00),
-              (0.60, 0.34, 0.24, 4, 1.50, -0.85)],
-    "low":   [(2.00, 0.68, 0.38, 5, 0.00, 0.00),
-              (0.75, 0.40, 0.26, 4, 2.15, 0.95)],
-    "block": [(1.25, 1.00, 0.60, 4, 0.00, 0.00)],
-    "slab":  [(2.15, 0.58, 0.30, 5, 0.00, 0.00),
-              (0.48, 0.26, 0.16, 4, 2.30, -0.70)],
+    "big":   [(1.85, 0.70, 0.75, 6, 0.00, 0.00),
+              (0.85, 0.34, 0.34, 5, 2.30, -0.95),
+              (0.50, 0.20, 0.20, 5, -1.95, 1.05)],
+    "twin":  [(1.45, 0.62, 0.62, 6, 0.00, 0.00),
+              (1.05, 0.48, 0.48, 5, 2.05, 0.80)],
+    "spire": [(1.00, 0.85, 0.85, 5, 0.00, 0.00),
+              (0.60, 0.26, 0.26, 5, 1.50, -0.85)],
+    "low":   [(1.95, 0.45, 0.45, 7, 0.00, 0.00),
+              (0.75, 0.30, 0.30, 5, 2.15, 0.95)],
+    "block": [(1.20, 0.72, 0.72, 5, 0.00, 0.00)],
+    "slab":  [(2.10, 0.36, 0.36, 7, 0.00, 0.00),
+              (0.48, 0.18, 0.18, 5, 2.30, -0.70)],
 }
 
 
