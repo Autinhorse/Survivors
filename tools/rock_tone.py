@@ -37,9 +37,18 @@ def report(path, tag):
     med = np.median(v)
     dark = v[v < med]
     spread = (np.percentile(dark, 85) - np.percentile(dark, 15)) / med
-    print("%-22s px=%6d  级数 %d  暗侧跨度 %.3f  暗端/亮端 %.2f"
+    # 最坏邻面跳变：面内是平的，所以 3x3 窗口的极差只在**面与面的交界**
+    # 上非零。取高分位就是"相邻两个面最大差多少"。用来盯量化档位造成的
+    # 硬跳 —— 法线只差几度的两个面不该差一整档。
+    Lm = np.where(m, L, np.nan)
+    mx = ndimage.maximum_filter(np.nan_to_num(Lm, nan=-1e9), 3)
+    mn = ndimage.minimum_filter(np.nan_to_num(Lm, nan=+1e9), 3)
+    edge = (mx - mn)[m]
+    edge = edge[np.isfinite(edge) & (edge < 1e6)]
+    jump = np.percentile(edge, 99.5) / med if edge.size else float("nan")
+    print("%-22s px=%6d  级数 %d  暗侧跨度 %.3f  暗端/亮端 %.2f  最坏邻面跳变 %.3f"
           % (tag, v.size, pk, spread,
-             np.percentile(v, 10) / np.percentile(v, 90)))
+             np.percentile(v, 10) / np.percentile(v, 90), jump))
 
 
 if __name__ == "__main__":

@@ -67,6 +67,40 @@ def seeded(name):
     return random.Random(zlib.crc32(name.encode("utf-8")) & 0xffffffff)
 
 
+def _components(me):
+    """把网格按连通性分组，返回每个顶点属于第几块。
+
+    **一组石头是一个网格里的 2-3 块独立几何。** 按整个物体的包围盒算高度，
+    小的卫星石整块都落在低处，会被均匀压暗、内部一点梯度都没有 ——
+    明暗就只剩 N·L 在决定，于是出现"两个暗面下面反而是个亮面"。
+    高度类的烘焙必须**每块各算各的**。
+    """
+    n = len(me.vertices)
+    par = list(range(n))
+
+    def find(a):
+        while par[a] != a:
+            par[a] = par[par[a]]
+            a = par[a]
+        return a
+
+    for e in me.edges:
+        ra, rb = find(e.vertices[0]), find(e.vertices[1])
+        if ra != rb:
+            par[ra] = rb
+    return [find(i) for i in range(n)]
+
+
+def _comp_span(me, comp):
+    """每个连通块自己的 z 范围。"""
+    span = {}
+    for i, v in enumerate(me.vertices):
+        c = comp[i]
+        lo, hi = span.get(c, (1e9, -1e9))
+        span[c] = (min(lo, v.co.z), max(hi, v.co.z))
+    return span
+
+
 def vgrad(obj, amount=0.28):
     """把**垂直渐变**烘进顶点色：顶亮底暗。
 
@@ -75,24 +109,107 @@ def vgrad(obj, amount=0.28):
     石头 125->96），而单个面**内部**的 std 有 12-26；
     我们纯平面着色的面内 std 只有 0.45，死平。
 
-    它不是贴图 —— 是烘在模型上的渐变。按整个物体的包围盒算，
-    所以高的树和矮的灌木各自都有完整的过渡，不会因为世界高度不同而失真。
+    它不是贴图 —— 是烘在模型上的渐变。按**连通块**的包围盒算，
+    所以一组石头里每一块、一棵树的树冠和树干各自都有完整的过渡。
     在合并之后、finalize 之前做，渐变才覆盖整个物体而不是每个部件各来一遍。
     """
     me = obj.data
-    zs = [v.co.z for v in me.vertices]
-    lo, hi = min(zs), max(zs)
-    span = max(hi - lo, 1e-4)
     attr = me.color_attributes.get("Color")
     if attr is None:
         return obj
+    comp = _components(me)
+    span = _comp_span(me, comp)
     for poly in me.polygons:
         for li in poly.loop_indices:
-            z = me.vertices[me.loops[li].vertex_index].co.z
-            t = (z - lo) / span
+            vi = me.loops[li].vertex_index
+            lo, hi = span[comp[vi]]
+            t = (me.vertices[vi].co.z - lo) / max(hi - lo, 1e-4)
             k = 1.0 - amount * (1.0 - t)
             c = attr.data[li].color
-            attr.data[li].color = (c[0]*k, c[1]*k, c[2]*k, c[3])
+            attr.data[li].color = (c[0] * k, c[1] * k, c[2] * k, c[3])
+    return obj
+
+
+def face_relax(obj, low_dark=0.20, base=0.03, slope=0.60, iters=40):
+    """**逐面**按高度压暗，再做邻面约束松弛，结果乘进顶点色。
+
+    要解决两个具体现象：
+
+    1. 低处的面比它上面的面还亮。纯按 N·L 着色时完全可能 ——
+       一个朝光倾斜的下部面，亮度可以超过一个背光的上部面。
+       真实石头不会这样：低处被周围环境遮挡，本来就更暗。
+       所以每个面按**面心在自己那块石头里的相对高度**加一个压暗偏置。
+    2. 相邻两个面的色差要和法线差成比例。法线只差几度的两个面
+       不该差一大截。
+
+    第 2 条只能在这里做 —— 片元着色器看不到邻面，只有网格阶段有拓扑。
+    做法是约束松弛：邻面允许的色差上限 = base + slope * 法线夹角/pi，
+    超了就把两边各拉一半，迭代到收敛。夹角大的边界（顶面对侧面）上限很宽，
+    硬边保留；夹角小的边界被压平，假台阶消失。
+
+    约束的对象是**面的最终平均亮度**，不是高度偏置本身 —— 只约束自己那
+    一项的话，tint 的逐面抖动照样能让两个近平行的面差出 0.2 以上。
+    在对数域里松弛：约束说的是"相对色差"，而且对数不会把暗面推成负值。
+
+    注意烘的量必须**旋转无关**：ScatterField 会给每个实例随机绕 Y 转。
+    高度和法线夹角都满足，光照方向不满足 —— 所以方向性的明暗留在着色器里
+    按世界法线算，这里只管高度和邻面平滑。
+    """
+    me = obj.data
+    attr = me.color_attributes.get("Color")
+    if attr is None or not me.polygons:
+        return obj
+
+    comp = _components(me)
+    span = _comp_span(me, comp)
+
+    lum, k = [], []
+    for poly in me.polygons:
+        t3 = [0.0, 0.0, 0.0]
+        for li in poly.loop_indices:
+            c = attr.data[li].color
+            for x in range(3):
+                t3[x] += c[x]
+        n3 = float(len(poly.loop_indices))
+        L = max((0.299 * t3[0] + 0.587 * t3[1] + 0.114 * t3[2]) / n3, 1e-5)
+        lo, hi = span[comp[poly.vertices[0]]]
+        h = min(max((poly.center.z - lo) / max(hi - lo, 1e-4), 0.0), 1.0)
+        lum.append(L)
+        k.append(math.log(L) + math.log(1.0 - low_dark * (1.0 - h)))
+
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.faces.ensure_lookup_table()
+    pairs = []
+    for e in bm.edges:
+        if len(e.link_faces) != 2:
+            continue
+        f0, f1 = e.link_faces
+        d = max(-1.0, min(1.0, f0.normal.dot(f1.normal)))
+        pairs.append((f0.index, f1.index,
+                      base + slope * (math.acos(d) / math.pi)))
+    bm.free()
+
+    for _it in range(iters):
+        moved = 0.0
+        for i, j, lim in pairs:
+            d = k[i] - k[j]
+            over = abs(d) - lim
+            if over <= 0.0:
+                continue
+            step = over * 0.25 * (1.0 if d > 0.0 else -1.0)
+            k[i] -= step
+            k[j] += step
+            moved += over
+        if moved < 1e-5:
+            break
+
+    for poly in me.polygons:
+        i = poly.index
+        f = math.exp(k[i]) / lum[i]
+        for li in poly.loop_indices:
+            c = attr.data[li].color
+            attr.data[li].color = (c[0] * f, c[1] * f, c[2] * f, c[3])
     return obj
 
 
@@ -317,6 +434,7 @@ def rock(name, shape, loc=(0, 0, 0)):
     bpy.context.collection.objects.link(o)
     tint(o, "Rock", rng, 0.04)
     vgrad(o, 0.24)
+    face_relax(o, low_dark=0.20)
     finalize(o, loc, smooth_angle=0.0)
     ROCK_FOOTPRINT[shape] = foot
     return o

@@ -58,6 +58,7 @@ shader_parameter/light_steps = 4.0
 shader_parameter/light_floor = 0.22
 shader_parameter/light_wrap = 0.60
 shader_parameter/face_tilt = 0.10
+shader_parameter/step_weight = 0.80
 shader_parameter/top_boost = 0.10
 
 [sub_resource type="ShaderMaterial" id="MatHrBlob"]

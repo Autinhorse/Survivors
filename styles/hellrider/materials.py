@@ -66,7 +66,8 @@ def materials():
     MAT["flat"] = shader_mat(
         "MatHrFlat", "res://shaders/hr_flat.gdshader",
         tint="1.0", light_steps="4.0", light_floor="0.22",
-        light_wrap="0.60", face_tilt="0.10", top_boost="0.10")
+        light_wrap="0.60", face_tilt="0.10", step_weight="0.80",
+        top_boost="0.10")
 
     # blob 阴影：贴在地面上的软影贴片，代替真实投影阴影。
     # 参考图里树/石头下面的影子是居中的软椭圆，没有方向偏移。

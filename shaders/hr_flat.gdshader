@@ -22,6 +22,14 @@ uniform float light_wrap = 0.85;
 // 档内的连续微分：同一档里朝向不同的面仍然拉开一点点。
 // 只给很小的量 —— 台阶的硬边是这个风格的骨架，不能软掉。
 uniform float face_tilt = 0.10;
+// 台阶在最终亮度里占的比重，其余走连续的 N·L。
+//
+// **这一项是给"相邻面色差要和法线差成比例"兜底的。** floor() 量化天生
+// 违反这条规则：两个法线只差 5° 的面，只要 N·L 跨过档位阈值就硬差一整档。
+// 片元着色器看不到邻面，改不了这件事，只能给非比例的那部分**加上限**：
+// 跳变最大 step_weight/(steps-1)，剩下的 (1-step_weight) 严格正比于法线差。
+// 真正的邻面约束在 Blender 端做（face_relax），那里才有拓扑。
+uniform float step_weight = 0.80;
 uniform float tint = 1.0;               // 顶点色的权重，0 = 用 base_color
 uniform vec3 base_color : source_color = vec3(0.6, 0.6, 0.6);
 // 顶面提亮一点点：参考图的低模石头顶面明显比推导出来的更亮，
@@ -44,7 +52,8 @@ void light() {
 	float d = dot(NORMAL, LIGHT);
 	float nl = mix(clamp(d, 0.0, 1.0), d * 0.5 + 0.5, light_wrap);
 	float q = floor(nl * light_steps) / max(light_steps - 1.0, 1.0);
-	float lit = mix(light_floor, 1.0, clamp(q, 0.0, 1.0))
+	float shade = mix(nl, clamp(q, 0.0, 1.0), step_weight);
+	float lit = mix(light_floor, 1.0, shade)
 			* (1.0 + face_tilt * (nl - 0.5) * 2.0);
 	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ATTENUATION * lit;
 }
