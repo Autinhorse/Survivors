@@ -103,8 +103,12 @@ func _build() -> void:
 		verts.append(r)
 		norms.append(Vector3.UP)
 		norms.append(Vector3.UP)
-		# UV.x 让河道边界恰好落在 0 和 1（overhang 落在区间外）
-		var edge_u := (half - overhang) / (2.0 * half)
+		# UV.x 让**河道边界**恰好落在 0 和 1，overhang 落在区间之外
+		# （UV.x < 0 或 > 1）。
+		# 注意用河道宽度 w 归一化，不是整条带子的宽度 half ——
+		# 用 half 归一化的话河道边界会落在 0.36 附近，
+		# 岸边浪花的判据 across≈1 就跑到地形里去了，表现为"浪花消失"。
+		var edge_u := half / w
 		uvs.append(Vector2(0.5 - edge_u, v_acc))
 		uvs.append(Vector2(0.5 + edge_u, v_acc))
 		uv2.append(Vector2(-half / u_metre_scale, v_acc))

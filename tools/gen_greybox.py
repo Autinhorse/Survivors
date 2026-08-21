@@ -149,7 +149,9 @@ def materials():
                               flow_speed="0.35", fleck_scale="2.2",
                               swell_scale="0.35", streak_stretch="2.5",
                               foam_threshold="0.78", foam_softness="0.075",
-                              bank_foam="0.055", normal_strength="0.45",
+                              bank_width="0.42", bank_strength="1.0",
+                              bank_break="0.55", bank_churn="1.6",
+                              normal_strength="0.45",
                               base_alpha="0.95")
 
     # --- foliage: wind sway + noise break-up ---------------------------------

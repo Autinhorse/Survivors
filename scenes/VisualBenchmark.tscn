@@ -183,7 +183,10 @@ shader_parameter/swell_scale = 0.35
 shader_parameter/streak_stretch = 2.5
 shader_parameter/foam_threshold = 0.78
 shader_parameter/foam_softness = 0.075
-shader_parameter/bank_foam = 0.055
+shader_parameter/bank_width = 0.42
+shader_parameter/bank_strength = 1.0
+shader_parameter/bank_break = 0.55
+shader_parameter/bank_churn = 1.6
 shader_parameter/normal_strength = 0.45
 shader_parameter/base_alpha = 0.95
 

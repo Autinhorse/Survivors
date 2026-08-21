@@ -30,7 +30,18 @@ uniform float swell_scale = 0.35;      // 大尺度明暗起伏
 uniform float streak_stretch = 2.5;    // 沿流向拉长的倍数
 uniform float foam_threshold = 0.78;
 uniform float foam_softness = 0.075;
-uniform float bank_foam = 0.055;
+
+// 岸边浪花。
+//
+// 之前这层"消失"了，原因不是没写，而是**落在了看不见的地方**：
+// UV.x 的 0/1 对应河道的名义宽度，而地形挖槽的圆柱半径带 ±10% 抖动，
+// 窄处的实际水面边界在 across≈0.9，泡沫带却从 0.945 才开始 —— 整条埋进了地形。
+// 而且它只以 0.35 的权重参与白沫阈值，本身压不过阈值。
+// 现在改成独立的一层，向内延伸得足够远，并直接叠加而不是参与阈值。
+uniform float bank_width = 0.34;      // 从水边向内延伸多少（UV.x 单位）
+uniform float bank_strength = 0.85;
+uniform float bank_break = 0.55;      // 打碎浪花边缘的噪声强度
+uniform float bank_churn = 1.6;       // 浪花自身的翻涌速度
 uniform float normal_strength = 0.45;
 uniform float base_alpha = 0.95;
 
@@ -43,13 +54,20 @@ void fragment() {
 	float fleck = texture(fleck_noise, fuv).r;
 	float swell = texture(wave_noise, suv).r;
 
-	// 岸边：UV.x 的 0 和 1 就是河道边界，宽窄变化时依然精确
-	float across = abs(UV.x - 0.5) * 2.0;
-	across += (texture(wave_noise, vec2(UV2.x * 0.7, flow * 0.25)).r - 0.5) * 0.45;
-	float edge = smoothstep(1.0 - bank_foam, 1.05, across);
-
+	// 河道内的细白沫
 	float foam = smoothstep(foam_threshold, foam_threshold + foam_softness,
-			fleck + swell * 0.18 + edge * 0.35);
+			fleck + swell * 0.18);
+
+	// 岸边浪花：水撞石头的地方最白。作为**独立的一层**叠加，
+	// 而不是参与上面的阈值 —— 参与阈值的话永远压不过去。
+	float across = abs(UV.x - 0.5) * 2.0;
+	float churn = texture(fleck_noise,
+			vec2(UV2.x * 1.3, flow * 0.6 - TIME * flow_speed * bank_churn)).r;
+	// 用噪声打碎浪花的内边界，否则是一条平行于河岸的干净白带
+	float bank_edge = across + (churn - 0.5) * bank_break;
+	float bank = smoothstep(1.0 - bank_width, 1.0 - bank_width * 0.25, bank_edge);
+	bank *= bank_strength * (0.55 + 0.45 * churn);
+	foam = clamp(foam + bank, 0.0, 1.0);
 
 	vec3 water = mix(water_dark, water_bright, swell * 0.7 + fleck * 0.3);
 	ALBEDO = mix(water, foam_color, foam);
