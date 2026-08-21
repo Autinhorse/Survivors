@@ -564,6 +564,9 @@ RAMP_LEN = 8.0                   # 桥头土坡的长度（坡趾到桥头）
 # 占位检查登记的是**实际抬起来的那一块**，不是整个包围盒：
 # 高度场在边缘已经归零，拿整块外框去判定会把周围一大片都判成冲突。
 RAMP_SOLID = (0.78, 0.74)        # 有效长/宽相对整体的比例
+
+# 电线杆：沿路排成一条线，避开所有建筑（占位检查会验）
+POLES = ((8.6, -22.6), (-0.6, -23.4), (-10.4, -22.2), (-19.8, -19.4))
 DECK_Y = 2.1                     # meets the far-bank plateau top
 
 # Village loop road
@@ -860,30 +863,39 @@ def build():
           "noise_amp": "0.16", "noise_freq": "0.55"},
          T((x0 + 0.6, 0.0, bz), ry=RANG))
 
-    # 拉索。桅杆在资产局部 x = -L/2 + 1.2、高 4.6，顶横梁在 y = ±0.55。
+    # 拉索。两座塔在资产局部 x = ±(L/2 - 4.4)、高 4.6，顶横梁在 y = ±0.55。
     #
-    # **必须沿桥的方向走**：桥绕 Y 轴转了 RANG（约 15.6°），用只在 XY 平面里算的
-    # T_segment 会把拉索拉在恒定 z 上，于是斜着穿过桥面，像一堆乱线。
-    ca, sa = math.cos(math.radians(RANG)), -math.sin(math.radians(RANG))
-    mast_x, mast_top = x0 + 4.2, DECK_Y + 4.6
+    # 索要拉到**桥面两侧的边缘**（栏杆脚下），不是拉到中线附近 ——
+    # 真实斜拉桥就是这样，而且俯视下才会读成两把对称的扇形。
+    # 之前索几乎沿中线走，加上单塔，整体看着就是"甲板上插了根电线杆"。
+    def bridge_pt(dx, dz):
+        """桥局部坐标 -> 世界 XZ。
 
-    def along(d, off=0.0):
-        return (bcx + d * ca - off * sa, bz - d * sa - off * ca)
+        T() 的基是 Ry(RANG)，列为 ax=(cos,0,-sin), az=(sin,0,cos)，
+        所以 world = (dx*cos + dz*sin, -dx*sin + dz*cos)。
+        这里写错过一次（z 分量两项符号都反了，等于做了个镜像），
+        表现是拉索沿着错误的对角线走、跟桥面对不上。
+        """
+        c, sn = math.cos(math.radians(RANG)), math.sin(math.radians(RANG))
+        return (bcx + dx * c + dz * sn, bz - dx * sn + dz * c)
 
-    top_d = mast_x - bcx
-    for k, side in enumerate((-0.55, 0.55)):
-        tx, tz = along(top_d, side)
-        # 锚点落在栏杆以内（side=±0.55，乘 6.2 得 ±3.4 m，桥半宽 4.2 m）。
-        # 之前拉索看着像摊在桥面上，原因不在锚点而在桅杆 ——
-        # 它立在甲板最端头，被引桥土坡埋了半截，索是从一个很低的点拉出来的。
-        for i, dl in enumerate((3.0, 6.6, 10.0)):
-            ax_, az_ = along(top_d + dl, side * 6.2)
-            mesh("Cable%d_%d" % (k, i), br, box, MAT["metal"], cast_shadow="0",
-                 xform=T_seg3((tx, mast_top, tz), (ax_, DECK_Y + 0.55, az_), 0.06))
-        # 背拉索朝上游拉，不再压向村子（原来拉到 x-6.5，正好穿过 HouseB 屋顶）
-        bx, bzz = along(top_d - 5.4, side * 3.0)
-        mesh("CableBack%d" % k, br, box, MAT["metal"], cast_shadow="0",
-             xform=T_seg3((tx, mast_top, tz), (bx, 0.1, bzz), 0.06))
+    tower_d = DECK_L / 2.0 - 4.4          # 塔到桥中心的距离
+    mast_top = DECK_Y + 4.6
+    edge = DECK_W / 2.0 - 0.45            # 锚点落在栏杆脚下
+    for t, sx in enumerate((-1.0, 1.0)):
+        for k, side in enumerate((-1.0, 1.0)):
+            tx, tz = bridge_pt(sx * tower_d, side * 0.55)
+            # 朝跨中的两根 + 朝端头的一根背索。
+            # 锚点用**绝对位置**给，不要写成 "塔的位置 + 偏移" ——
+            # 第一版那样写，塔在 +x 侧时索反而朝桥外拉，伸到了甲板之外。
+            for i, anchor in enumerate((sx * (tower_d - 1.5),
+                                        sx * (tower_d - 3.0),
+                                        sx * (tower_d + 2.9))):
+                ax_, az_ = bridge_pt(anchor, side * edge)
+                mesh("Cable%d%d_%d" % (t, k, i), br, box, MAT["metal"],
+                     cast_shadow="0",
+                     xform=T_seg3((tx, mast_top, tz),
+                                  (ax_, DECK_Y + 0.5, az_), 0.055))
 
     # -------------------------------------------------------------- buildings
     bl = node("Buildings", "Node3D", ".")
@@ -935,7 +947,10 @@ def build():
         mesh("FenceB%d" % i, pr, box, MAT["wood"],
              (-16.0 + i * 1.3, 0.6, -18.6 - i * 0.2), ry=8.0,
              scale=(0.14, 1.2, 0.14))
-    for i, (px, pz) in enumerate(((5.1, -19.5), (-5.4, -18.0), (-16.5, -14.0))):
+    # 电线杆的位置写死在这里，而房子的位置是后来求解出来的 ——
+    # 上一轮挪房子时它们没跟着动，于是两根直接立进了房子里。
+    # 现在它们也进 check_clearance（见文件末尾），挪房子会当场报出来。
+    for i, (px, pz) in enumerate(POLES):
         mesh("Pole%d" % i, pr, cyl, MAT["wood"], (px, 3.2, pz),
              scale=(0.34, 6.4, 0.34))
         mesh("PoleArm%d" % i, pr, box, MAT["wood"], (px, 5.9, pz), ry=20.0,
@@ -944,9 +959,11 @@ def build():
     # ------------------------------------------------- scatter (rejection map)
     # Shared occupancy list so rocks/trees/bushes never pile into each other or
     # into gameplay space (roads, meadow, bridge approach, player).
-    taken = [(-12.9, -13.2, 6.4), (-2.7, -11.1, 5.0), (-21.5, -6.5, 5.2),
-             (3.9, -14.4, 3.4), (-1.2, 3.6, 7.5), (bcx, bz, 11.0),
-             (5.1, -19.5, 1.6), (-5.4, -18.0, 1.6), (-16.5, -14.0, 1.6)]
+    # 这张表里的坐标必须和实际摆放一致。上一轮挪了房子却没改这里，
+    # 于是石头树木照着**旧位置**避让 —— 新位置周围反而堆满了散布物。
+    taken = [(-14.5, -14.5, 6.4), (-4.0, -18.5, 5.0), (-21.5, -6.5, 5.2),
+             (2.6, -17.6, 3.4), (-1.2, 3.6, 7.5), (bcx, bz, 11.0),
+             ] + [(px, pz, 1.6) for px, pz in POLES]
 
     def blocked(px, pz, r):
         if abs(px - river_x(pz)) < RIVER_W / 2.0 + 1.0 + r * 0.3:
@@ -1265,8 +1282,11 @@ check_clearance([
     ("HouseB", footprint(-4.0, -18.5, 5.4, 4.6, 22.0)),
     ("HouseC", footprint(-21.5, -6.5, 5.8, 5.0, 22.0)),
     ("Shed", footprint(2.6, -17.6, 4.0, 3.4, 6.0)),
-    # 土坡必须一起算。上一版漏了它，于是 HouseB 的位置是"避开了桥"
-    # 但正好落在坡里 —— 检查表漏一项，检查就等于没做。
+] + [("Pole%d" % i, footprint(px, pz, 2.4, 0.5, 20.0))
+     for i, (px, pz) in enumerate(POLES)] + [
+    # 土坡和电线杆都必须在表里。漏掉土坡那一版，求解出的房屋位置
+    # "避开了桥"却正好落在坡里；漏掉电线杆那一版，房子直接搬到了杆上。
+    # 检查表漏一项，检查就等于没做。
     ("Ramp", footprint(
         river_x(BRIDGE_Z) - DECK_L / 2.0 + 0.6
         - RAMP_LEN * 0.5 * (1.0 - (1.0 - RAMP_SOLID[0]) * 0.6),
