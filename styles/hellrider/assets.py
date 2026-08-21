@@ -135,101 +135,108 @@ def tint(obj, colour, rng=None, jitter=0.0):
 
 
 # ------------------------------------------------------------------ 石头 --
-# 参考图的石头有三个特征，缺一个都不像：
+# 把参考图的石头放到最大看清楚之后，结构是这样的（前两版都理解错了）：
 #
-# 1. **平顶 + 近乎竖直的侧壁**。不是随机点的凸包（那到处都是斜面，
-#    没有那个决定性的大平顶）。
-# 2. **大块的是两层**：一个宽的低平台，上面偏一侧压着一个小锥台。
-#    单层棱柱只能做小石头。
-# 3. **成组出现**：一大配两三小，挤在一起、高低错落，共享底边。
-#    孤零零一块是散布器的味道，不是美术摆的味道。
+#   ┌─ 一整块**起伏的多面顶**：从边缘的窄台阶升上去，
+#   │  几条脊线通向偏一侧的高点，各个顶点高度都不一样
+#   ├─ 边缘一圈**窄台阶**（顶面折下来和墙相交的地方）
+#   └─ 低矮的底座，侧壁**略微外撇**，不是垂直
 #
-# 第三条决定了这里的做法：**变体本身就是一组**，而不是靠散布器去凑。
-# 散布器随机撒出来的"组"总是间距均匀、朝向随机，读起来还是散的。
+# 走过的两条弯路：
+#   v1 随机点凸包    —— 到处斜面，没有平顶（gatling 的语言，错的）
+#   v2 两层锥台堆叠  —— 读成"平台上放了个方块"，参考图没有这么明显的分层
 #
-# 比例：参考图的石头总高和顶面宽度大致相当（敦实但不矮墩）。
-# 第一版做得太扁，第二版锥台给了 7 条边读成圆顶 —— 改成 4-5 条边才有方块感。
+# 关键在于顶部是**一个连续的多面体表面**，靠顶点高度变化产生脊和坡，
+# 而不是靠堆几何体。所以生成方式是：
+#   外圈（墙顶）-> 中圈（抬高、高度按方向渐变 + 抖动）-> 顶点（最高，偏一侧）
+# 三圈之间连三角面。"前后高度有变化"就是中圈那一圈的高度梯度。
 
-def _tier(r0, r1, h, ox=0.0, oy=0.0, sides=6):
-    return (r0, r1, h, ox, oy, sides)
+def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
+               flare=0.10, cuts=4, top_n=0, mid_ratio=0.0):
+    """一块石头：**棱柱被几个斜面切过**。
 
+    "盒子切几刀"要照字面做。前三版都是在造顶面：
+      v1 随机点凸包      -> 到处斜面，没有平顶
+      v2 两层锥台堆叠    -> 读成"平台上放了个方块"，分层太明显
+      v3/v4 外圈连内圈   -> 顶部收敛成穹顶或土包，没有大平面
+    参考图那种"几个大切面 + 平台 + 台阶"的来源是**平面切割**：
+    一个块体被两三个斜面削掉上部的角，切面自然是大平面，
+    交线自然是锐利的脊，而且高度前后自然不同。
 
-ROCK_GROUPS = {
-    # 每个变体是一组石头：[(锥台层列表, x, y, 转角), ...]
-    #
-    # 比例是并排比出来的：参考图的底座**宽而低**（宽高比约 3:1），
-    # 顶面很大、侧壁很矮，高度主要来自压在上面那一层。
-    # 我们一度做成"窄而高"，读起来像柱子不像岩体。
-    #
-    # **侧壁严格竖直**（顶半径 = 底半径）。给了锥度就读成圆锥，
-    # 参考图里没有一块石头是锥形的。收窄只发生在最上面那层的顶面（做成坡顶）。
-    "big": [([_tier(1.95, 1.95, 0.72, 0, 0, 6),
-              _tier(1.20, 0.80, 0.75, 0.30, 0.18, 5)], 0.0, 0.0, 0.0),
-            ([_tier(0.85, 0.85, 0.55, 0, 0, 5),
-              _tier(0.55, 0.30, 0.34, 0.05, 0.05, 4)], 2.35, -0.95, 0.7),
-            ([_tier(0.52, 0.52, 0.30, 0, 0, 4)], -2.00, 1.10, 2.1)],
+    切面只落在上部（z > wall_h），所以侧壁那条带保持完整。
+    """
+    rot = rng.uniform(0.0, math.tau)
+    lift = rng.uniform(0.0, math.tau)
+    H = wall_h + cap_h
 
-    "twin": [([_tier(1.55, 1.55, 0.66, 0, 0, 6),
-               _tier(0.95, 0.62, 0.62, -0.22, 0.20, 4)], 0.0, 0.0, 0.0),
-             ([_tier(1.10, 1.10, 0.78, 0, 0, 5),
-               _tier(0.62, 0.34, 0.40, 0.10, -0.08, 4)], 2.10, 0.80, 1.2)],
-
-    "spire": [([_tier(1.15, 1.15, 0.78, 0, 0, 5),
-                _tier(0.78, 0.72, 0.72, 0.05, 0.02, 5),
-                _tier(0.55, 0.22, 0.55, 0.02, -0.06, 4)], 0.0, 0.0, 0.0),
-              ([_tier(0.62, 0.62, 0.34, 0, 0, 4)], 1.55, -0.85, 0.4)],
-
-    "low": [([_tier(2.05, 2.05, 0.60, 0, 0, 7)], 0.0, 0.0, 0.0),
-            ([_tier(0.78, 0.78, 0.38, 0, 0, 5)], 2.20, 0.95, 1.8)],
-
-    "block": [([_tier(1.30, 1.30, 0.75, 0, 0, 5),
-                _tier(0.88, 0.55, 0.68, 0.18, 0.14, 4)], 0.0, 0.0, 0.0)],
-
-    "slab": [([_tier(2.20, 2.20, 0.50, 0, 0, 8)], 0.0, 0.0, 0.0),
-             ([_tier(0.50, 0.50, 0.26, 0, 0, 4)], 2.35, -0.70, 0.9)],
-}
-ROCK_TILT = {"low": 0.10, "slab": 0.08}
-
-
-def _ngon(rng, sides):
-    """不规则凸多边形的角度和半径系数。抖动控制在 ±20% 以内保持凸性。"""
-    ang, a = [], rng.uniform(0.0, math.tau)
+    ang, jit = [], []
+    a = 0.0
     for _i in range(sides):
-        a += math.tau / sides * rng.uniform(0.84, 1.16)
-        ang.append(a)
-    return ang, [rng.uniform(0.90, 1.06) for _ in range(sides)]
+        a += math.tau / sides * rng.uniform(0.90, 1.10)
+        ang.append(a + rot)
+        jit.append(rng.uniform(0.93, 1.05))
 
-
-def _stack(bm, rng, tiers, cx, cy, rot, tilt):
-    """在 (cx, cy) 堆一摞锥台。"""
-    z = 0.0
-    for ti, (r0, r1, h, ox, oy, sides) in enumerate(tiers):
-        ang, jit = _ngon(rng, sides)
-        bot, top = [], []
+    def prism(z0, z1, shrink=1.0):
+        m = bmesh.new()
+        lo, hi = [], []
         for i in range(sides):
-            a = ang[i] + rot
-            ca, sa = math.cos(a), math.sin(a)
-            k = jit[i]
-            bot.append(bm.verts.new((cx + ox + ca * r0 * k,
-                                     cy + oy + sa * r0 * k, z)))
-            tz = z + h + ca * r1 * k * tilt
-            top.append(bm.verts.new((cx + ox + ca * r1 * k,
-                                     cy + oy + sa * r1 * k, tz)))
-        bm.faces.new(top)
-        if ti == 0:
-            bm.faces.new(list(reversed(bot)))
+            ca, sa = math.cos(ang[i]), math.sin(ang[i])
+            k = jit[i] * radius * shrink
+            lo.append(m.verts.new((cx + ca * k * (1.0 + flare * (1.0 if z0 == 0.0 else 0.0)),
+                                   cy + sa * k * (1.0 + flare * (1.0 if z0 == 0.0 else 0.0)),
+                                   z0)))
+            hi.append(m.verts.new((cx + ca * k, cy + sa * k, z1)))
+        m.faces.new(list(reversed(lo)))
+        m.faces.new(hi)
         for i in range(sides):
             j = (i + 1) % sides
-            bm.faces.new((bot[i], bot[j], top[j], top[i]))
-        z += h
+            m.faces.new((lo[i], lo[j], hi[j], hi[i]))
+        return m
+
+    def merge(m):
+        bmesh.ops.recalc_face_normals(m, faces=m.faces[:])
+        vmap = {v: bm.verts.new(v.co) for v in m.verts}
+        for f in m.faces:
+            try:
+                bm.faces.new([vmap[v] for v in f.verts])
+            except ValueError:
+                pass
+        m.free()
+
+    # 墙和帽子**分开建，只切帽子**。
+    # 单块棱柱去切的话，斜切面会一路削到地面，把侧壁那条带切断；
+    # 分开之后墙永远完整，帽子被削掉的地方正好露出墙顶 ——
+    # 那就是参考图里绕着石头的那道窄台阶。
+    merge(prism(0.0, wall_h))
+
+    tmp = prism(wall_h, H)
+    merge(tmp)
+
+
+# 每个变体是一组石头：(半径, 墙高, 顶高, 边数, x, y)
+# 参考图的石头成组出现：一大配两三小、挤在一起、共享底边。
+# 让**变体本身就是一组** —— 散布器撒出来的"组"间距均匀、朝向随机，读起来还是散的。
+ROCK_GROUPS = {
+    "big":   [(1.90, 0.95, 0.70, 4, 0.00, 0.00),
+              (0.85, 0.45, 0.32, 4, 2.30, -0.95),
+              (0.50, 0.28, 0.18, 4, -1.95, 1.05)],
+    "twin":  [(1.45, 0.82, 0.58, 5, 0.00, 0.00),
+              (1.05, 0.65, 0.45, 4, 2.05, 0.80)],
+    "spire": [(1.05, 1.05, 0.95, 4, 0.00, 0.00),
+              (0.60, 0.34, 0.24, 4, 1.50, -0.85)],
+    "low":   [(2.00, 0.68, 0.38, 5, 0.00, 0.00),
+              (0.75, 0.40, 0.26, 4, 2.15, 0.95)],
+    "block": [(1.25, 1.00, 0.60, 4, 0.00, 0.00)],
+    "slab":  [(2.15, 0.58, 0.30, 5, 0.00, 0.00),
+              (0.48, 0.26, 0.16, 4, 2.30, -0.70)],
+}
 
 
 def rock(name, shape, loc=(0, 0, 0)):
     rng = seeded(name)
-    tilt = ROCK_TILT.get(shape, 0.05)
     bm = bmesh.new()
-    for tiers, cx, cy, rot in ROCK_GROUPS[shape]:
-        _stack(bm, rng, tiers, cx, cy, rot, tilt)
+    for radius, wall_h, cap_h, sides, cx, cy in ROCK_GROUPS[shape]:
+        _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides)
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     me = bpy.data.meshes.new(name)
@@ -237,7 +244,7 @@ def rock(name, shape, loc=(0, 0, 0)):
     bm.free()
     o = bpy.data.objects.new(name, me)
     bpy.context.collection.objects.link(o)
-    tint(o, "Rock", rng, 0.045)
+    tint(o, "Rock", rng, 0.04)
     vgrad(o, 0.24)
     finalize(o, loc, smooth_angle=0.0)
     return o
@@ -249,7 +256,6 @@ def build_rocks(out_dir):
         rock("rock_%s" % shape, shape, loc=(i * 7.0 - 17.0, 0, 0))
     export(os.path.join(out_dir, "rocks.glb"), "rocks")
 
-    # 碎石：单块、很小，用来填空
     clear()
     for i, shape in enumerate(("block", "low", "slab", "twin")):
         o = rock("pebble_%d" % i, shape, loc=(i * 2.0 - 3.0, 0, 0))
