@@ -20,6 +20,24 @@ extends Camera3D
 ##
 ## 真正要"既公平又不裁切"的话得加信箱黑边，那属于 UI/呈现层，不在本 benchmark 范围。
 
+## 正交投影。实测参考风格（styles/hellrider）用的就是正交：
+## 通道宽度从画面顶端到底端完全不变（收敛斜率 −0.005 px/行），
+## 而透视下我们是 +1.06 px/行、近处比远处宽 1.9 倍。
+##
+## 投影方式是**玩法层**的决定而不是美术风格的决定，但它和 §9 的
+## 屏幕外生成半径直接相关：透视下可见区域是个梯形（近边 ±27.2 m、
+## 远边 ±41.6 m，所以生成半径要按最远的角算到 54.3 m）；
+## 正交下可见区域是个**矩形**，生成半径的推导会简单很多。
+@export var orthographic: bool = false:
+	set(v):
+		orthographic = v
+		_apply()
+## 正交时的**纵向**世界高度（对应透视的 design_fov_vertical）
+@export var ortho_size: float = 37.0:
+	set(v):
+		ortho_size = v
+		_apply()
+
 @export_enum("clamp", "keep_height", "keep_width") var aspect_policy: String = "clamp":
 	set(v):
 		aspect_policy = v
@@ -48,6 +66,20 @@ func _apply() -> void:
 		return
 	var sz := vp.get_visible_rect().size
 	var a: float = sz.x / maxf(sz.y, 1.0)
+
+	if orthographic:
+		projection = PROJECTION_ORTHOGONAL
+		# 正交下 size 就是世界单位，clamp 的逻辑同样适用：
+		# 比基准宽就锁横向（否则宽屏玩家横向看得更多）
+		if aspect_policy == "keep_width" or (
+				aspect_policy == "clamp" and a > reference_aspect):
+			keep_aspect = KEEP_WIDTH
+			size = ortho_size * reference_aspect
+		else:
+			keep_aspect = KEEP_HEIGHT
+			size = ortho_size
+		return
+	projection = PROJECTION_PERSPECTIVE
 
 	# KEEP_WIDTH 下 `fov` 被解释为**水平** FOV，所以切换时要换算，
 	# 否则视野会跳变

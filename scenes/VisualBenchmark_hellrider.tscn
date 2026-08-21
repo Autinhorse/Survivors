@@ -18,7 +18,7 @@
 [sub_resource type="ShaderMaterial" id="MatHrGround"]
 shader = ExtResource("ext_1_hr_ground")
 shader_parameter/tile_a = Color(0.545, 0.392, 0.282, 1)
-shader_parameter/tile_b = Color(0.635, 0.463, 0.333, 1)
+shader_parameter/tile_b = Color(0.573, 0.413, 0.297, 1)
 shader_parameter/tile_size = 2.6
 shader_parameter/tile_steps = 4.0
 shader_parameter/tile_bias = 0.55
@@ -140,14 +140,16 @@ far = 300.0
 current = true
 aspect_policy = "clamp"
 design_fov_vertical = 40.0
+orthographic = true
+ortho_size = 37.0
 
 [node name="Field" type="Node3D" parent="."]
 script = ExtResource("ext_5_HellField")
 half_width = 20
 z_start = -46
 z_end = 36
-tooth_len = 7.5
-tooth_depth = 5.2
+tooth_len = 5
+tooth_depth = 2.8
 lava_width = 34.0
 lava_drop = 0.12
 lava_rows = 3
@@ -158,277 +160,277 @@ lava_material = SubResource("MatHrLava")
 
 
 [node name="Ember0" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.73951, 0.00000, 0.73951, 0.00000, 0.06000, 0.00000, -0.73951, 0.00000, 0.73951, 50.89022, 0.02000, -36.28341)
+transform = Transform3D(0.73951, 0.00000, 0.73951, 0.00000, 0.06000, 0.00000, -0.73951, 0.00000, 0.73951, 48.49022, 0.02000, -36.28341)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember1" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.39451, 0.00000, 0.39451, 0.00000, 0.06000, 0.00000, -0.39451, 0.00000, 0.39451, -33.87778, 0.02000, -8.71007)
+transform = Transform3D(0.39451, 0.00000, 0.39451, 0.00000, 0.06000, 0.00000, -0.39451, 0.00000, 0.39451, -31.47778, 0.02000, -8.71007)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember2" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.38161, 0.00000, 0.38161, 0.00000, 0.06000, 0.00000, -0.38161, 0.00000, 0.38161, 33.54323, 0.02000, -28.28093)
+transform = Transform3D(0.38161, 0.00000, 0.38161, 0.00000, 0.06000, 0.00000, -0.38161, 0.00000, 0.38161, 31.14323, 0.02000, -28.28093)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember3" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.62835, 0.00000, 0.62835, 0.00000, 0.06000, 0.00000, -0.62835, 0.00000, 0.62835, -44.55321, 0.02000, -28.90015)
+transform = Transform3D(0.62835, 0.00000, 0.62835, 0.00000, 0.06000, 0.00000, -0.62835, 0.00000, 0.62835, -42.15321, 0.02000, -28.90015)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember4" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.48180, 0.00000, 0.48180, 0.00000, 0.06000, 0.00000, -0.48180, 0.00000, 0.48180, 51.04086, 0.02000, -10.66564)
+transform = Transform3D(0.48180, 0.00000, 0.48180, 0.00000, 0.06000, 0.00000, -0.48180, 0.00000, 0.48180, 48.64086, 0.02000, -10.66564)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember5" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.70078, 0.00000, 0.70078, 0.00000, 0.06000, 0.00000, -0.70078, 0.00000, 0.70078, -47.26013, 0.02000, -17.89799)
+transform = Transform3D(0.70078, 0.00000, 0.70078, 0.00000, 0.06000, 0.00000, -0.70078, 0.00000, 0.70078, -44.86013, 0.02000, -17.89799)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember6" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.63618, 0.00000, 0.63618, 0.00000, 0.06000, 0.00000, -0.63618, 0.00000, 0.63618, 38.30261, 0.02000, 4.14256)
+transform = Transform3D(0.63618, 0.00000, 0.63618, 0.00000, 0.06000, 0.00000, -0.63618, 0.00000, 0.63618, 35.90261, 0.02000, 4.14256)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember7" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.28115, 0.00000, 0.28115, 0.00000, 0.06000, 0.00000, -0.28115, 0.00000, 0.28115, -36.46778, 0.02000, 10.14951)
+transform = Transform3D(0.28115, 0.00000, 0.28115, 0.00000, 0.06000, 0.00000, -0.28115, 0.00000, 0.28115, -34.06778, 0.02000, 10.14951)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember8" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.65755, 0.00000, 0.65755, 0.00000, 0.06000, 0.00000, -0.65755, 0.00000, 0.65755, 28.51634, 0.02000, 29.77142)
+transform = Transform3D(0.65755, 0.00000, 0.65755, 0.00000, 0.06000, 0.00000, -0.65755, 0.00000, 0.65755, 26.11634, 0.02000, 29.77142)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember9" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.28703, 0.00000, 0.28703, 0.00000, 0.06000, 0.00000, -0.28703, 0.00000, 0.28703, -27.82975, 0.02000, 5.28125)
+transform = Transform3D(0.28703, 0.00000, 0.28703, 0.00000, 0.06000, 0.00000, -0.28703, 0.00000, 0.28703, -25.42975, 0.02000, 5.28125)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember10" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.30514, 0.00000, 0.30514, 0.00000, 0.06000, 0.00000, -0.30514, 0.00000, 0.30514, 32.19910, 0.02000, 24.35820)
+transform = Transform3D(0.30514, 0.00000, 0.30514, 0.00000, 0.06000, 0.00000, -0.30514, 0.00000, 0.30514, 29.79910, 0.02000, 24.35820)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember11" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.45212, 0.00000, 0.45212, 0.00000, 0.06000, 0.00000, -0.45212, 0.00000, 0.45212, -48.18251, 0.02000, -28.68815)
+transform = Transform3D(0.45212, 0.00000, 0.45212, 0.00000, 0.06000, 0.00000, -0.45212, 0.00000, 0.45212, -45.78251, 0.02000, -28.68815)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember12" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.68894, 0.00000, 0.68894, 0.00000, 0.06000, 0.00000, -0.68894, 0.00000, 0.68894, 42.51659, 0.02000, 20.74900)
+transform = Transform3D(0.68894, 0.00000, 0.68894, 0.00000, 0.06000, 0.00000, -0.68894, 0.00000, 0.68894, 40.11659, 0.02000, 20.74900)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember13" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.48911, 0.00000, 0.48911, 0.00000, 0.06000, 0.00000, -0.48911, 0.00000, 0.48911, -28.21308, 0.02000, 6.00579)
+transform = Transform3D(0.48911, 0.00000, 0.48911, 0.00000, 0.06000, 0.00000, -0.48911, 0.00000, 0.48911, -25.81308, 0.02000, 6.00579)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember14" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.57948, 0.00000, 0.57948, 0.00000, 0.06000, 0.00000, -0.57948, 0.00000, 0.57948, 28.45269, 0.02000, 31.61857)
+transform = Transform3D(0.57948, 0.00000, 0.57948, 0.00000, 0.06000, 0.00000, -0.57948, 0.00000, 0.57948, 26.05269, 0.02000, 31.61857)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember15" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.68501, 0.00000, 0.68501, 0.00000, 0.06000, 0.00000, -0.68501, 0.00000, 0.68501, -39.66933, 0.02000, 10.75174)
+transform = Transform3D(0.68501, 0.00000, 0.68501, 0.00000, 0.06000, 0.00000, -0.68501, 0.00000, 0.68501, -37.26933, 0.02000, 10.75174)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember16" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.56573, 0.00000, 0.56573, 0.00000, 0.06000, 0.00000, -0.56573, 0.00000, 0.56573, 44.92113, 0.02000, -0.87419)
+transform = Transform3D(0.56573, 0.00000, 0.56573, 0.00000, 0.06000, 0.00000, -0.56573, 0.00000, 0.56573, 42.52113, 0.02000, -0.87419)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember17" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.28068, 0.00000, 0.28068, 0.00000, 0.06000, 0.00000, -0.28068, 0.00000, 0.28068, -41.73186, 0.02000, 24.53724)
+transform = Transform3D(0.28068, 0.00000, 0.28068, 0.00000, 0.06000, 0.00000, -0.28068, 0.00000, 0.28068, -39.33186, 0.02000, 24.53724)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember18" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.36901, 0.00000, 0.36901, 0.00000, 0.06000, 0.00000, -0.36901, 0.00000, 0.36901, 41.37200, 0.02000, 9.38698)
+transform = Transform3D(0.36901, 0.00000, 0.36901, 0.00000, 0.06000, 0.00000, -0.36901, 0.00000, 0.36901, 38.97200, 0.02000, 9.38698)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember19" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.55026, 0.00000, 0.55026, 0.00000, 0.06000, 0.00000, -0.55026, 0.00000, 0.55026, -45.60718, 0.02000, 7.49320)
+transform = Transform3D(0.55026, 0.00000, 0.55026, 0.00000, 0.06000, 0.00000, -0.55026, 0.00000, 0.55026, -43.20718, 0.02000, 7.49320)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember20" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.46222, 0.00000, 0.46222, 0.00000, 0.06000, 0.00000, -0.46222, 0.00000, 0.46222, 33.00957, 0.02000, 1.67808)
+transform = Transform3D(0.46222, 0.00000, 0.46222, 0.00000, 0.06000, 0.00000, -0.46222, 0.00000, 0.46222, 30.60957, 0.02000, 1.67808)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember21" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.34592, 0.00000, 0.34592, 0.00000, 0.06000, 0.00000, -0.34592, 0.00000, 0.34592, -48.79851, 0.02000, 12.74614)
+transform = Transform3D(0.34592, 0.00000, 0.34592, 0.00000, 0.06000, 0.00000, -0.34592, 0.00000, 0.34592, -46.39851, 0.02000, 12.74614)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember22" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.33853, 0.00000, 0.33853, 0.00000, 0.06000, 0.00000, -0.33853, 0.00000, 0.33853, 34.14005, 0.02000, 14.40285)
+transform = Transform3D(0.33853, 0.00000, 0.33853, 0.00000, 0.06000, 0.00000, -0.33853, 0.00000, 0.33853, 31.74005, 0.02000, 14.40285)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember23" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.41395, 0.00000, 0.41395, 0.00000, 0.06000, 0.00000, -0.41395, 0.00000, 0.41395, -45.29764, 0.02000, 1.21993)
+transform = Transform3D(0.41395, 0.00000, 0.41395, 0.00000, 0.06000, 0.00000, -0.41395, 0.00000, 0.41395, -42.89764, 0.02000, 1.21993)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember24" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.64181, 0.00000, 0.64181, 0.00000, 0.06000, 0.00000, -0.64181, 0.00000, 0.64181, 45.23539, 0.02000, -4.50698)
+transform = Transform3D(0.64181, 0.00000, 0.64181, 0.00000, 0.06000, 0.00000, -0.64181, 0.00000, 0.64181, 42.83539, 0.02000, -4.50698)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember25" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.40776, 0.00000, 0.40776, 0.00000, 0.06000, 0.00000, -0.40776, 0.00000, 0.40776, -34.63921, 0.02000, -7.90816)
+transform = Transform3D(0.40776, 0.00000, 0.40776, 0.00000, 0.06000, 0.00000, -0.40776, 0.00000, 0.40776, -32.23921, 0.02000, -7.90816)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember26" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.32690, 0.00000, 0.32690, 0.00000, 0.06000, 0.00000, -0.32690, 0.00000, 0.32690, 28.27006, 0.02000, -18.91396)
+transform = Transform3D(0.32690, 0.00000, 0.32690, 0.00000, 0.06000, 0.00000, -0.32690, 0.00000, 0.32690, 25.87006, 0.02000, -18.91396)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember27" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.36790, 0.00000, 0.36790, 0.00000, 0.06000, 0.00000, -0.36790, 0.00000, 0.36790, -50.37618, 0.02000, -41.31732)
+transform = Transform3D(0.36790, 0.00000, 0.36790, 0.00000, 0.06000, 0.00000, -0.36790, 0.00000, 0.36790, -47.97618, 0.02000, -41.31732)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember28" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.29772, 0.00000, 0.29772, 0.00000, 0.06000, 0.00000, -0.29772, 0.00000, 0.29772, 42.96452, 0.02000, -13.78556)
+transform = Transform3D(0.29772, 0.00000, 0.29772, 0.00000, 0.06000, 0.00000, -0.29772, 0.00000, 0.29772, 40.56452, 0.02000, -13.78556)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember29" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.27611, 0.00000, 0.27611, 0.00000, 0.06000, 0.00000, -0.27611, 0.00000, 0.27611, -39.21458, 0.02000, -36.84297)
+transform = Transform3D(0.27611, 0.00000, 0.27611, 0.00000, 0.06000, 0.00000, -0.27611, 0.00000, 0.27611, -36.81458, 0.02000, -36.84297)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember30" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.25306, 0.00000, 0.25306, 0.00000, 0.06000, 0.00000, -0.25306, 0.00000, 0.25306, 43.35157, 0.02000, -31.44159)
+transform = Transform3D(0.25306, 0.00000, 0.25306, 0.00000, 0.06000, 0.00000, -0.25306, 0.00000, 0.25306, 40.95157, 0.02000, -31.44159)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember31" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.70400, 0.00000, 0.70400, 0.00000, 0.06000, 0.00000, -0.70400, 0.00000, 0.70400, -41.83809, 0.02000, 18.37578)
+transform = Transform3D(0.70400, 0.00000, 0.70400, 0.00000, 0.06000, 0.00000, -0.70400, 0.00000, 0.70400, -39.43809, 0.02000, 18.37578)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember32" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.69252, 0.00000, 0.69252, 0.00000, 0.06000, 0.00000, -0.69252, 0.00000, 0.69252, 50.99581, 0.02000, -13.80498)
+transform = Transform3D(0.69252, 0.00000, 0.69252, 0.00000, 0.06000, 0.00000, -0.69252, 0.00000, 0.69252, 48.59581, 0.02000, -13.80498)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember33" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.25929, 0.00000, 0.25929, 0.00000, 0.06000, 0.00000, -0.25929, 0.00000, 0.25929, -30.24463, 0.02000, 20.54650)
+transform = Transform3D(0.25929, 0.00000, 0.25929, 0.00000, 0.06000, 0.00000, -0.25929, 0.00000, 0.25929, -27.84463, 0.02000, 20.54650)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember34" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.65114, 0.00000, 0.65114, 0.00000, 0.06000, 0.00000, -0.65114, 0.00000, 0.65114, 39.80665, 0.02000, 6.91175)
+transform = Transform3D(0.65114, 0.00000, 0.65114, 0.00000, 0.06000, 0.00000, -0.65114, 0.00000, 0.65114, 37.40665, 0.02000, 6.91175)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember35" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.25763, 0.00000, 0.25763, 0.00000, 0.06000, 0.00000, -0.25763, 0.00000, 0.25763, -38.84814, 0.02000, 4.94971)
+transform = Transform3D(0.25763, 0.00000, 0.25763, 0.00000, 0.06000, 0.00000, -0.25763, 0.00000, 0.25763, -36.44814, 0.02000, 4.94971)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember36" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.44445, 0.00000, 0.44445, 0.00000, 0.06000, 0.00000, -0.44445, 0.00000, 0.44445, 45.92326, 0.02000, 14.29662)
+transform = Transform3D(0.44445, 0.00000, 0.44445, 0.00000, 0.06000, 0.00000, -0.44445, 0.00000, 0.44445, 43.52326, 0.02000, 14.29662)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember37" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.44510, 0.00000, 0.44510, 0.00000, 0.06000, 0.00000, -0.44510, 0.00000, 0.44510, -48.57379, 0.02000, -30.41889)
+transform = Transform3D(0.44510, 0.00000, 0.44510, 0.00000, 0.06000, 0.00000, -0.44510, 0.00000, 0.44510, -46.17379, 0.02000, -30.41889)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember38" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.54894, 0.00000, 0.54894, 0.00000, 0.06000, 0.00000, -0.54894, 0.00000, 0.54894, 28.01493, 0.02000, -38.07361)
+transform = Transform3D(0.54894, 0.00000, 0.54894, 0.00000, 0.06000, 0.00000, -0.54894, 0.00000, 0.54894, 25.61493, 0.02000, -38.07361)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember39" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.47029, 0.00000, 0.47029, 0.00000, 0.06000, 0.00000, -0.47029, 0.00000, 0.47029, -35.58072, 0.02000, -15.04838)
+transform = Transform3D(0.47029, 0.00000, 0.47029, 0.00000, 0.06000, 0.00000, -0.47029, 0.00000, 0.47029, -33.18072, 0.02000, -15.04838)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember40" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.28672, 0.00000, 0.28672, 0.00000, 0.06000, 0.00000, -0.28672, 0.00000, 0.28672, 28.85075, 0.02000, -41.34677)
+transform = Transform3D(0.28672, 0.00000, 0.28672, 0.00000, 0.06000, 0.00000, -0.28672, 0.00000, 0.28672, 26.45075, 0.02000, -41.34677)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember41" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.38840, 0.00000, 0.38840, 0.00000, 0.06000, 0.00000, -0.38840, 0.00000, 0.38840, -41.34417, 0.02000, 6.91089)
+transform = Transform3D(0.38840, 0.00000, 0.38840, 0.00000, 0.06000, 0.00000, -0.38840, 0.00000, 0.38840, -38.94417, 0.02000, 6.91089)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember42" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.73262, 0.00000, 0.73262, 0.00000, 0.06000, 0.00000, -0.73262, 0.00000, 0.73262, 36.05922, 0.02000, -41.96420)
+transform = Transform3D(0.73262, 0.00000, 0.73262, 0.00000, 0.06000, 0.00000, -0.73262, 0.00000, 0.73262, 33.65922, 0.02000, -41.96420)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember43" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.71926, 0.00000, 0.71926, 0.00000, 0.06000, 0.00000, -0.71926, 0.00000, 0.71926, -37.24283, 0.02000, -40.94785)
+transform = Transform3D(0.71926, 0.00000, 0.71926, 0.00000, 0.06000, 0.00000, -0.71926, 0.00000, 0.71926, -34.84283, 0.02000, -40.94785)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember44" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.28282, 0.00000, 0.28282, 0.00000, 0.06000, 0.00000, -0.28282, 0.00000, 0.28282, 32.91433, 0.02000, 11.73253)
+transform = Transform3D(0.28282, 0.00000, 0.28282, 0.00000, 0.06000, 0.00000, -0.28282, 0.00000, 0.28282, 30.51433, 0.02000, 11.73253)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0
 
 [node name="Ember45" type="MeshInstance3D" parent="Embers"]
-transform = Transform3D(0.59143, 0.00000, 0.59143, 0.00000, 0.06000, 0.00000, -0.59143, 0.00000, 0.59143, -30.72292, 0.02000, 15.06255)
+transform = Transform3D(0.59143, 0.00000, 0.59143, 0.00000, 0.06000, 0.00000, -0.59143, 0.00000, 0.59143, -28.32292, 0.02000, 15.06255)
 mesh = SubResource("MeshBox")
 surface_material_override/0 = SubResource("MatHrLava")
 cast_shadow = 0

@@ -57,11 +57,15 @@ func _build() -> void:
 
 
 func _rows() -> PackedFloat32Array:
-	## 采样点必须**正好落在锯齿的拐点上**，否则三角波会被采样平滑掉，
-	## 锯齿变成波浪。所以步长取 tooth_len 的一半。
+	## 采样点必须**正好落在锯齿的拐点上**，否则三角波会被采样平滑掉。
+	##
+	## 步长取 tooth_len 的一半只是一半条件 —— **起点还要对齐齿的相位**。
+	## 这里一度只做了前者：z_start = -46、tooth_len = 5 时，采样落在
+	## 三角波的 f=0.8 / 0.3 处而不是波峰波谷，振幅被压到名义值的 1/5，
+	## 实测边界只摆动 ±3 px（应为 ±26 px）。表现是"把齿调到 5.2 m 还看不见"。
 	var out := PackedFloat32Array()
 	var step := tooth_len * 0.5
-	var z := z_start
+	var z: float = floor(z_start / tooth_len) * tooth_len
 	while z <= z_end + 0.001:
 		out.append(z)
 		z += step

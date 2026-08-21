@@ -27,9 +27,12 @@ random.seed(20260821)
 # ------------------------------------------------------------------ 场地 --
 FIELD_HALF = 20.0            # 场地半宽（不含锯齿）
 FIELD_Z0, FIELD_Z1 = -46.0, 36.0
-# 锯齿要够大才读得出来。3.6 m 的进出幅度在 60° 俯视下几乎看不见 ——
-# 这是这个风格最强的识别元素，宁可夸张。
-TOOTH_LEN, TOOTH_DEPTH = 7.5, 5.2
+# 锯齿的尺寸靠量，不靠"看着够不够明显"。
+# 判据：熔岩边界的**逐行抖动 std**。参考图是 9-55 px（画面宽 565-596 px），
+# 折算到我们 1920 px 的画面约是 30-180 px；
+# 我凭感觉调到 5.2 m 时实测 std 133-200 px，已经超出上限 ——
+# 而且巨齿会把"两条边平不平行"的拟合带偏。
+TOOTH_LEN, TOOTH_DEPTH = 5.0, 2.8
 
 # ------------------------------------------------------------------ 河流 --
 # 笔直、沿 Z、轴向。没有曲线，没有宽窄变化 —— 那是上一个风格的语言。
@@ -46,6 +49,10 @@ BRIDGE_L = 14.0
 BRIDGE_W = 6.0
 
 # ------------------------------------------------------------------ 相机 --
+# **正交投影**。实测参考图：通道宽度从画面顶端到底端完全不变
+# （收敛斜率 −0.005 px/行），只有正交做得到；我们原来的透视是 +1.06 px/行。
+CAM_ORTHO = True
+CAM_ORTHO_SIZE = 37.0        # 纵向世界高度；16:9 下横向 = 37*16/9 = 65.8 m
 CAM_PITCH = 60.0
 CAM_HEIGHT = 44.0
 CAM_FOV = 40.0
@@ -59,6 +66,13 @@ def camera_z():
 
 
 def frame_size(aspect=16.0 / 9.0):
+    if CAM_ORTHO:
+        # 正交：可见区域是**矩形**。横向 = size*aspect（1:1 映射到地面），
+        # 纵向 = size / sin(俯角)（地面被俯角压缩）。
+        w = CAM_ORTHO_SIZE * aspect
+        depth = CAM_ORTHO_SIZE / math.sin(math.radians(CAM_PITCH))
+        # 中心是相机在地面上的**注视点**，不是相机自身的 z
+        return CAM_FOCUS_Z - depth * 0.5, CAM_FOCUS_Z + depth * 0.5, w
     half = CAM_FOV / 2.0
     far = CAM_HEIGHT / math.tan(math.radians(max(CAM_PITCH - half, 1.0)))
     near = CAM_HEIGHT / math.tan(math.radians(min(CAM_PITCH + half, 89.0)))
@@ -123,7 +137,9 @@ def build(MAT, MESH, performance=False):
                         "res://scripts/environment/GameplayCameraPolicy.gd"),
           "fov": "%.1f" % CAM_FOV, "near": "0.5", "far": "300.0",
           "current": "true", "aspect_policy": '"clamp"',
-          "design_fov_vertical": "%.1f" % CAM_FOV},
+          "design_fov_vertical": "%.1f" % CAM_FOV,
+          "orthographic": "true" if CAM_ORTHO else "false",
+          "ortho_size": "%.1f" % CAM_ORTHO_SIZE},
          T((0.0, CAM_HEIGHT, camera_z()), rx=-CAM_PITCH))
 
     # ------------------------------------------------------- 场地与熔岩带 --
