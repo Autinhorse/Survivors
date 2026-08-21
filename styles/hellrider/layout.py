@@ -76,18 +76,9 @@ MINIMAL = True
 # 调参模式下手工摆的位置：每个物体都摆在空处，互不遮挡，一眼能看全
 # 尺度按参考图反推：那里的骷髅约 1.8 m，大石头是它的 2.5-3 倍高。
 # 我们的玩家方块是 1.6 m，所以大石头要到 4-5 m 高。
-# 石头按**格子坐标**摆：(格子 i, 格子 j)，i/j 是 hr_ground 的方格索引。
-# 不给缩放也不给转角 —— 网格石头的底面是贴着格线的，缩放或旋转就脱格了。
-# 键是形状名，顺序由 rocks_footprint.json 的 shapes 决定（见 _minimal）。
-MIN_ROCK_CELLS = {
-    "c11": (-9, -5),
-    "c12": (-9, 5),
-    "c13": (3, -8),
-    "c22": (-8, 1),
-    "c23": (5, 5),
-    "L12": (-2, 7),
-    "L23": (6, -1),
-}
+MIN_ROCKS = ((-11.0, -12.0, 1.55, 0.0),
+             (-1.0, 3.0, 1.20, 40.0),
+             (10.0, -14.0, 1.00, -25.0))
 # 四棵 —— 树有 4 个变体，摆三棵的话第四个变体永远看不到
 MIN_TREES = ((-12.0, 9.0, 1.0, 0.0),
              (2.0, -22.0, 1.15, 30.0),
@@ -374,11 +365,8 @@ def build(MAT, MESH, performance=False):
 BLOB_PAD = 1.9
 
 
-def _rock_table():
-    """读 Blender 导出的石头侧表：底面椭圆（摆假阴影）+ 占格尺寸（摆位置）。
-
-    表的顺序就是 GLB 里的节点顺序，assets.py 那边导出后核对过。
-    """
+def _rock_footprint():
+    """读 Blender 导出的石头底面椭圆表，读不到就退化成单个圆。"""
     import json
     fp = os.path.join(os.path.dirname(os.path.dirname(
         os.path.dirname(os.path.abspath(__file__)))),
@@ -387,7 +375,7 @@ def _rock_table():
         with open(fp) as f:
             return json.load(f)
     except (IOError, ValueError):
-        print("  [warn] 没有 rocks_footprint.json，石头退化成随机摆放")
+        print("  [warn] 没有 rocks_footprint.json，石头阴影退化成圆")
         return None
 
 
@@ -449,27 +437,9 @@ def _minimal(MAT, MESH, plane):
             "placements": "PackedFloat32Array(%s)"
                           % ", ".join("%.3f" % v for v in pl)})
 
-    # 石头按格子坐标摆。网格对齐的算法：
-    #   资产原点在包围盒中心，形状占 w x h 格，
-    #   所以中心落在 (i + w/2, j + h/2) * tile 上，底面的角就压在格线上。
-    # 顺序必须跟着侧表走（ScatterField 按 i % variants 取变体）。
-    tab = _rock_table()
-    rocks, foot = [], None
-    if tab:
-        # 不要叫 T —— tscnlib 的变换函数就叫 T，覆盖掉之后玩家那行才炸
-        tile = tab["tile"]
-        foot = tab["foot"]
-        for k, shp in enumerate(tab["shapes"]):
-            ci, cj = MIN_ROCK_CELLS[shp]
-            w, h = tab["size"][k]
-            rocks.append(((ci + w * 0.5) * tile, (cj + h * 0.5) * tile,
-                          1.0, 0.0))
-        print("  石头：%d 块，占格 %s"
-              % (len(rocks), " ".join("%dx%d" % tuple(v) for v in tab["size"])))
-    # 假阴影仍然是**一块石头一个椭圆**。L 型的椭圆会盖住缺口那一格 ——
-    # 影子很虚、对比很低，这个精度够用；真要准就得每格一片，
-    # 但那样 ScatterField 那条路（MultiMesh 一片）也得跟着改。
-    put("Rocks", "rocks.glb", len(rocks) or 7, rocks, BLOB_PAD, foot)
+    # 石头的假阴影按**每一块石头自己的底面椭圆**摆，不是整组一个圆。
+    # 底面数据是 Blender 端量出来写进 rocks_footprint.json 的。
+    put("Rocks", "rocks.glb", 6, MIN_ROCKS, BLOB_PAD, _rock_footprint())
     put("Trees", "trees.glb", 4, MIN_TREES, 5.1)
 
     # 玩家留着当尺度参照
@@ -477,4 +447,4 @@ def _minimal(MAT, MESH, plane):
     mesh("Body", pl, sub("BoxMesh", "MeshBoxP", size="Vector3(1, 1, 1)"),
          MAT["player"], (0.0, 1.0, 0.0), scale=(1.5, 1.6, 2.1))
     print("MINIMAL 调参场景：%d 块石头 + %d 棵树"
-          % (len(MIN_ROCK_CELLS), len(MIN_TREES)))
+          % (len(MIN_ROCKS), len(MIN_TREES)))
