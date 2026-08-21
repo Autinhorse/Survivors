@@ -485,14 +485,77 @@ def build_rocks(out_dir):
 
 
 # -------------------------------------------------------------------- 树 --
+# 树冠团的几种形状。全用同一个二十面体的话，不管怎么摆位置，
+# 每一团的刻面图案都一模一样，凑近了就露馅。
+#
+#   ball   二十面体，随机转向          —— 圆的一团
+#   long   二十面体沿一个水平轴拉长     —— 横着的一簇
+#   drum   六棱台，上小下大，顶面是平的 —— 像被削掉一块
+#   spike  六棱锥，顶尖削平             —— 尖的一簇，接近参考图里的针叶感
+#
+# 都控制在 20 面左右，和原来的二十面体持平。
+LOBE_KINDS = ("ball", "long", "drum", "spike")
+
+
+def _prism(r0, r1, h, sides, rng, jitter=0.12):
+    """棱台。r1 接近 r0 是鼓，接近 0 是锥。顶面留一点不收到尖 ——
+    真收成一个点的话顶上会出现一圈很细的三角形，分档着色下闪得厉害。"""
+    bm = bmesh.new()
+    ang = [math.tau * i / sides + rng.uniform(-0.18, 0.18)
+           for i in range(sides)]
+    lo, hi = [], []
+    for i in range(sides):
+        ca, sa = math.cos(ang[i]), math.sin(ang[i])
+        k0 = r0 * (1.0 + rng.uniform(-jitter, jitter))
+        k1 = r1 * (1.0 + rng.uniform(-jitter, jitter))
+        lo.append(bm.verts.new((ca * k0, sa * k0, -h * 0.5)))
+        hi.append(bm.verts.new((ca * k1, sa * k1,
+                                h * 0.5 * (1.0 + rng.uniform(-0.10, 0.10)))))
+    bm.faces.new(list(reversed(lo)))
+    bm.faces.new(hi)
+    for i in range(sides):
+        j = (i + 1) % sides
+        bm.faces.new((lo[i], lo[j], hi[j], hi[i]))
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    me = bpy.data.meshes.new("lobe")
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("lobe", me)
+    bpy.context.collection.objects.link(o)
+    o.data.materials.append(mat("Leaf"))
+    return o
+
+
+def _lobe(kind, r, pos, flat_z, rng):
+    """按 kind 造一团树叶，摆到 pos。"""
+    yaw = rng.uniform(0.0, math.tau)
+    if kind == "drum":
+        o = _prism(r * 1.06, r * 0.74, r * 1.22, 6, rng)
+        o.rotation_euler = (rng.uniform(-0.16, 0.16), 0.0, yaw)
+    elif kind == "spike":
+        o = _prism(r * 1.00, r * 0.30, r * 1.80, 6, rng)
+        o.rotation_euler = (rng.uniform(-0.12, 0.12), 0.0, yaw)
+    else:
+        o = ico(r, (0, 0, 0), "Leaf", subdiv=1,
+                rot=(rng.uniform(0, math.tau), rng.uniform(0, math.tau), yaw))
+        if kind == "long":
+            # 先转到随机方位再拉长，所以长轴方向也是随机的
+            o.scale = (1.34, 0.82, 0.92 * flat_z)
+        else:
+            o.scale = (1.0, 1.0, flat_z)
+    o.location = pos
+    return o
+
+
 # 每个变体一套**不同的比例**，不是同一个模型缩放。
 # 之前 4 个变体只改了总高和冠半径，等比缩放之后读起来就是同一棵树。
-# (总高, 冠半径, 团数, 树干占总高, 冠的扁平, 树干倾斜)
+# (总高, 冠半径, 团数, 树干占总高, 冠的扁平, 树干倾斜, 各团形状)
 TREE_SHAPES = (
-    (4.6, 1.70, 3, 0.44, 1.12, 0.00),
-    (5.8, 1.95, 4, 0.38, 0.92, 0.07),
-    (3.7, 1.55, 2, 0.52, 1.26, 0.12),
-    (5.0, 1.80, 3, 0.34, 1.00, 0.05),
+    (4.6, 1.70, 3, 0.44, 1.12, 0.00, ("ball", "long", "ball")),
+    (5.8, 1.95, 4, 0.38, 0.92, 0.07, ("drum", "ball", "long", "drum")),
+    (3.7, 1.55, 2, 0.52, 1.26, 0.12, ("long", "ball")),
+    (5.2, 1.62, 3, 0.46, 1.00, 0.05, ("spike", "ball", "drum")),
 )
 
 
@@ -514,7 +577,7 @@ def tree(name, loc=(0, 0, 0), shape=0, seed=0):
     各团是独立连通块，vgrad 和 COLOR.a 会各给各的顶亮底暗。
     """
     rng = seeded(name)
-    height, crown, lobes, trunk_f, flat_z, lean = TREE_SHAPES[shape]
+    height, crown, lobes, trunk_f, flat_z, lean, kinds = TREE_SHAPES[shape]
     parts = []
 
     th = height * trunk_f
@@ -571,9 +634,9 @@ def tree(name, loc=(0, 0, 0), shape=0, seed=0):
             p[k] -= c0
 
     cz = th + crown * 0.62
-    for r, p in zip(rs, pos):
-        o = ico(r, (p[0], p[1], cz + p[2]), "Leaf", subdiv=1)
-        o.scale = (1.0, 1.0, flat_z)
+    for i, (r, p) in enumerate(zip(rs, pos)):
+        o = _lobe(kinds[i % len(kinds)], r, (p[0], p[1], cz + p[2]),
+                  flat_z, rng)
         parts.append(tint(o, "Leaf", rng, 0.07))
 
     # 打印判读用的两个数：相邻团心距/半径和（0.55-0.75 才读得出是几团），
@@ -587,8 +650,9 @@ def tree(name, loc=(0, 0, 0), shape=0, seed=0):
         gaps.append(d / (rs[i] + rs[j]))
     off = math.hypot(sum(p[0] * wi for p, wi in zip(pos, w)) / tw,
                      sum(p[1] * wi for p, wi in zip(pos, w)) / tw) / crown
-    print("  %-8s %d 团，心距/半径和 %s，质心偏移 %.3f"
-          % (name, lobes, ", ".join("%.2f" % g for g in gaps) or "-", off))
+    print("  %-8s %d 团 %-24s 心距/半径和 %s，质心偏移 %.3f"
+          % (name, lobes, "+".join(kinds),
+             ", ".join("%.2f" % g for g in gaps) or "-", off))
     return flat(parts, name, loc)
 
 
