@@ -509,9 +509,18 @@ def rock(name, shape, loc=(0, 0, 0)):
     foot = []
     bm = bmesh.new()
     for radius, wall_h, cap_h, sides, cx, cy in ROCK_GROUPS[shape]:
-        # 只有够大的块才加第三环：小石头加了反而碎
+        # 只有够大的块才加第三环 —— 阈值是**量出来的**，不是"看着碎"。
+        # 判据：可见面在屏幕上要有 200 px²（约 14x14），小于这个就读不成
+        # 一个面，只读成脏点。`tools/hr_face_px.py` 量的就是这个。
+        #
+        # 阈值 0.95 时（实例缩放 1.2）：
+        #   rock_block  15.1 个可见面，7.5 个太小，占屏幕面积 13.3%，跨 4 档
+        #   rock_twin   40.9 个可见面，26.2 个太小，占 24.0%
+        # 改成 1.6 之后：
+        #   rock_block   8.8 个可见面，0.8 个太小，占  1.9%，只跨 1 档
+        #   rock_twin   19.9 个可见面，3.0 个太小，占  3.7%
         base = _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
-                          third_ring=(radius > 0.95))
+                          third_ring=(radius > 1.6))
         foot.append(_fit_ellipse(base))
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
