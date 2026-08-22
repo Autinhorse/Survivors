@@ -12,11 +12,16 @@
 
 [sub_resource type="ShaderMaterial" id="MatHrGround"]
 shader = ExtResource("ext_1_hr_ground")
-shader_parameter/tile_a = Color(0.545, 0.392, 0.282, 1)
-shader_parameter/tile_b = Color(0.563, 0.406, 0.292, 1)
+shader_parameter/tile_a = Color(0.5246, 0.3778, 0.2718, 1)
+shader_parameter/tile_b = Color(0.585, 0.4213, 0.3031, 1)
 shader_parameter/tile_size = 2.6
 shader_parameter/tile_steps = 4.0
 shader_parameter/tile_bias = 0.55
+shader_parameter/zone_size_mul = 5.0
+shader_parameter/zone_steps = 3.0
+shader_parameter/zone_weight = 0.80
+shader_parameter/zone_jitter = 1.0
+shader_parameter/lattice_deg = 45.0
 shader_parameter/path_a = Color(0.31, 0.216, 0.153, 1)
 shader_parameter/path_b = Color(0.404, 0.29, 0.204, 1)
 shader_parameter/light_steps = 3.0
@@ -60,6 +65,12 @@ shader_parameter/light_wrap = 0.60
 shader_parameter/face_tilt = 0.10
 shader_parameter/step_weight = 0.80
 shader_parameter/top_boost = 0.10
+shader_parameter/zone_tint = 0.11
+shader_parameter/tile_size = 2.6
+shader_parameter/zone_size_mul = 5.0
+shader_parameter/zone_steps = 3.0
+shader_parameter/lattice_deg = 45.0
+shader_parameter/zone_jitter = 1.0
 
 [sub_resource type="ShaderMaterial" id="MatHrBlob"]
 shader = ExtResource("ext_4_hr_blob")

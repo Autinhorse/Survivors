@@ -44,17 +44,65 @@ uniform vec3 base_color : source_color = vec3(0.6, 0.6, 0.6);
 // 是美术手动提的，不是物理光照的结果
 uniform float top_boost = 0.10;
 
+// **地面分区的余色**：物体按自己**原点**落在哪个地面分区里，整体提亮或压暗
+// 一点点，让它和脚下的地面属于同一"格调"。
+//
+// 两条必须守住的：
+//   1. 按**物体原点**取格，不是按片元 —— 按片元取的话一条格线会把一块石头
+//      从中间切开，那正是这个风格最怕的东西。
+//   2. 下面这套取法（格子大小、朝向、偏移、档数）必须和 hr_ground 里
+//      **逐字相同**，否则物体和它脚下的地面会落在不同档上，反而更乱。
+// 参数默认 0，只有 flat 材质打开；水面和单位不吃这个。
+uniform float zone_tint = 0.0;
+uniform float tile_size = 2.6;
+uniform float zone_size_mul = 5.0;
+uniform float zone_steps = 3.0;
+uniform float zone_jitter = 1.5;   // 分区边界在细格上浮动几格
+uniform float lattice_deg = 45.0;
+
+float hash21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+
+vec2 lattice(vec2 xz) {
+	float a = radians(lattice_deg);
+	float c = cos(a);
+	float s = sin(a);
+	return vec2(c * xz.x - s * xz.y, s * xz.x + c * xz.y);
+}
+
+float zone_step(vec2 xz) {
+	// 分区边界要**跟着细格走**，不能是一条直线。
+	// 把两张图的对比度都拉到 3 倍看：参考图里同一档是几块相邻菱形连成的
+	// 不规则一片；我们第一版的分区是规整的大菱形，一条笔直的长边横穿整幅
+	// 画面 —— 那是这一层唯一露馅的地方。
+	// 做法：先落到细格上，给每个细格一个随机偏移，**再**除以 zone_size_mul。
+	// 于是边界在细格上下浮动 zone_jitter 格，读出来就是不规则的一团。
+	vec2 f = floor(lattice(xz) / tile_size);
+	vec2 j = vec2(hash21(f + 91.0), hash21(f + 137.0)) - 0.5;
+	vec2 zone = floor((f + j * zone_jitter) / zone_size_mul);
+	float zh = hash21(zone + 17.0);
+	return floor(zh * zone_steps) / max(zone_steps - 1.0, 1.0);
+}
+
 varying float v_up;
+varying float v_zone;
 // COLOR 在 light() 里读不到（只有 fragment 能读），用 varying 递过去
 varying float v_h;
 
 void vertex() {
 	v_up = clamp(normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz).y, 0.0, 1.0);
 	v_h = COLOR.a;
+	// MODEL_MATRIX 的第四列就是物体原点的世界坐标；MultiMesh 下它是**实例**的
+	// 变换，所以散布出来的每一件也各自取自己的格
+	v_zone = zone_step(MODEL_MATRIX[3].xz);
 }
 
 void fragment() {
-	ALBEDO = mix(base_color, COLOR.rgb, tint) * (1.0 + top_boost * v_up);
+	ALBEDO = mix(base_color, COLOR.rgb, tint) * (1.0 + top_boost * v_up)
+			* (1.0 + zone_tint * (v_zone - 0.5) * 2.0);
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
 }
