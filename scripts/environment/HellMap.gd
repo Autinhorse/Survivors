@@ -50,9 +50,18 @@ const EMBER_Y := 0.050         ## 余烬压在最上面
 @export_group("余烬")
 ## 熔岩里飘的小方块，参考图里数量不少，是这个风格的签名之一。
 ## 由这里生成而不是 layout 摆死：边界是随机的，只有这里知道熔岩落在哪些格。
-@export var ember_per_cell: float = 0.06
+##
+## 两条来自"看着像黄线断了"的教训：
+##   1. **不能用 QuadMesh。** 它的 UV 是 0..1，而熔岩着色器按 UV.x 选颜色 ——
+##      每块余烬会左半边亮黄、右半边橙，读出来就是一小截黄线。
+##      自己建一个 UV 全 0 的方片，整块才是统一的金色。
+##   2. **不给随机 yaw。** 轴向世界里不该有斜着的方块（第 4 条规则）；
+##      斜的余烬落在边界附近会被读成"黄线歪了"。
+@export var ember_per_cell: float = 0.13
 @export var ember_size_min: float = 0.35
 @export var ember_size_max: float = 1.05
+## 离边界至少几格才放 —— 太近会和亮边混在一起，看着像线碎了
+@export var ember_min_dist: int = 3
 
 @export_group("材质")
 @export var ground_material: Material
@@ -320,6 +329,28 @@ func _dist_cells(i: int, j: int) -> int:
 	return mini(_dist[y * _dw + x], lava_out + 1)
 
 
+func _gold_quad() -> ArrayMesh:
+	## 一个 UV 全 0 的单位方片。UV.x = 0 让熔岩着色器整块画成最亮的那道金色。
+	var verts := PackedVector3Array([
+			Vector3(-0.5, 0.0, -0.5), Vector3(0.5, 0.0, -0.5),
+			Vector3(-0.5, 0.0, 0.5), Vector3(0.5, 0.0, 0.5)])
+	var norms := PackedVector3Array()
+	norms.resize(4)
+	norms.fill(Vector3.UP)
+	var uvs := PackedVector2Array([Vector2.ZERO, Vector2.ZERO,
+			Vector2.ZERO, Vector2.ZERO])
+	var idx := PackedInt32Array([0, 1, 2, 1, 3, 2])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return m
+
+
 func _rim() -> void:
 	## 两道亮边，各自一层**纯色**：外橙在下，内黄在上。
 	##
@@ -392,24 +423,19 @@ func _embers(rng: RandomNumberGenerator) -> void:
 			if _inside(i, j) or rng.randf() > ember_per_cell:
 				continue
 			var d := _dist_cells(i, j)
-			# 贴着边界那一格不放：会和黄边打架
-			if d < 2 or d > lava_out:
+			if d < ember_min_dist or d > lava_out:
 				continue
 			var sz: float = rng.randf_range(ember_size_min, ember_size_max)
 			var x: float = _cx(i) + rng.randf() * cell
 			var z: float = _cz(j) + rng.randf() * cell
-			xf.append(Transform3D(
-					Basis(Vector3.UP, rng.randf() * TAU).scaled(
-							Vector3(sz, 1.0, sz)),
+			# 轴向，不转
+			xf.append(Transform3D(Basis().scaled(Vector3(sz, 1.0, sz)),
 					Vector3(x, EMBER_Y, z)))
 	if xf.is_empty():
 		return
-	var quad := QuadMesh.new()
-	quad.size = Vector2.ONE
-	quad.orientation = PlaneMesh.FACE_Y
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = quad
+	mm.mesh = _gold_quad()
 	mm.instance_count = xf.size()
 	for k in xf.size():
 		mm.set_instance_transform(k, xf[k])
