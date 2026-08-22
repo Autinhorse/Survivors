@@ -479,7 +479,12 @@ def _bigmap(MAT, MESH, plane, box):
     # 5.1 不是拍的：调参场景里量出来树冠要这么大的影子才盖得住。
     # 之前抄了村庄那版的 2.6，影子比树冠小一圈。
     field("Trees", "trees.glb", 4, 5.1)
-    field("Bushes", "bushes.glb", 6, 2.6)
+    # 3.0 是算出来的下限往上取的：ScatterField 的 blob 是一个边长
+    # blob_scale x 缩放 的方片，半宽 = blob_scale/2；灌木半宽约 1.03 x 缩放，
+    # 所以 blob_scale 要大于 2.06 影子才露得出来。
+    # 给过 1.7，结果整片影子藏在灌木底下，看着像浮在地上 ——
+    # 石头那次"影子没了"是同一个毛病。
+    field("Bushes", "bushes.glb", 6, 3.0)
     field("Pebbles", "pebbles.glb", 4, 1.8)
 
     node("Inspector", "Node", ".", {

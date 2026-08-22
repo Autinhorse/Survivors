@@ -27,12 +27,41 @@ const STRIDE := 7          ## 和 ScatterField 一致：x, y, z, yaw, sx, sy, sz
 @export var margin: float = 16.0           ## 簇心离可玩区边界留多远
 
 @export_group("一组长什么样")
-@export var cluster_radius: float = 7.0    ## 一组摊开多大
+@export var cluster_radius: float = 10.0   ## 一组摊开多大
 @export var items_min: int = 2
-@export var items_max: int = 5
+@export var items_max: int = 4
 ## 一组里"全石头 / 全树 / 混着"的比例
 @export var frac_rock: float = 0.40
 @export var frac_tree: float = 0.40
+
+@export_group("占地半径（互不穿插用）")
+## **每一件都有自己的占地半径，摆之前要查重。**
+## 一个石头"变体"其实是一整组石头（一大配两三小，跨 3 m 左右），
+## 不查重的话组和组会叠在一起 —— 小石头就从大石头身上冒出来，
+## 树也会插进石头里。
+@export var r_rock: float = 3.2
+@export var r_tree: float = 2.2
+@export var r_bush: float = 1.1
+@export var r_pebble: float = 0.9
+## 允许挨多近：1.0 = 刚好不碰，小于 1 = 可以挤一点（成组才自然）
+@export var pack: float = 0.85
+@export var tries: int = 24                ## 每件最多试几个位置
+
+@export_group("石头边上的灌木")
+## 大石头周围放几团半埋进地面的球，当低矮灌木。
+@export var bushes_per_rock_min: int = 1
+@export var bushes_per_rock_max: int = 3
+## 往地里埋多深（米，按缩放）。
+## 灌木本体是个扁球（`bush()`：ico 半径 r，压扁到 0.72r，中心抬到 0.446r），
+## 本来就有 0.27r 在地面以下。再埋 0.42 左右，最宽处刚好落在地面上，
+## 读出来才是"一丛低矮的灌木"而不是"地上放了个球"。
+@export var bush_sink: float = 0.42
+@export var bush_scale_min: float = 1.0
+@export var bush_scale_max: float = 1.6
+## 贴石头贴多近：按石头**占地半径**的比例。石头的占地半径比它的可见轮廓大，
+## 所以 0.6-1.0 正好落在石头脚边，而不是离着老远。
+@export var bush_ring_min: float = 0.60
+@export var bush_ring_max: float = 1.00
 
 @export_group("接线")
 @export var map_path: NodePath             ## HellMap，问它要可玩区范围
@@ -87,38 +116,101 @@ func regenerate(new_seed: int = -1) -> void:
 	_push(pebbles_path, out["pebble"])
 
 
+func _radius_of(kind: String) -> float:
+	match kind:
+		"rock":
+			return r_rock
+		"tree":
+			return r_tree
+		"bush":
+			return r_bush
+	return r_pebble
+
+
 func _one_cluster(rng: RandomNumberGenerator, cx: float, cz: float,
 		out: Dictionary) -> void:
-	var roll := rng.randf()
-	var kinds: Array[String] = []
-	var n: int = rng.randi_range(items_min, items_max)
-	if roll < frac_rock:
-		for _i in n:
-			kinds.append("rock")
-	elif roll < frac_rock + frac_tree:
-		for _i in n:
-			kinds.append("tree")
-	else:
-		for _i in n:
-			kinds.append("rock" if rng.randf() < 0.5 else "tree")
-	# 每组带一两件小装饰
-	for _i in rng.randi_range(0, 2):
-		kinds.append("bush" if rng.randf() < 0.6 else "pebble")
+	# 这一组已经占掉的位置：(x, z, 半径)
+	var taken: Array = []
 
-	for k in kinds:
-		# 半径开方分布：均匀取 r 会把点全推到外圈，中心反而空
-		var a: float = rng.randf() * TAU
-		var r: float = cluster_radius * sqrt(rng.randf())
-		var x: float = cx + cos(a) * r
-		var z: float = cz + sin(a) * r
+	var roll := rng.randf()
+	var main := "rock"
+	if roll >= frac_rock and roll < frac_rock + frac_tree:
+		main = "tree"
+	elif roll >= frac_rock + frac_tree:
+		main = "mix"
+
+	var n: int = rng.randi_range(items_min, items_max)
+	var rocks: Array = []
+	for _i in n:
+		var k := main
+		if main == "mix":
+			k = "rock" if rng.randf() < 0.5 else "tree"
 		var s: float = rng.randf_range(0.85, 1.35)
-		if k == "bush" or k == "pebble":
-			s = rng.randf_range(0.7, 1.1)
-		var arr: PackedFloat32Array = out[k]
-		arr.append(x); arr.append(0.0); arr.append(z)
-		arr.append(rng.randf() * 360.0)
-		arr.append(s); arr.append(s); arr.append(s)
-		out[k] = arr
+		var spot: Array = _find(rng, cx, cz, cluster_radius,
+				_radius_of(k) * s, taken, k)
+		if spot.is_empty():
+			continue
+		_emit(out, k, spot[0], 0.0, spot[1], rng.randf() * 360.0, s)
+		if k == "rock":
+			rocks.append([spot[0], spot[1], _radius_of(k) * s])
+
+	# 大石头周围的灌木：贴着石头的外沿摆，半埋进地面
+	for r in rocks:
+		for _b in rng.randi_range(bushes_per_rock_min, bushes_per_rock_max):
+			var s: float = rng.randf_range(bush_scale_min, bush_scale_max)
+			var a: float = rng.randf() * TAU
+			var d: float = r[2] * rng.randf_range(bush_ring_min, bush_ring_max)
+			var x: float = r[0] + cos(a) * d
+			var z: float = r[1] + sin(a) * d
+			# 只避开别的灌木和树，石头是**故意**贴着的
+			if not _free(x, z, r_bush * s, taken, "rock"):
+				continue
+			taken.append([x, z, r_bush * s, "bush"])
+			_emit(out, "bush", x, -bush_sink * s, z, rng.randf() * 360.0, s)
+
+	# 撒几粒卵石
+	for _p in rng.randi_range(1, 3):
+		var s: float = rng.randf_range(0.7, 1.1)
+		var spot: Array = _find(rng, cx, cz, cluster_radius * 1.15,
+				r_pebble * s, taken, "pebble")
+		if spot.is_empty():
+			continue
+		_emit(out, "pebble", spot[0], 0.0, spot[1], rng.randf() * 360.0, s)
+
+
+func _find(rng: RandomNumberGenerator, cx: float, cz: float, spread: float,
+		r: float, taken: Array, kind: String) -> Array:
+	## 在簇心附近找一个不和别人穿插的位置，找不到就返回空数组。
+	## 半径取 sqrt(random)：均匀取 r 会把点全推到外圈，中心反而空。
+	for _t in tries:
+		var a: float = rng.randf() * TAU
+		var d: float = spread * sqrt(rng.randf())
+		var x: float = cx + cos(a) * d
+		var z: float = cz + sin(a) * d
+		if _free(x, z, r, taken, ""):
+			taken.append([x, z, r, kind])
+			return [x, z]
+	return []
+
+
+func _free(x: float, z: float, r: float, taken: Array, skip: String) -> bool:
+	for t in taken:
+		if skip != "" and t.size() > 3 and t[3] == skip:
+			continue
+		var dx: float = x - t[0]
+		var dz: float = z - t[1]
+		if dx * dx + dz * dz < pow((r + t[2]) * pack, 2.0):
+			return false
+	return true
+
+
+func _emit(out: Dictionary, kind: String, x: float, y: float, z: float,
+		yaw: float, s: float) -> void:
+	var arr: PackedFloat32Array = out[kind]
+	arr.append(x); arr.append(y); arr.append(z)
+	arr.append(yaw)
+	arr.append(s); arr.append(s); arr.append(s)
+	out[kind] = arr
 
 
 func _push(p: NodePath, arr: PackedFloat32Array) -> void:
