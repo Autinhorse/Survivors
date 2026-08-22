@@ -36,6 +36,12 @@ const STRIDE := 7
 ## 椭圆度：影子按物体底面的形状拉扁并跟着朝向转，比正圆更像烘出来的 AO
 @export var blob_aspect: float = 0.78
 @export var blob_y: float = 0.03
+## 逐块的底面椭圆（Blender 端量出来的，rocks_footprint.json）。
+## 一个"变体"其实是**一组**石头（一大配两三小），只给整组一个椭圆的话
+## 影子比石头小得多，从上面看等于没有影子。
+## 编码：每个变体先一个数字 = 这组有几块，然后每块 5 个数
+## (cx, cy, ex, ey, ang)，坐标是 Blender 的 XY、角度是弧度。
+@export var footprints: PackedFloat32Array = PackedFloat32Array()
 
 @export_group("Materials")
 @export var material: Material                 ## rocks / bushes / tree trunks
@@ -110,20 +116,56 @@ func _build() -> void:
 						material_secondary, buckets[v])
 
 
+func _parse_footprints() -> Array:
+	## 拆成 [变体][(cx, cy, ex, ey, ang), ...]
+	var out: Array = []
+	var i := 0
+	while i < footprints.size():
+		var n := int(footprints[i])
+		i += 1
+		var grp: Array = []
+		for _k in n:
+			if i + 5 > footprints.size():
+				break
+			grp.append([footprints[i], footprints[i + 1], footprints[i + 2],
+					footprints[i + 3], footprints[i + 4]])
+			i += 5
+		out.append(grp)
+	return out
+
+
 func _blobs(buckets: Array) -> void:
 	## 所有散布物共用一层 MultiMesh，一次 draw call。
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
 	quad.orientation = PlaneMesh.FACE_Y
+	var fps := _parse_footprints()
 	var xf: Array[Transform3D] = []
-	for b in buckets:
-		for t in b:
-			var s: float = t.basis.get_scale().x * blob_scale
+	for v in buckets.size():
+		for t in buckets[v]:
+			var s: float = t.basis.get_scale().x
+			var yaw: float = t.basis.get_euler().y
+			if not fps.is_empty() and not fps[v % fps.size()].is_empty():
+				# 逐块一个椭圆，按实例的朝向和缩放摆
+				var ca := cos(yaw)
+				var sa := sin(yaw)
+				for f in fps[v % fps.size()]:
+					# Blender XY -> Godot XZ，和 layout.py 的 _blob_spots 同一套
+					var lx: float = f[0] * s
+					var lz: float = -f[1] * s
+					xf.append(Transform3D(
+							Basis(Vector3.UP, f[4] + yaw).scaled(Vector3(
+									2.0 * f[2] * s * blob_scale, 1.0,
+									2.0 * f[3] * s * blob_scale)),
+							Vector3(t.origin.x + lx * ca + lz * sa, blob_y,
+									t.origin.z - lx * sa + lz * ca)))
+				continue
+			# 没有底面数据就退回"整件一个椭圆"
+			var r: float = s * blob_scale
 			# 跟着散布物的朝向转，并按 blob_aspect 拉扁 ——
 			# 正圆的影子在成组的石头下面一眼是贴上去的
-			var yaw: float = t.basis.get_euler().y
 			var bs := Basis(Vector3.UP, yaw).scaled(
-					Vector3(s, 1.0, s * blob_aspect))
+					Vector3(r, 1.0, r * blob_aspect))
 			xf.append(Transform3D(bs, Vector3(t.origin.x, blob_y, t.origin.z)))
 	if xf.is_empty():
 		return

@@ -13,7 +13,7 @@ config_version=5
 config/name="Survivors 3D Benchmark"
 config/description="Vertical slice benchmark for Godot 4 (see docs/GODOT_3D_可行性验证需求.md)"
 config/version="0.1.2"
-run/main_scene="res://scenes/VisualBenchmark.tscn"
+run/main_scene="res://scenes/VisualBenchmark_hellrider.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 
 [display]

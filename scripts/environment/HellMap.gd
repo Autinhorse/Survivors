@@ -10,7 +10,7 @@ extends Node3D
 ##
 ##   可玩区   名义矩形 play_w x play_d，四条边各自沿格随机进出 0..edge_jitter 格
 ##   熔岩     可玩区之外、向外 lava_out 格以内的所有格子，一格一个方块
-##   黄边     沿"可玩区/熔岩"那条阶梯边界铺一条窄带
+##   亮边     沿阶梯边界的两条纯色带（外橙在下、内黄在上）+ 凸角补丁
 ##
 ## 三件事都跟着同一条边界走，所以不会出现缝。这一点比看上去重要 ——
 ## 上一个风格里"判据坐标和实际可见边界对不上"这个坑踩了三次。
@@ -18,7 +18,11 @@ extends Node3D
 ## **熔岩方块是轴向的正方形，不是 45° 菱形。** 参考图的菱形是等距投影的
 ## 产物；见 styles/hellrider/README.md「四条不能破的规则」第 4 条。
 
-const RIM_Y := 0.03            ## 黄边抬高一点，避免和熔岩方块 z-fighting
+## 三层各抬高一点点。**顺序是有意的**：黄边必须压在橙边上面，
+## 否则在转角重叠处会看到红压黄。
+const RIM_OUT_Y := 0.020       ## 外面那道橙
+const RIM_IN_Y := 0.035        ## 里面那道亮黄
+const EMBER_Y := 0.050         ## 余烬压在最上面
 
 @export var rebuild: bool = false:
 	set(v):
@@ -40,8 +44,8 @@ const RIM_Y := 0.03            ## 黄边抬高一点，避免和熔岩方块 z-f
 
 @export_group("熔岩")
 @export var lava_out: int = 10              ## 从名义边界再向外几格
-@export var rim_inner_w: float = 0.55       ## 亮黄那道（米）
-@export var rim_outer_w: float = 1.30       ## 外面那道橙（米）
+@export var rim_inner_w: float = 0.55       ## 亮黄那道有多宽（米）
+@export var rim_outer_w: float = 1.30       ## 外面那道橙有多宽（米）
 
 @export_group("余烬")
 ## 熔岩里飘的小方块，参考图里数量不少，是这个风格的签名之一。
@@ -202,10 +206,29 @@ func _ground() -> void:
 	_make("Ground", verts, uvs, idx, ground_material)
 
 
+func _vert_dist(vi: int, vj: int) -> float:
+	## 一个**格顶点**到可玩区的距离（米）。
+	## 四周任何一格是可玩格，这个顶点就在边界上，距离 0；
+	## 否则取四周格子里最小的格距乘格边长。
+	if (_inside(vi - 1, vj - 1) or _inside(vi, vj - 1)
+			or _inside(vi - 1, vj) or _inside(vi, vj)):
+		return 0.0
+	var d := mini(mini(_dist_cells(vi - 1, vj - 1), _dist_cells(vi, vj - 1)),
+			mini(_dist_cells(vi - 1, vj), _dist_cells(vi, vj)))
+	return float(d) * cell
+
+
 func _lava() -> void:
 	## 熔岩：可玩区之外、离可玩区 lava_out 格以内的每一个格子各一个方块。
-	## UV.x 携带**到可玩区的距离（米）**，着色器靠它把颜色往外压暗。
-	## 逐格用切比雪夫距离（格数），够用而且不用做 BFS。
+	##
+	## UV.x 携带到可玩区的距离（米），着色器靠它把颜色往外压暗。
+	## 距离逐顶点算，所以渐变是连续的，不会一格一个色阶。
+	##
+	## **但距离在这里要夹到亮边宽度之外**：亮边由 `_rim()` 单独画。
+	## 试过让亮边直接从熔岩格身上长出来（靠同一条 UV），不行 ——
+	## 地面凹进去一格时，那个熔岩格有三个顶点距离都是 0，线性插值把大半个
+	## 格子算成"离边界很近"，黄色摊成一个大三角，转角被斜切掉。
+	## 4 m 的格子撑不住 0.55 m 的细带。
 	var verts := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
@@ -213,12 +236,36 @@ func _lava() -> void:
 		for i in range(-lava_out, _cols + lava_out):
 			if _inside(i, j):
 				continue
-			var d := _dist_cells(i, j)
-			if d > lava_out:
+			if _dist_cells(i, j) > lava_out:
 				continue
-			var u := (float(d) - 0.5) * cell
-			_quad(verts, uvs, idx, _cx(i), _cz(j), _cx(i + 1), _cz(j + 1),
-					0.0, u, u)
+			var a := verts.size()
+			var x0 := _cx(i)
+			var x1 := _cx(i + 1)
+			var z0 := _cz(j)
+			var z1 := _cz(j + 1)
+			var lo := rim_outer_w + 0.01
+			var da: float = maxf(_vert_dist(i, j), lo)
+			var db: float = maxf(_vert_dist(i + 1, j), lo)
+			var dc: float = maxf(_vert_dist(i, j + 1), lo)
+			var dd: float = maxf(_vert_dist(i + 1, j + 1), lo)
+			verts.append(Vector3(x0, 0.0, z0))
+			verts.append(Vector3(x1, 0.0, z0))
+			verts.append(Vector3(x0, 0.0, z1))
+			verts.append(Vector3(x1, 0.0, z1))
+			uvs.append(Vector2(da, z0))
+			uvs.append(Vector2(db, z0))
+			uvs.append(Vector2(dc, z1))
+			uvs.append(Vector2(dd, z1))
+			# **对角线要挑**：距离在三角形内是线性插值的，所以对角线切在哪
+			# 决定了亮边在转角上是什么形状。固定切法会把"距离 0 的那个角"
+			# 单独切成一个三角形，等值线就成了一条 45° 斜线 —— 转角被斜切掉。
+			# 让对角线**穿过**距离最小的那个角，转角就变成两段折线，接近圆角。
+			if da + dd <= db + dc:
+				idx.append(a); idx.append(a + 1); idx.append(a + 3)
+				idx.append(a); idx.append(a + 3); idx.append(a + 2)
+			else:
+				idx.append(a); idx.append(a + 1); idx.append(a + 2)
+				idx.append(a + 1); idx.append(a + 3); idx.append(a + 2)
 	_make("Lava", verts, uvs, idx, lava_material)
 
 
@@ -274,13 +321,24 @@ func _dist_cells(i: int, j: int) -> int:
 
 
 func _rim() -> void:
-	## 黄边：沿"可玩格 / 非可玩格"之间的每一条格边铺一条窄带，往熔岩那侧长。
-	## 用和熔岩同一个材质 —— 着色器按 UV.x（到边界的距离）画亮边，
-	## 所以这里只要把距离写对，两道边（内亮黄、外橙）就自动出来。
+	## 两道亮边，各自一层**纯色**：外橙在下，内黄在上。
+	##
+	## 纯色是关键。上一版这两道是靠一条 UV 渐变画出来的，转角处两条带
+	## 互相重叠又共面，z-fighting 让同一块像素一会儿黄一会儿橙 ——
+	## 拖动画面就闪。纯色的话重叠也看不出来，因为重叠的两片长得一样。
+	##
+	## 缺口靠**凸角补丁**补：一条边一条带的话，地面向外凸的角上会缺一个
+	## w x w 的方块，黄线就在转角断开。
+	_rim_band(rim_outer_w, RIM_OUT_Y, rim_outer_w - 0.01, "RimOuter")
+	_rim_band(rim_inner_w, RIM_IN_Y, 0.0, "RimInner")
+
+
+func _rim_band(w: float, y: float, u: float, nm: String) -> void:
+	## u 是写进 UV.x 的常数距离，着色器按它选颜色：
+	## < rim_inner_w -> 亮黄，< rim_outer_w -> 橙。
 	var verts := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
-	var w := rim_outer_w
 	for j in range(-1, _rows + 1):
 		for i in range(-1, _cols + 1):
 			if not _inside(i, j):
@@ -289,15 +347,42 @@ func _rim() -> void:
 			var x1 := _cx(i + 1)
 			var z0 := _cz(j)
 			var z1 := _cz(j + 1)
-			if not _inside(i, j - 1):
-				_strip(verts, uvs, idx, x0, z0 - w, x1, z0, true)
-			if not _inside(i, j + 1):
-				_strip(verts, uvs, idx, x0, z1, x1, z1 + w, false)
-			if not _inside(i - 1, j):
-				_strip(verts, uvs, idx, x0 - w, z0, x0, z1, true, true)
-			if not _inside(i + 1, j):
-				_strip(verts, uvs, idx, x1, z0, x1 + w, z1, false, true)
-	_make("Rim", verts, uvs, idx, lava_material)
+			var n := not _inside(i, j - 1)
+			var so := not _inside(i, j + 1)
+			var we := not _inside(i - 1, j)
+			var ea := not _inside(i + 1, j)
+			if n:
+				_flat(verts, uvs, idx, x0, z0 - w, x1, z0, y, u)
+			if so:
+				_flat(verts, uvs, idx, x0, z1, x1, z1 + w, y, u)
+			if we:
+				_flat(verts, uvs, idx, x0 - w, z0, x0, z1, y, u)
+			if ea:
+				_flat(verts, uvs, idx, x1, z0, x1 + w, z1, y, u)
+			# 凸角补丁
+			if n and we:
+				_flat(verts, uvs, idx, x0 - w, z0 - w, x0, z0, y, u)
+			if n and ea:
+				_flat(verts, uvs, idx, x1, z0 - w, x1 + w, z0, y, u)
+			if so and we:
+				_flat(verts, uvs, idx, x0 - w, z1, x0, z1 + w, y, u)
+			if so and ea:
+				_flat(verts, uvs, idx, x1, z1, x1 + w, z1 + w, y, u)
+	_make(nm, verts, uvs, idx, lava_material)
+
+
+func _flat(verts: PackedVector3Array, uvs: PackedVector2Array,
+		idx: PackedInt32Array, x0: float, z0: float, x1: float, z1: float,
+		y: float, u: float) -> void:
+	var a := verts.size()
+	verts.append(Vector3(x0, y, z0))
+	verts.append(Vector3(x1, y, z0))
+	verts.append(Vector3(x0, y, z1))
+	verts.append(Vector3(x1, y, z1))
+	for _k in 4:
+		uvs.append(Vector2(u, 0.0))
+	idx.append(a); idx.append(a + 1); idx.append(a + 2)
+	idx.append(a + 1); idx.append(a + 3); idx.append(a + 2)
 
 
 func _embers(rng: RandomNumberGenerator) -> void:
@@ -316,7 +401,7 @@ func _embers(rng: RandomNumberGenerator) -> void:
 			xf.append(Transform3D(
 					Basis(Vector3.UP, rng.randf() * TAU).scaled(
 							Vector3(sz, 1.0, sz)),
-					Vector3(x, RIM_Y, z)))
+					Vector3(x, EMBER_Y, z)))
 	if xf.is_empty():
 		return
 	var quad := QuadMesh.new()
@@ -334,27 +419,3 @@ func _embers(rng: RandomNumberGenerator) -> void:
 	mi.material_override = lava_material
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
-
-
-func _strip(verts: PackedVector3Array, uvs: PackedVector2Array,
-		idx: PackedInt32Array, x0: float, z0: float, x1: float, z1: float,
-		flip: bool, vertical: bool = false) -> void:
-	## 一条窄带，UV.x 从 0（贴着可玩区）线性到 rim_outer_w（外侧）。
-	var a := verts.size()
-	var u0 := 0.0
-	var u1 := rim_outer_w
-	if flip:
-		u0 = rim_outer_w
-		u1 = 0.0
-	verts.append(Vector3(x0, RIM_Y, z0))
-	verts.append(Vector3(x1, RIM_Y, z0))
-	verts.append(Vector3(x0, RIM_Y, z1))
-	verts.append(Vector3(x1, RIM_Y, z1))
-	if vertical:
-		uvs.append(Vector2(u0, z0)); uvs.append(Vector2(u1, z0))
-		uvs.append(Vector2(u0, z1)); uvs.append(Vector2(u1, z1))
-	else:
-		uvs.append(Vector2(u0, z0)); uvs.append(Vector2(u0, z0))
-		uvs.append(Vector2(u1, z1)); uvs.append(Vector2(u1, z1))
-	idx.append(a); idx.append(a + 1); idx.append(a + 2)
-	idx.append(a + 1); idx.append(a + 3); idx.append(a + 2)

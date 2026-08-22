@@ -451,21 +451,36 @@ def _bigmap(MAT, MESH, plane, box):
         "bushes_path": 'NodePath("Bushes")',
         "pebbles_path": 'NodePath("Pebbles")'})
 
-    def field(nm, src, n_var, blob):
+    def field(nm, src, n_var, blob, foot=None):
         # placements 留空：ClusterScatter 在运行时填进去再重建
-        node(nm, "Node3D", sc, {
+        props = {
             "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
             "kind": '"rock"',
             "source_scene": ext("PackedScene", MESH(src)),
             "variants": str(n_var),
             "material": MAT["flat"],
             "blob_material": MAT["blob"],
-            "blob_scale": "%g" % blob})
+            "blob_scale": "%g" % blob}
+        if foot:
+            flat_f = []
+            for v in range(n_var):
+                grp = foot[v % len(foot)]
+                flat_f.append(len(grp))
+                for cx, cy, ex, ey, ang in grp:
+                    flat_f += [cx, cy, ex, ey, ang]
+            props["footprints"] = ("PackedFloat32Array(%s)"
+                                   % ", ".join("%.4f" % v for v in flat_f))
+        node(nm, "Node3D", sc, props)
 
-    field("Rocks", "rocks.glb", 6, 2.1)
-    field("Trees", "trees.glb", 4, 2.6)
-    field("Bushes", "bushes.glb", 6, 2.1)
-    field("Pebbles", "pebbles.glb", 4, 1.5)
+    # 石头的影子按**每一块的底面椭圆**摆，不是整组一个圆 ——
+    # 一个"变体"是一组石头（一大配两三小），整组一个椭圆的话影子比石头小得多，
+    # 从上面看等于没有影子。底面数据是 Blender 端量出来的。
+    field("Rocks", "rocks.glb", 6, BLOB_PAD, _rock_footprint())
+    # 5.1 不是拍的：调参场景里量出来树冠要这么大的影子才盖得住。
+    # 之前抄了村庄那版的 2.6，影子比树冠小一圈。
+    field("Trees", "trees.glb", 4, 5.1)
+    field("Bushes", "bushes.glb", 6, 2.6)
+    field("Pebbles", "pebbles.glb", 4, 1.8)
 
     node("Inspector", "Node", ".", {
         "script": ext("Script", "res://scripts/environment/MapInspector.gd"),
