@@ -458,9 +458,14 @@ def _bigmap(MAT, MESH, plane, box):
             "kind": '"rock"',
             "source_scene": ext("PackedScene", MESH(src)),
             "variants": str(n_var),
-            "material": MAT["flat"],
-            "blob_material": MAT["blob"],
-            "blob_scale": "%g" % blob}
+            "material": MAT["flat"]}
+        # blob <= 0 就不挂 blob 材质，ScatterField 也就不生成影子。
+        # 卵石用这条：它只有半米，任何影子都比它自己大，读出来是一团脏
+        # （blob 的软过渡有个下限，缩不到那么小）。地上的小碎石本来就
+        # 不该有明显的接触影。
+        if blob > 0.0:
+            props["blob_material"] = MAT["blob"]
+            props["blob_scale"] = "%g" % blob
         if foot:
             flat_f = []
             for v in range(n_var):
@@ -485,7 +490,7 @@ def _bigmap(MAT, MESH, plane, box):
     # 给过 1.7，结果整片影子藏在灌木底下，看着像浮在地上 ——
     # 石头那次"影子没了"是同一个毛病。
     field("Bushes", "bushes.glb", 6, 3.0)
-    field("Pebbles", "pebbles.glb", 4, 1.8)
+    field("Pebbles", "pebbles.glb", 4, 0.0)      # 卵石不要影子，见上
 
     node("Inspector", "Node", ".", {
         "script": ext("Script", "res://scripts/environment/MapInspector.gd"),

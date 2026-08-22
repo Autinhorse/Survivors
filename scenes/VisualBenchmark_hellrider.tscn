@@ -212,8 +212,6 @@ kind = "rock"
 source_scene = ExtResource("ext_12_pebbles")
 variants = 4
 material = SubResource("MatHrFlat")
-blob_material = SubResource("MatHrBlob")
-blob_scale = 1.8
 
 [node name="Inspector" type="Node" parent="."]
 script = ExtResource("ext_13_MapInspector")
