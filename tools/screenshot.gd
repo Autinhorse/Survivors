@@ -18,6 +18,14 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	var out_path: String = args[0] if args.size() > 0 else "user://shot.png"
 	var scene_path: String = args[1] if args.size() > 1 else "res://scenes/VisualBenchmark.tscn"
+	# 下面那几个"位置参数"（frames / shots / interval）只认**纯数字**的 token。
+	# 场景脚本自己也读 user args（MapInspector 的 pos= / ortho=），
+	# 而 String.to_int() 会从 "ortho=300" 里抠出 300 —— 一次 ortho=300 的截图
+	# 变成了连拍 300 张。踩过一次。
+	var pos_args := PackedStringArray()
+	for a in args:
+		if String(a).is_valid_int() or String(a).is_valid_float():
+			pos_args.append(String(a))
 
 	var packed: PackedScene = load(scene_path)
 	if packed == null:
@@ -52,7 +60,7 @@ func _ready() -> void:
 	# NOT the Milestone 4 benchmark (that needs the 5s warm-up / 20-30s window
 	# from doc section 28).  This is only good for A/B comparisons of the same
 	# scene on the same machine in the same session -- e.g. renderer switches.
-	var frames: int = int(args[2]) if args.size() > 2 else 0
+	var frames: int = int(pos_args[0]) if pos_args.size() > 0 else 0
 	if frames > 0:
 		# V-Sync pins every frame to the refresh rate and hides the real cost.
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -87,8 +95,8 @@ func _ready() -> void:
 			" fps=", Performance.get_monitor(Performance.TIME_FPS))
 
 	# Multiple shots over time: combat VFX cannot be judged from one frame.
-	var shots: int = int(args[3]) if args.size() > 3 else 1
-	var interval: float = float(args[4]) if args.size() > 4 else 0.5
+	var shots: int = int(pos_args[1]) if pos_args.size() > 1 else 1
+	var interval: float = float(pos_args[2]) if pos_args.size() > 2 else 0.5
 	var err := OK
 	for shot in maxi(shots, 1):
 		if shot > 0:

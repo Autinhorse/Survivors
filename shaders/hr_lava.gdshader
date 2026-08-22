@@ -6,7 +6,8 @@ render_mode cull_back, unshaded;
 // 参考图里它由三层构成，缺一层都不像：
 //   1. 场地边缘的**锯齿轮廓**（几何，见 scripts/environment/HellField.gd）
 //   2. 紧贴轮廓的**亮边**（两道：内侧亮橙，外侧橙）
-//   3. 外面一大片**菱形色块场**，两三档红，越往外越暗
+//   3. 外面一大片**方块色块场**，两三档红，越往外越暗
+//      （参考图是菱形，那是等距投影的产物 —— 我们用轴向正方形）
 // 再加上飘着的金色小方块（另一层，见 layout）。
 //
 // unshaded：熔岩是自发光的，不参与场景光照。
@@ -20,7 +21,7 @@ uniform vec3 lava_cold : source_color = vec3(0.553, 0.133, 0.216);
 
 uniform float rim_inner_w = 0.55;       // 米
 uniform float rim_outer_w = 1.30;
-uniform float diamond_size = 3.2;       // 菱形色块的尺度
+uniform float block_size = 4.0;         // 明暗方块的边长，要和 HellMap 的 cell 一致
 uniform float fade_dist = 26.0;         // 多远褪到最暗
 uniform float pulse_speed = 0.6;
 
@@ -43,10 +44,12 @@ void vertex() {
 void fragment() {
 	float d = uv.x;
 
-	// 菱形色块场：45° 旋转的方格。世界是轴向的，但这一层是纯装饰，
-	// 用菱形正好保留参考图的图形语言。
-	vec2 r = vec2(w_pos.x + w_pos.z, w_pos.x - w_pos.z) * 0.7071;
-	vec2 cell = floor(r / diamond_size);
+	// **轴向的正方形色块，不是 45° 菱形。**
+	// 参考图的菱形是等距投影的产物；我们是正面 90° 的世界，
+	// 见 styles/hellrider/README.md「四条不能破的规则」第 4 条。
+	// 这一层和熔岩的几何格**同一个格**（HellMap.gd 的 cell），
+	// 所以明暗方块和方块几何是对齐的，不会出现"色块横跨两个方块"。
+	vec2 cell = floor(w_pos.xz / block_size);
 	float h = hash21(cell);
 
 	float t = clamp(d / fade_dist, 0.0, 1.0);

@@ -73,6 +73,17 @@ FORWARD_PLUS = False
 # 改回 False 就是完整村庄。
 MINIMAL = True
 
+# ------------------------------------------------------------ 大地图模式 --
+# 优先级高于 MINIMAL。整块 8x8 屏的可玩区 + 四面包一圈熔岩，
+# 石头和树成簇随机撒（平均每屏一组），方向键平移相机、R 重掷。
+#
+# 这个模式下**没有任何东西是在 Python 里摆死的** —— 地图和散布都在运行时
+# 生成，所以"每次跑都是一张新图"。Python 这边只负责接线。
+BIGMAP = True
+MAP_CELL = 4.0               # 格边长，也是熔岩明暗方块的边长
+MAP_SCREENS_X = 8            # 可玩区有几屏宽
+MAP_SCREENS_Z = 8            # 有几屏深
+
 # 调参模式下手工摆的位置：每个物体都摆在空处，互不遮挡，一眼能看全
 # 尺度按参考图反推：那里的骷髅约 1.8 m，大石头是它的 2.5-3 倍高。
 # 我们的玩家方块是 1.6 m，所以大石头要到 4-5 m 高。
@@ -186,6 +197,10 @@ def build(MAT, MESH, performance=False):
          T((0.0, CAM_HEIGHT, camera_z()), rx=-CAM_PITCH))
 
     # ------------------------------------------------------- 场地与熔岩带 --
+    if BIGMAP:
+        _bigmap(MAT, MESH, plane, box)
+        return
+
     node("Field", "Node3D", ".",
          {"script": ext("Script", "res://scripts/environment/HellField.gd"),
           "half_width": "%g" % FIELD_HALF,
@@ -403,6 +418,68 @@ def _blob_spots(footprint, idx, n_var, px, pz, s_, ry, pad):
                     2.0 * ey * s_ * pad,
                     math.degrees(ang) + ry))
     return out
+
+
+def _bigmap(MAT, MESH, plane, box):
+    """大地图：HellMap + ClusterScatter + MapInspector，三个节点接起来就完了。
+
+    可玩区按"几屏"算，一屏是 frame_size() 算出来的可见矩形 ——
+    "平均每屏一组"这个密度目标只有在同一个口径下才有意义。
+    """
+    _z0, _z1, w = frame_size()
+    depth = _z1 - _z0
+    play_w = w * MAP_SCREENS_X
+    play_d = depth * MAP_SCREENS_Z
+
+    node("Map", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/HellMap.gd"),
+        "cell": "%g" % MAP_CELL,
+        "play_w": "%.1f" % play_w, "play_d": "%.1f" % play_d,
+        # 边界沿格随机进出 0-3 格，所以熔岩带宽度在 10*4=40 到 (10+3)*4=52 m
+        # 之间变化。站在可玩区最边上时屏幕宽 65.8 m，看到的那条带
+        # 占 1/5 到 1/3 屏宽 —— 就是要的那个比例。
+        "edge_jitter": "3", "lava_out": "10",
+        "ground_material": MAT["ground"], "lava_material": MAT["lava"]})
+
+    sc = node("Clusters", "Node3D", ".", {
+        "script": ext("Script", "res://scripts/environment/ClusterScatter.gd"),
+        "screen_w": "%.1f" % w, "screen_d": "%.1f" % depth,
+        "clusters_per_screen": "1.0",
+        "map_path": 'NodePath("../Map")',
+        "rocks_path": 'NodePath("Rocks")',
+        "trees_path": 'NodePath("Trees")',
+        "bushes_path": 'NodePath("Bushes")',
+        "pebbles_path": 'NodePath("Pebbles")'})
+
+    def field(nm, src, n_var, blob):
+        # placements 留空：ClusterScatter 在运行时填进去再重建
+        node(nm, "Node3D", sc, {
+            "script": ext("Script", "res://scripts/environment/ScatterField.gd"),
+            "kind": '"rock"',
+            "source_scene": ext("PackedScene", MESH(src)),
+            "variants": str(n_var),
+            "material": MAT["flat"],
+            "blob_material": MAT["blob"],
+            "blob_scale": "%g" % blob})
+
+    field("Rocks", "rocks.glb", 6, 2.1)
+    field("Trees", "trees.glb", 4, 2.6)
+    field("Bushes", "bushes.glb", 6, 2.1)
+    field("Pebbles", "pebbles.glb", 4, 1.5)
+
+    node("Inspector", "Node", ".", {
+        "script": ext("Script", "res://scripts/environment/MapInspector.gd"),
+        "camera_path": 'NodePath("../GameplayCamera")',
+        "map_path": 'NodePath("../Map")',
+        "scatter_path": 'NodePath("../Clusters")'})
+
+    # 尺度参照：一个 1.6 m 的方块摆在原点旁边
+    pl = node("Player", "Node3D", ".", None, T((3.0, 0.0, 0.0)))
+    mesh("Body", pl, box, MAT["player"], (0.0, 0.8, 0.0),
+         scale=(1.5, 1.6, 1.5))
+
+    print("bigmap: 可玩区 %.0f x %.0f m = %d x %d 屏，簇密度 1/屏"
+          % (play_w, play_d, MAP_SCREENS_X, MAP_SCREENS_Z))
 
 
 def _minimal(MAT, MESH, plane):

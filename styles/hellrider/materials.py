@@ -64,7 +64,7 @@ def materials():
         lava_hot=col(0.969, 0.251, 0.224), lava_mid=col(0.871, 0.192, 0.271),
         lava_cold=col(0.604, 0.145, 0.267),
         rim_inner_w="0.55", rim_outer_w="1.30",
-        diamond_size="3.2", fade_dist="26.0", pulse_speed="0.6")
+        block_size="4.0", fade_dist="26.0", pulse_speed="0.6")
 
     MAT["water"] = shader_mat(
         "MatHrWater", "res://shaders/hr_flat.gdshader",
