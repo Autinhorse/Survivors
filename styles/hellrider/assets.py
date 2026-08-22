@@ -277,6 +277,65 @@ def deconcave(bm, max_fold=32.0, max_area=0.04, iters=80, step=0.30):
     return bm
 
 
+def flatten(bm, angle=30.0, iters=60, rate=0.5):
+    """把法线相近的相邻面并成**一个真正的平面**。
+
+    要解决的是"面多而小"：一个石头的侧面本来是一圈四边形，但上下两环不
+    垂直对应，每个四边形都被扭成两个朝向差十几度的三角形；再加上环与环之间
+    的桥接，一块 11500 px² 的大石头能出 22 个可见面（约 500 px²/面），
+    而参考图是 8 个面、约 2500 px²/面 —— 差一个数量级。
+
+    面多而小的后果不只是"碎"：分档着色下相邻两档差 3.7 倍，两个朝向只差
+    十几度的三角形一旦跨过档位边界就硬差一整档，读出来是脏点。
+
+    两步：
+
+      1. `dissolve_limit` 把法线差小于 `angle` 的相邻面并成 n-gon。
+         但并完之后 n-gon 并**不平**，直接三角化又会变回两个不同朝向的面。
+      2. 所以要**压平**：迭代地把每个面的顶点往它自己的最佳拟合平面上挪。
+         一个顶点被几个面共用，就取各面要求的平均 —— 和 `face_relax`、
+         `deconcave` 同一类的约束松弛。
+
+    贴地的顶点只锁 z，x/y 仍可动 —— 否则贴地那圈的侧面永远压不平，
+    而石头必须坐在地面上。
+
+    `angle` 就是"多大的朝向差算同一个面"。扫过 20 / 26 / 30 / 34：
+    rock_big 的可见面 22.7 -> 20.5 -> 17.2 -> 17.2，34° 已经不再有收益，
+    所以取 30°。（档位宽 23°，30° 略宽于一档 —— 被并掉的面本来大多也落在
+    同一档里，跨档的那少数几个正是要消掉的脏点。）
+    """
+    from mathutils import Vector
+    bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(angle),
+                             verts=bm.verts[:], edges=bm.edges[:],
+                             delimit=set())
+    bm.normal_update()
+    for _it in range(iters):
+        disp = {}
+        for f in bm.faces:
+            if len(f.verts) < 4:
+                continue                      # 三角形天然是平的
+            c = f.calc_center_median()
+            n = f.normal
+            for v in f.verts:
+                disp.setdefault(v, []).append(-n * ((v.co - c).dot(n)) * rate)
+        if not disp:
+            break
+        moved = 0.0
+        for v, ds in disp.items():
+            d = Vector((0.0, 0.0, 0.0))
+            for x in ds:
+                d += x
+            d /= len(ds)
+            if v.co.z < 1e-4:
+                d.z = 0.0                     # 贴地：只锁 z，x/y 让它动
+            v.co += d
+            moved += d.length
+        bm.normal_update()
+        if moved < 1e-5:
+            break
+    return bm
+
+
 def flat(parts, name, loc=(0, 0, 0), grad=0.28):
     """合并 + 垂直渐变 + **平面着色**（smooth_angle=0）。
 
@@ -331,6 +390,22 @@ def tint(obj, colour, rng=None, jitter=0.0):
 # 而不是靠堆几何体。所以生成方式是：
 #   外圈（墙顶）-> 中圈（抬高、高度按方向渐变 + 抖动）-> 顶点（最高，偏一侧）
 # 三圈之间连三角面。"前后高度有变化"就是中圈那一圈的高度梯度。
+
+def sides_for(radius):
+    """边数按**屏幕上有多大**分级，不是一律 5-7。
+
+    判据是 `tools/hr_face_px.py` 量的 px²/面：参考图的石头约 2500 px²/面，
+    我们改之前小石块只有 82-121 —— 一块 30x30 像素的石头被切成 9 个面，
+    读出来就是一团噪点，而不是"一块有几个面的石头"。
+
+    表里写的边数当上限，只降不升。
+    """
+    if radius < 1.10:
+        return 4
+    if radius < 1.70:
+        return 5
+    return 6
+
 
 def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
                taper=0.30, jitter=0.20, flare=0.06, third_ring=False):
@@ -411,6 +486,10 @@ def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
     top_ang = []
     n = len(hi)
     keep = list(range(n))
+    # 第三环要**比上环粗**：它在屏幕上比上环小得多，点数还一样就必然碎。
+    # 先均匀抽掉一些，抽到 4 个点为止，再走下面的增删。
+    while len(keep) > 4:
+        keep.pop(rng.randrange(len(keep)))
     ops = rng.randint(1, 2)
     for _o in range(ops):
         if rng.random() < 0.5 and len(keep) > 4:
@@ -519,13 +598,18 @@ def rock(name, shape, loc=(0, 0, 0)):
         # 改成 1.6 之后：
         #   rock_block   8.8 个可见面，0.8 个太小，占  1.9%，只跨 1 档
         #   rock_twin   19.9 个可见面，3.0 个太小，占  3.7%
-        base = _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
+        base = _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h,
+                          min(sides, sides_for(radius)),
                           third_ring=(radius > 1.6))
         foot.append(_fit_ellipse(base))
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     # **在三角化之后**做：顶环是个不共面的 n-gon，凹折是三角化之后才成形的
     deconcave(bm)
+    # 压平放在最后：它要保住的正是"面是平的"，前面任何一步再动顶点都会破坏
+    flatten(bm)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()

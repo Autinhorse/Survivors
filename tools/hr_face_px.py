@@ -35,6 +35,55 @@ def step_of(th):
     return int(max(0, min(3, math.floor(t * STEPS))))
 
 
+def components(bm):
+    """按连通块分组 —— 一个变体是**一组**石头（大的配两三小的），
+    要和参考图比"一块石头有几个面"就必须拆开算。"""
+    seen, out = set(), []
+    for f in bm.faces:
+        if f.index in seen:
+            continue
+        stack, grp = [f], []
+        seen.add(f.index)
+        while stack:
+            g = stack.pop()
+            grp.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h.index not in seen:
+                        seen.add(h.index)
+                        stack.append(h)
+        out.append(grp)
+    return out
+
+
+def survey_parts(obj, scale):
+    """逐块：可见面数、屏幕面积、每个面平均多少 px²。"""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-4)
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
+    out = []
+    for grp in components(bm):
+        n, area, small = 0.0, 0.0, 0.0
+        for k in range(YAWS):
+            R = Matrix.Rotation(math.tau * k / YAWS, 3, 'Z')
+            for f in grp:
+                nrm = (R @ f.normal).normalized()
+                c = nrm.dot(D)
+                if c >= -1e-6:
+                    continue
+                px = f.calc_area() * scale * scale * (-c) * PPM * PPM
+                n += 1
+                area += px
+                if px < MIN_PX:
+                    small += 1
+        if area > 0:
+            out.append((area / YAWS, n / YAWS, small / YAWS))
+    bm.free()
+    return sorted(out, reverse=True)
+
+
 def survey(obj, scale):
     bm = bmesh.new()
     bm.from_mesh(obj.data)
@@ -73,6 +122,15 @@ def main(path, scale):
         v, s, a, t, sp = survey(o, scale)
         print("%-14s %8.1f %8.1f %8.1f%% %10.0f %8d%s"
               % (o.name, v, s, a, t, sp, "   <-" if a > 15.0 else ""))
+    print()
+    print("逐块（一个变体是一组石头，拆开算才能和参考图比）")
+    print("%-14s %10s %8s %10s %8s"
+          % ("网格.块", "屏幕px²", "可见面", "px²/面", "太小的"))
+    for o in [x for x in bpy.data.objects if x.type == "MESH"]:
+        for i, (area, n, sm) in enumerate(survey_parts(o, scale)):
+            print("%-14s %10.0f %8.1f %10.0f %8.1f%s"
+                  % ("%s.%d" % (o.name, i), area, n, area / max(n, 1e-9), sm,
+                     "   <- 面太碎" if area / max(n, 1e-9) < 900 else ""))
 
 
 if __name__ == "__main__":
