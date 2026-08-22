@@ -220,6 +220,63 @@ def face_relax(obj, low_dark=0.20, base=0.03, slope=0.60, iters=40):
     return obj
 
 
+def deconcave(bm, max_fold=32.0, max_area=0.04, iters=80, step=0.30):
+    """把**又深又窄的凹折**压平，凸的地方一律不动。
+
+    要解决的是这个：面法线猛地转过去再转回来，中间夹一个很小的面。
+    分档着色下它掉进最暗的一档，而它太小，读不成"一个面"，只读成一个脏点。
+    参考图的石头也有台阶（台阶也是凹的），但台阶是**宽**的，读成一个平面 ——
+    所以判据不是"有没有凹"，是"凹得又深又窄"。
+
+    和 `face_relax` 同一类做法：保留意图，只约束病态。非共面的顶环是**故意**
+    的（面的朝向要参差，明暗才碎得开），这里不去改生成规则，只把超出上限的
+    那几条谷抬平。
+
+    凹凸的判法：外向法线下，convex 时相邻面的重心落在本面平面**之下**，
+    即 `dot(n0, c1 - c0) <= 0`；大于 0 就是凹。
+    凹折的谷底就是那条共享边，所以把**边的两个顶点**沿两面法线的平均方向
+    往外推，折角就变小。贴地的顶点（z≈0）锁住不动 —— 石头得坐在地面上。
+
+    **`max_area` 那一条不能省。** 第一版只看"深"，结果把参考图里那种宽台阶
+    （台阶也是凹的，但riser 和 ledge 两个面都很大）一起抹平了 ——
+    大石头的顶从"有台阶"变成一整片流下来的面，石头的结构就没了。
+    只有当较小的那个面小于整体表面积的 `max_area` 时才动它。
+    """
+    from mathutils import Vector
+    total = sum(f.calc_area() for f in bm.faces)
+    for _it in range(iters):
+        bm.normal_update()
+        disp = {}
+        for e in bm.edges:
+            if len(e.link_faces) != 2:
+                continue
+            f0, f1 = e.link_faces
+            d = max(-1.0, min(1.0, f0.normal.dot(f1.normal)))
+            ang = math.degrees(math.acos(d))
+            if ang <= max_fold:
+                continue
+            if f0.normal.dot(f1.calc_center_median()
+                             - f0.calc_center_median()) <= 1e-6:
+                continue                      # 凸的，留着 —— 硬边是这个风格
+            if min(f0.calc_area(), f1.calc_area()) > max_area * total:
+                continue                      # 宽台阶，留着 —— 那是结构
+            n = (f0.normal + f1.normal)
+            if n.length < 1e-6:
+                continue
+            n.normalize()
+            amt = (ang - max_fold) / 180.0 * step * e.calc_length()
+            for v in e.verts:
+                disp[v] = disp.get(v, Vector((0.0, 0.0, 0.0))) + n * amt
+        if not disp:
+            break
+        for v, dv in disp.items():
+            if v.co.z < 1e-4:                 # 贴地的顶点锁住
+                continue
+            v.co += dv
+    bm.normal_update()
+    return bm
+
+
 def flat(parts, name, loc=(0, 0, 0), grad=0.28):
     """合并 + 垂直渐变 + **平面着色**（smooth_angle=0）。
 
@@ -362,8 +419,22 @@ def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
             k = rng.randrange(len(keep))                # 在两个之间插一个
             keep.insert(k + 1, (keep[k], keep[(k + 1) % len(keep)]))
 
+    # 第三圈的抖动**也要沿环平滑**。上环那里早就这么做了（见上面那段注释），
+    # 这一圈当初漏了：各点独立随机，相邻两个一上一下就把顶面折出一条又深又窄
+    # 的谷，分档着色下读成一小块突兀的深色。量过 —— 六个变体的顶上都有，
+    # 折角 43-125°，夹着的小面只占表面积 0.3-1.1%（tools/hr_concave.py）。
+    m = len(keep)
+    tr = [rng.uniform(-0.25, 0.25) for _ in range(m)]
+    tzj = [rng.uniform(-0.25, 0.25) for _ in range(m)]
+    tx = [rng.uniform(-0.25, 0.25) for _ in range(m)]
+    ty = [rng.uniform(-0.25, 0.25) for _ in range(m)]
+    for arr in (tr, tzj, tx, ty):
+        sm = [0.5 * arr[i] + 0.25 * (arr[i - 1] + arr[(i + 1) % m])
+              for i in range(m)]
+        arr[:] = [v / 0.75 for v in sm]
+
     top = []
-    for e in keep:
+    for i, e in enumerate(keep):
         if isinstance(e, tuple):
             a0, a1 = base_ang[e[0]], base_ang[e[1]]
             if a1 < a0:
@@ -371,12 +442,10 @@ def _rock_body(bm, rng, cx, cy, radius, wall_h, cap_h, sides,
             ta = (a0 + a1) * 0.5
         else:
             ta = base_ang[e]
-        rt = radius * (1.0 - taper) * 0.50 * (1.0 + rng.uniform(-0.25, 0.25))
-        tz = H * (1.0 + cap_h / max(H, 1e-4) * 0.35) * (1.0 + rng.uniform(-0.25, 0.25))
-        top.append(bm.verts.new((cx + math.cos(ta) * rt
-                                 + radius * rng.uniform(-0.25, 0.25) * 0.30,
-                                 cy + math.sin(ta) * rt
-                                 + radius * rng.uniform(-0.25, 0.25) * 0.30,
+        rt = radius * (1.0 - taper) * 0.50 * (1.0 + tr[i])
+        tz = H * (1.0 + cap_h / max(H, 1e-4) * 0.35) * (1.0 + tzj[i])
+        top.append(bm.verts.new((cx + math.cos(ta) * rt + radius * tx[i] * 0.30,
+                                 cy + math.sin(ta) * rt + radius * ty[i] * 0.30,
                                  tz)))
     # 上环的边已经被侧面四边形建过了，直接 new 会 "this edge exists"
     def _edge(a, b):
@@ -446,6 +515,8 @@ def rock(name, shape, loc=(0, 0, 0)):
         foot.append(_fit_ellipse(base))
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    # **在三角化之后**做：顶环是个不共面的 n-gon，凹折是三角化之后才成形的
+    deconcave(bm)
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
