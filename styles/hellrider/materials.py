@@ -80,10 +80,10 @@ def materials():
     MAT["flat"] = shader_mat(
         "MatHrFlat", "res://shaders/hr_flat.gdshader",
         # 明暗只有一条规则：法线和光照方向的夹角，分 4 档。
-        # gamma 1.6 是把档位挪到面真正分布的区间上（0-120°），
-        # 纯线性时最暗那档要 θ>150° 才够得着，画面会发灰。
+        # 12-105° 是**相机看得见的那段** —— 摊在整个半球上的话最暗一档
+        # 全给了看不见的底面，可见的暗面只能拿到中间档。见 hr_flat 里那段。
         tint="1.0", light_steps="4.0", light_floor="0.20",
-        light_gamma="1.6", light_jitter="0.06",
+        light_theta_lo="12.0", light_theta_hi="105.0", light_jitter="0.06",
         top_boost="0.10",
         # 吃地面的低频分区。这四个必须和上面 ground 的写法一致。
         #
