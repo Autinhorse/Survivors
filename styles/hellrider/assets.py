@@ -675,7 +675,15 @@ def build_rocks(out_dir):
     clear()
     for i, shape in enumerate(("block", "low", "slab", "twin")):
         o = rock("pebble_%d" % i, shape, loc=(i * 2.0 - 3.0, 0, 0))
-        o.scale = (0.16, 0.16, 0.15)
+        # **缩放必须压进网格数据，不能只设 o.scale。**
+        # ScatterField 从 GLB 里取的是 **Mesh 资源**，节点上的缩放不跟着走 ——
+        # 卵石会按原始石头的尺寸渲出来，大了 6 倍。
+        # 表现很隐蔽：它看着就是一块普通石头，只是"没有影子"
+        # （blob 按卵石的尺寸算，整片藏在放大了 6 倍的石头底下）。
+        for v in o.data.vertices:
+            v.co.x *= 0.16
+            v.co.y *= 0.16
+            v.co.z *= 0.15
     export(os.path.join(out_dir, "pebbles.glb"), "pebbles")
 
 
