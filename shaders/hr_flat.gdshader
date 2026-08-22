@@ -10,34 +10,41 @@ render_mode cull_back, diffuse_lambert, specular_disabled;
 // 唯一要做对的是**光照台阶**：参考图里同一块石头只有 3-4 个明确的亮度级，
 // 台阶之间是硬边。连续的 Lambert 会让整个画面"软"下来，风格就散了。
 
-uniform float light_steps = 3.0;
-uniform float light_floor = 0.52;
-// 半 Lambert 的权重。0 = clamp(dot(N,L),0,1)，1 = dot*0.5+0.5。
+// ------------------------------------------------------------ 面的明暗 --
+// **一条规则**：面的亮度只由面法线和光照方向的**夹角 θ** 决定，
+// 再加一点点逐面随机；外加一条高度封顶（见 low_cap）。
 //
-// **这是暗面读不出朝向的根因**：clamp 把所有背光面（不管朝 90° 还是 180°）
-// 压成同一个值，一块石头的整个背面因此是一整片死平的色块。
-// 量出来只有 2 个色阶、暗侧内部跨度 0.015 —— 基本没有层次。
-// 参考图里暗面是**成组朝一个方向**的，明显分得出深浅。
-uniform float light_wrap = 0.85;
-// 档内的连续微分：同一档里朝向不同的面仍然拉开一点点。
-// 只给很小的量 —— 台阶的硬边是这个风格的骨架，不能软掉。
-uniform float face_tilt = 0.10;
-// 台阶在最终亮度里占的比重，其余走连续的 N·L。
+// 这里用 θ 本身，不是 cos θ（`dot`）。`dot` 在接近 90° 的地方压得很扁 ——
+// 朝向差 20° 的两个侧面 cos 只差 0.06，分档之后挤进同一档。θ 是均匀的，
+// 每一档覆盖同样宽的一段朝向。
 //
-// **这一项是给"相邻面色差要和法线差成比例"兜底的。** floor() 量化天生
-// 违反这条规则：两个法线只差 5° 的面，只要 N·L 跨过档位阈值就硬差一整档。
-// 片元着色器看不到邻面，改不了这件事，只能给非比例的那部分**加上限**：
-// 跳变最大 step_weight/(steps-1)，剩下的 (1-step_weight) 严格正比于法线差。
-// 真正的邻面约束在 Blender 端做（face_relax），那里才有拓扑。
-uniform float step_weight = 0.80;
+// 上一版为了补 `dot` 的这个毛病，叠了三条规则：半 Lambert（把背光面摊开）、
+// 档内连续微分、step_weight（限制量化造成的非比例跳变）。θ 天然就是摊开的，
+// 三条补丁全部删掉了。实测两者的 侧/顶 打平（0.88 对 0.85），
+// 但面与面的台阶更干脆：上一版大石头的整个前面糊成一片亮块。
+//
+// 方向的约定：Godot 的 LIGHT 是**指向光源**的方向，所以夹角**小** = 迎光 = 亮。
+// 若按"光的传播方向"算就是夹角大 = 迎光，同一件事换个符号。
+uniform float light_steps = 3.0;        // 分几档
+uniform float light_floor = 0.52;       // 最暗那一档
+// θ 线性映射时，4 档每档覆盖 45°，而物体上绝大多数面落在 0-120° 之间 ——
+// 等于只用到前两档，最暗那档要 θ > 150° 才够得着，几乎没有面能到，画面发灰
+// （实测 θ=90° 的面拿到 0.733，上一版是 0.475）。
+// gamma > 1 把档位边界往迎光那一侧挪，让分档落在面**真正分布**的区间上。
+// 1.0 就是纯线性；1.6 时 θ=90° 的面和上一版对得上。
+uniform float light_gamma = 1.6;
+// 逐面随机，加在**分档之前** —— 所以它是去拨动档位，不是给颜色加噪声。
+// 参考图的树冠上相邻面的深浅不完全跟随光照方向，有一部分是美术手给的差异。
+uniform float light_jitter = 0.06;
 // "位置低的面更暗"的**硬约束**。COLOR.a 里烘着这个面在自己那块几何里的
-// 相对高度（0 底 1 顶），这里拿它给 N·L 封顶：低处的面再怎么朝光也亮不
+// 相对高度（0 底 1 顶），这里拿它给 θ 的亮度封顶：低处的面再怎么朝光也亮不
 // 过这个上限，高处的面不受影响。
 //
 // 为什么不能只在顶点色里压暗：光是运行时算的，烘进 RGB 的偏置只改反照率。
 // 量过 —— 一个朝光的下部面能比它上面那个背光的面亮 4.28 倍，几个百分点的
 // 反照率偏置根本压不住。封顶是**单调**的，直接消掉这种倒挂。
 uniform float low_cap = 0.30;
+
 uniform float tint = 1.0;               // 顶点色的权重，0 = 用 base_color
 uniform vec3 base_color : source_color = vec3(0.6, 0.6, 0.6);
 // 顶面提亮一点点：参考图的低模石头顶面明显比推导出来的更亮，
@@ -52,13 +59,15 @@ uniform float top_boost = 0.10;
 //      从中间切开，那正是这个风格最怕的东西。
 //   2. 下面这套取法（格子大小、朝向、偏移、档数）必须和 hr_ground 里
 //      **逐字相同**，否则物体和它脚下的地面会落在不同档上，反而更乱。
-// 参数默认 0，只有 flat 材质打开；水面和单位不吃这个。
+// 默认 0，只有 flat 材质打开；水面和单位不吃这个。
 uniform float zone_tint = 0.0;
 uniform float tile_size = 2.6;
 uniform float zone_size_mul = 5.0;
 uniform float zone_steps = 3.0;
 uniform float zone_jitter = 1.5;   // 分区边界在细格上浮动几格
 uniform float lattice_deg = 0.0;   // 轴向。见 hr_ground 里那段
+
+const float PI_ = 3.14159265;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -89,6 +98,10 @@ float zone_step(vec2 xz) {
 
 varying float v_up;
 varying float v_zone;
+// 逐面随机。平面着色下 NORMAL 在一个面上是常数，所以拿它做哈希就等于逐面。
+// 用**模型空间**的法线：同一个面无论实例转到哪个 yaw 都拿到同一个随机数，
+// 于是同一块石头的花纹不会因为摆放角度而变。
+varying float v_rnd;
 // COLOR 在 light() 里读不到（只有 fragment 能读），用 varying 递过去
 varying float v_h;
 
@@ -98,6 +111,7 @@ void vertex() {
 	// MODEL_MATRIX 的第四列就是物体原点的世界坐标；MultiMesh 下它是**实例**的
 	// 变换，所以散布出来的每一件也各自取自己的格
 	v_zone = zone_step(MODEL_MATRIX[3].xz);
+	v_rnd = hash21(NORMAL.xy * 13.0 + NORMAL.z * 37.0) - 0.5;
 }
 
 void fragment() {
@@ -108,12 +122,18 @@ void fragment() {
 }
 
 void light() {
-	float d = dot(NORMAL, LIGHT);
-	float nl = mix(clamp(d, 0.0, 1.0), d * 0.5 + 0.5, light_wrap);
-	nl = min(nl, low_cap + (1.0 - low_cap) * v_h);
-	float q = floor(nl * light_steps) / max(light_steps - 1.0, 1.0);
-	float shade = mix(nl, clamp(q, 0.0, 1.0), step_weight);
-	float lit = mix(light_floor, 1.0, shade)
-			* (1.0 + face_tilt * (nl - 0.5) * 2.0);
-	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ATTENUATION * lit;
+	// **不能在 light() 里写 return** —— Godot 直接判编译错误
+	// （"Using 'return' in the 'light' processor function is incorrect"），
+	// 而且编译失败在画面上是**静默**的：材质退回默认白，所有用 hr_flat 的
+	// 东西一起变成白模，很容易误读成"算法算错了"。踩过一次。
+	//
+	// 1 = 正对光源，0.5 = 侧对，0 = 完全背光
+	float t = 1.0 - acos(clamp(dot(NORMAL, LIGHT), -1.0, 1.0)) / PI_;
+	t = pow(clamp(t, 0.0, 1.0), light_gamma);
+	t = clamp(t + light_jitter * v_rnd, 0.0, 1.0);
+	t = min(t, low_cap + (1.0 - low_cap) * v_h);
+	float q = clamp(floor(t * light_steps)
+			/ max(light_steps - 1.0, 1.0), 0.0, 1.0);
+	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ATTENUATION
+			* mix(light_floor, 1.0, q);
 }
