@@ -44,17 +44,17 @@ def materials():
         # 注意这里写的比是**uniform 空间**的，源色要过一次 sRGB->线性，
         # 屏幕上量到的比会更大：实测 uniform 1.12 -> 画面 1.204，指数约 1.64。
         # 所以要画面 1.16，这里写 1.095。旧值 uniform 1.035，地面读成一片死色。
-        tile_a=col(0.5246, 0.3778, 0.2718),
-        tile_b=col(0.5850, 0.4213, 0.3031),
+        tile_a=col(0.5287, 0.3808, 0.2739),
+        tile_b=col(0.5805, 0.4181, 0.3007),
         tile_size="2.6", tile_steps="4.0", tile_bias="0.55",
         # 分区 5 x 2.6 = 13 m。屏幕上约 380 px，和参考图里那些大色块同量级；
         # 细格 2.6 m 只有 76 px，两个尺度分别对应量出来的
         # "半幅块 std 3.04" 和 "总 std 5.54"。
         # 权重偏向分区：细格只在大色块上再抖一点点。
         # 0.55 那版细格的振幅跟着总跨度一起放大了 3 倍，直接读成棋盘。
-        zone_size_mul="5.0", zone_steps="3.0", zone_weight="0.80",
+        zone_size_mul="3.0", zone_steps="3.0", zone_weight="0.80",
         zone_jitter="1.0",
-        lattice_deg="45.0",
+        lattice_deg="0.0",
         path_a=col(0.310, 0.216, 0.153), path_b=col(0.404, 0.290, 0.204),
         light_steps="3.0", light_floor="0.72")
 
@@ -88,8 +88,8 @@ def materials():
         # zone_tint 乘的是线性空间的 ALBEDO，而 tile_a/tile_b 是 source_color，
         # 要多过一次 sRGB->线性。同样写 0.035，地面落到画面上是 1.12，
         # 物体只有 1.034 —— 差 3 倍。补上 2.2 次方后是 0.11。
-        zone_tint="0.11", tile_size="2.6", zone_size_mul="5.0",
-        zone_steps="3.0", lattice_deg="45.0", zone_jitter="1.0")
+        zone_tint="0.11", tile_size="2.6", zone_size_mul="3.0",
+        zone_steps="3.0", lattice_deg="0.0", zone_jitter="1.0")
 
     # blob 阴影：贴在地面上的软影贴片，代替真实投影阴影。
     # 参考图里树/石头下面的影子是居中的软椭圆，没有方向偏移。

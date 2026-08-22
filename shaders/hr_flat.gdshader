@@ -58,7 +58,7 @@ uniform float tile_size = 2.6;
 uniform float zone_size_mul = 5.0;
 uniform float zone_steps = 3.0;
 uniform float zone_jitter = 1.5;   // 分区边界在细格上浮动几格
-uniform float lattice_deg = 45.0;
+uniform float lattice_deg = 0.0;   // 轴向。见 hr_ground 里那段
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
