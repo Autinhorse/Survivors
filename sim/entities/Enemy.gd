@@ -21,6 +21,7 @@ var attack_kind: String = "melee"   # melee / ranged
 var attack_range: float = 0.0
 var bullet_speed: float = 0.0
 var hold_position: bool = false     # 远程进入射程后不再移动（§4.5 第六波）
+var keep_distance: bool = false     # 主角靠近就后撤，始终保持射程（§4.3）
 var holding: bool = false
 
 var alive: bool = true

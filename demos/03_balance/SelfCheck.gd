@@ -182,7 +182,7 @@ func check_shapes() -> void:
 		e2.max_hp = 1.0e9; e2.hp = e2.max_hp; e2.speed = 0.0; e2.attack = 0.0
 		row.append(e2)
 	w2.enemies = row.duplicate()
-	for i in 90:
+	for i in 45:                              # 1.5 秒，穿刺枪间隔 2.8 秒，只够打一发
 		w2.tick()
 	var hurt2 := 0
 	for e2 in row:

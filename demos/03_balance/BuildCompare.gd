@@ -11,29 +11,23 @@ const CELLS := [Vector2i(1,0), Vector2i(2,1), Vector2i(1,2), Vector2i(0,1),
 	Vector2i(0,0), Vector2i(2,0), Vector2i(2,2), Vector2i(0,2)]
 
 func _initialize() -> void:
-	print("%-34s %-8s %-9s %s" % ["build", "门数", "总DPS", "平均存活（5 局）"])
-	_run("2 门 rifle@1（现在开局能造出来的）", [["rifle",1],["rifle",1]])
-	_run("4 门 rifle@1", [["rifle",1],["rifle",1],["rifle",1],["rifle",1]])
-	_run("8 门 gun@3（DPS 相近但满覆盖）", [["gun",3],["gun",3],["gun",3],["gun",3],
-		["gun",3],["gun",3],["gun",3],["gun",3]])
-	_run("8 门 rifle@1（索敌4 血量最高）", [["rifle",1],["rifle",1],["rifle",1],["rifle",1],
-		["rifle",1],["rifle",1],["rifle",1],["rifle",1]])
-	_run("8 门 机枪@1（索敌3 血量最低）", [["machine_gun",1],["machine_gun",1],["machine_gun",1],
-		["machine_gun",1],["machine_gun",1],["machine_gun",1],["machine_gun",1],["machine_gun",1]])
-	_run("8 门 Spread Gun@1（索敌1 最近+范围）", [["spread_gun",1],["spread_gun",1],
-		["spread_gun",1],["spread_gun",1],["spread_gun",1],["spread_gun",1],
-		["spread_gun",1],["spread_gun",1]])
-	_run("8 门 rifle@1 但索敌改成 1", [["rifle",1],["rifle",1],["rifle",1],["rifle",1],
-		["rifle",1],["rifle",1],["rifle",1],["rifle",1]], 1)
-	print("---- 装甲（§6.2 / §26-D）----")
-	_run("无炮塔 + 四面满级尖刺", [], 0, 1)
-	_run("无炮塔 + 四面满级链锯", [], 0, 2)
-	_run("无炮塔 + 四面满级滚筒", [], 0, 4)
-	_run("8 门 gun@3 + 四面满级尖刺", [["gun",3],["gun",3],["gun",3],["gun",3],
-		["gun",3],["gun",3],["gun",3],["gun",3]], 0, 1)
-	_run("8 门 gun@3 + 四面满级滚筒", [["gun",3],["gun",3],["gun",3],["gun",3],
-		["gun",3],["gun",3],["gun",3],["gun",3]], 0, 4)
+	# 验收协议：两条威胁轨道各自都要能杀死"只带另一类武器"的玩家，
+	# 混合 build 才撑得到目标局长。三个数同时对了，"必须 2-3 种配合"才算成立。
+	print("%-30s %-7s %-9s %s" % ["build", "门数", "名义DPS", "平均存活（5 局）"])
+	_run("纯机枪 8 门（应被重甲拖死）", _rep("machine_gun", 1, 8))
+	_run("纯单发 8 门（应被杂兵淹死）", _rep("rifle", 1, 8))
+	_run("纯散弹 8 门", _rep("spread_gun", 1, 8))
+	_run("混合 3机枪+3散弹+2单发", _rep("machine_gun", 1, 3) + _rep("spread_gun", 1, 3)
+		+ _rep("rifle", 1, 2))
+	_run("混合 4机枪+4单发", _rep("machine_gun", 1, 4) + _rep("rifle", 1, 4))
+	_run("混合 4散弹+4单发", _rep("spread_gun", 1, 4) + _rep("rifle", 1, 4))
 	quit()
+
+func _rep(wid: String, lv: int, n: int) -> Array:
+	var out: Array = []
+	for i in n:
+		out.append([wid, lv])
+	return out
 
 func _run(name: String, spec: Array, force_targeting: int = 0, armor_tier: int = -1) -> void:
 	var total := 0.0

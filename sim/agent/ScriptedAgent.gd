@@ -115,11 +115,15 @@ func _probe(world) -> int:
 	for i in 4:
 		max_threat = maxf(max_threat, me.dir_threat[i])
 
-	var best := 0
-	var best_cost := INF
+	# 先把四个方向的威胁代价算出来，**归一化**之后再叠加商店/金币/战略的偏好。
+	# 之前直接用绝对值相加，威胁项是"每个敌人 5 点 × 几百个"的量级，
+	# 而商店引力最多 ±10 —— 引力被淹掉两个数量级，AI 从来没往商店走过
+	# （实测最近只接近到 49.4 格，商店就在 49.5 格外）。
+	var threat := PackedFloat32Array()
+	threat.resize(4)
 	for i in 4:
 		var fut: Vector2 = torus.wrap(mech.pos + DIR_VEC[i] * mech.move_speed * T)
-		var cost := 0.0
+		var c := 0.0
 		for e in pool:
 			if not e.alive:
 				continue
@@ -133,20 +137,31 @@ func _probe(world) -> int:
 			var reach: float = mech.half_size + e.radius + 0.2
 			if e.attack_kind == "ranged":
 				reach = maxf(reach, e.attack_range)
-			var threat: float = e.attack / maxf(0.01, e.attack_interval)
+			var th: float = e.attack / maxf(0.01, e.attack_interval)
 			if dist <= reach:
-				cost += threat
+				c += th
 			else:
 				var gap: float = dist - reach
-				cost += threat / (1.0 + gap * gap)
-		cost += sw * (me.dir_threat[i] / max_threat) * 10.0
-		# 商店在地图上时要主动过去 —— 局内成长只有这一条线（§5.2/§8），
-		# 不去店里就永远停在开局那门枪上
+				c += th / (1.0 + gap * gap)
+		threat[i] = c
+
+	var lo := INF
+	var hi := -INF
+	for i in 4:
+		lo = minf(lo, threat[i])
+		hi = maxf(hi, threat[i])
+	var span: float = maxf(0.0001, hi - lo)
+
+	var best := 0
+	var best_cost := INF
+	for i in 4:
+		# 归一化到 0-1，这样下面几项权重才是"相对威胁的几成"，可读也可调
+		var cost: float = (threat[i] - lo) / span
+		cost += sw * (me.dir_threat[i] / max_threat)
 		if shop_dir != Vector2.ZERO:
-			cost -= float(_p.get("shop_pull", 1.0)) * DIR_VEC[i].dot(shop_dir) * 10.0
+			cost -= float(_p.get("shop_pull", 1.0)) * (DIR_VEC[i].dot(shop_dir) + 1.0) * 0.5
 		elif coin_dir != Vector2.ZERO:
-			# 商店在场时先去商店，没商店才顺路扫金币
-			cost -= float(_p.get("coin_pull", 0.0)) * DIR_VEC[i].dot(coin_dir) * 10.0
+			cost -= float(_p.get("coin_pull", 0.0)) * (DIR_VEC[i].dot(coin_dir) + 1.0) * 0.5
 		if cost < best_cost:
 			best_cost = cost
 			best = i
@@ -227,8 +242,9 @@ func shop_step(world, shop) -> Dictionary:
 
 	# 1. 合并是免费的，而且按 §7.8 的数值单位面积效率总是正收益，能合就合
 	# wide 流派：槽位没铺满之前不合并（合并会把两门塔并成一门，等于自断宽度）
-	var ms: Array = [] if (pick_policy == "wide"
-		and not mech.free_placements(1).is_empty()) else shop.mergeable(mech)
+	# wide / mix：槽位没铺满之前不合并（合并会把两门塔并成一门，等于自断宽度）
+	var hold_merge: bool = (pick_policy == "wide" or pick_policy == "mix") 		and not mech.free_placements(1).is_empty()
+	var ms: Array = [] if hold_merge else shop.mergeable(mech)
 	if not ms.is_empty():
 		var m: Dictionary = ms[0]
 		var kids: Array = shop.children_of(String(m["id"]))
@@ -246,7 +262,7 @@ func shop_step(world, shop) -> Dictionary:
 		if String(card.get("kind", "weapon")) == "armor":
 			side = _worst_side(world, mech, int(card["tier"]))
 		return {"type": "place", "index": idx, "id": String(card["id"]), "side": side,
-			"prefer_new": pick_policy == "wide"}
+			"prefer_new": pick_policy == "wide" or pick_policy == "mix"}
 
 	# 3. 买一张买得起、而且放得下的卡
 	var buy := _best_to_buy(world, shop, mech)
@@ -302,6 +318,19 @@ func _score(world, wid: String, mech) -> float:
 	_db_cache = world.db
 	var col: float = float(world.db.weapon_column(wid))
 	var dps: float = world.db.weapon_damage(wid, 1) / world.db.weapon_interval(wid, 1)
+	if pick_policy == "mix":
+		# 设计意图是"枪族的 2-3 种配合才能过关"，不是单挑一条线推到底。
+		# 所以优先补自己最缺的那条线，同一条线内再按列数推进。
+		var line := String(world.db.weapons.get(wid, {}).get("line", ""))
+		var have := {}
+		for t in mech.turrets:
+			var l := String(world.db.weapons.get(t.weapon_id, {}).get("line", ""))
+			have[l] = int(have.get(l, 0)) + 1
+		var mine := int(have.get(line, 0))
+		var most := 0
+		for k in have.keys():
+			most = maxi(most, int(have[k]))
+		return float(most - mine) * 1000.0 + col * 10.0 + dps * 0.001
 	if pick_policy == "wide":
 		# 铺满优先：能占空位的低级卡更值钱；铺满了才看伤害
 		var free: bool = not mech.free_placements(world.db.weapon_size(wid)).is_empty()

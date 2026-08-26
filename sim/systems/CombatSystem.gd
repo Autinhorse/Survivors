@@ -40,8 +40,13 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 			# 生成时锁定方向，之后不再转向（§4.2 第 5 种）
 			e.pos = _torus.wrap(e.pos + e.straight_dir * e.speed * dt)
 		elif e.attack_kind == "ranged" and dist <= e.attack_range:
-			# 进入射程就钉住，主角走了也不追（§4.5 第六波）
-			if e.hold_position:
+			# §4.3 的两种远程行为：
+			#   hold_position —— 进入射程就钉住，主角走了也不追（第六波远程弧）
+			#   keep_distance —— 主角靠近就后撤，始终保持射程（重甲炮台）。
+			#     这条让"射程差"成为硬约束：射程不够的武器永远够不着它。
+			if e.keep_distance and dist < e.attack_range * 0.9:
+				e.pos = _torus.wrap(e.pos + rel / dist * e.speed * dt)
+			elif e.hold_position:
 				e.holding = true
 		elif not e.holding and not touching and dist > 0.001:
 			var np: Vector2 = _torus.wrap(e.pos - rel / dist * e.speed * dt)

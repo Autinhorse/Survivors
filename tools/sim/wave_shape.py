@@ -38,12 +38,24 @@ TREE_COST = 1040000.0    # 整棵树 + 四面满级装甲
 MECH_HP, CONTACT, ARMOR = 1000.0, 12, 0.45
 
 
+# 每波可带自己的 base/growth（独立威胁轨道），和 SpawnDirector 的规则保持一致
+_WB = [w.get("base", {}) for w in _W["waves"]]
+_WG = [w.get("growth", {}) for w in _W["waves"]]
+_KEY = {"hp": "hp", "cnt": "count", "atk": "attack", "coin": "coin"}
+
+
 def simulate(G, n_waves, shape):
     rows, cum = [], 0.0
     for n in range(1, n_waves + 1):
         k = (n - 1) % CYCLE
         c = (n - 1) // CYCLE + 1
-        v = {f: BASE[f] * G[f] ** (c - 1) * shape[f][k] for f in BASE}
+        v = {}
+        for f in BASE:
+            key = _KEY[f]
+            if key in _WB[k]:
+                v[f] = _WB[k][key] * _WG[k].get(key, 1.0) ** (c - 1)
+            else:
+                v[f] = BASE[f] * G[f] ** (c - 1) * shape[f][k]
         cum += v['cnt'] * v['coin']
         rows.append(dict(n=n, k=k + 1, cycle=c, t=WAVE_GAP * (n - 1), cum_coin=cum,
                          total_hp=v['cnt'] * v['hp'], **v))

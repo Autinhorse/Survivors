@@ -73,6 +73,12 @@ func _validate() -> void:
 		if float(growth.get(f, 1.0)) < 1.0:
 			errors.append("growth.%s = %s < 1，会导致该项跨周期下降（设计要求只涨不跌）"
 				% [f, growth.get(f)])
+	for i in defs.size():
+		var wg: Dictionary = (defs[i] as Dictionary).get("growth", {})
+		for f in ["hp", "count", "attack", "coin"]:
+			if wg.has(f) and float(wg[f]) < 1.0:
+				errors.append("waves[%d].growth.%s = %s < 1（独立轨道也要只涨不跌）"
+					% [i, f, wg[f]])
 
 ## 武器在某一级的实际数值。升级是**加法**增量（§7.8 的"升级：伤害+50"），
 ## 攻击距离那一栏是百分比（"攻击距离+5%"）。

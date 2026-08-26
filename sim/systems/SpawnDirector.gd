@@ -49,9 +49,17 @@ func wave_stats(n: int) -> Dictionary:
 	var base: Dictionary = w.get("base", {})
 	var growth: Dictionary = w.get("growth", {})
 	var shape: Dictionary = d.get("shape", {})
+	# 每波可以带自己的 base/growth，成为一条**独立威胁轨道**：
+	# 不共享全局基准、也不参与其他波次的总量平衡（重甲环就是这么用的）。
+	# 某个字段一旦自带 base，shape 对它就不再生效——base 本身就是该字段的值。
+	var wbase: Dictionary = d.get("base", {})
+	var wgrowth: Dictionary = d.get("growth", {})
 	var out := d.duplicate(true)
 	for f in ["hp", "count", "attack", "coin"]:
-		out[f] = float(base.get(f, 1.0)) * pow(float(growth.get(f, 1.0)), c) * float(shape.get(f, 1.0))
+		var bv: float = float(wbase.get(f, base.get(f, 1.0)))
+		var gv: float = float(wgrowth.get(f, growth.get(f, 1.0)))
+		var sv: float = 1.0 if wbase.has(f) else float(shape.get(f, 1.0))
+		out[f] = bv * pow(gv, c) * sv
 	out["wave_index"] = n
 	out["cycle"] = c + 1
 	out["start_t"] = wave_gap * float(n - 1)
@@ -145,6 +153,7 @@ func _make(st: Dictionary, p: Vector2, mech_pos: Vector2):
 	e.attack_range = float(st.get("attack_range", 0.0))
 	e.bullet_speed = float(st.get("bullet_speed", 0.0))
 	e.hold_position = bool(st.get("hold_position", false))
+	e.keep_distance = bool(st.get("keep_distance", false))
 	# 血量越高体型越大，方便肉眼分辨（纯表现，不参与规则判定以外的计算）
 	e.radius = clampf(0.3 * pow(e.max_hp / 100.0, 0.25), 0.25, 1.6)
 	if e.move_kind == "straight":
