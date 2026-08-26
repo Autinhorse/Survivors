@@ -55,6 +55,10 @@ func _field_dir(world) -> int:
 	var torus = world.torus
 	var panic: float = float(_p.get("panic_radius", 3.0))
 
+	# 已经在保护罩里就不用躲了（§8：罩内不会被攻击）
+	if world.shop.in_shield(mech, world.time) and world.shop.site != null:
+		return _to_dir(torus.dir(mech.pos, world.shop.site.pos))
+
 	# 第 1 层：贴脸的敌人直接产生排斥力，压过缓存的试探结果
 	var push := Vector2.ZERO
 	var close := 0
@@ -88,6 +92,24 @@ func _probe(world) -> int:
 	var pool: Array = world.enemies if vision > 500.0 else world.combat.hash.query(mech.pos, vision)
 
 	# 第 3 层：把 §7.6 的四方向威胁折进代价里，往最空的那边偏
+	var shop_dir := Vector2.ZERO
+	if world.shop.site != null:
+		shop_dir = torus.dir(mech.pos, world.shop.site.pos)
+
+	# 金币掉在敌人死的地方（射程 6-8 格外），不主动去捡就攒不够进店的钱。
+	# 取附近金币的加权质心；越近的权重越大，避免为了一枚远处的币横穿敌群。
+	var coin_dir := Vector2.ZERO
+	if float(_p.get("coin_pull", 0.0)) > 0.0:
+		var acc := Vector2.ZERO
+		for c in world.shop.coins:
+			var rel: Vector2 = torus.delta(mech.pos, c.pos)
+			var dd: float = rel.length()
+			if dd > 12.0 or dd < 0.001:
+				continue
+			acc += rel / dd * (c.amount / maxf(1.0, dd))
+		if acc.length() > 0.001:
+			coin_dir = acc.normalized()
+
 	var me = world.map_eval
 	var max_threat := 0.001
 	for i in 4:
@@ -118,6 +140,13 @@ func _probe(world) -> int:
 				var gap: float = dist - reach
 				cost += threat / (1.0 + gap * gap)
 		cost += sw * (me.dir_threat[i] / max_threat) * 10.0
+		# 商店在地图上时要主动过去 —— 局内成长只有这一条线（§5.2/§8），
+		# 不去店里就永远停在开局那门枪上
+		if shop_dir != Vector2.ZERO:
+			cost -= float(_p.get("shop_pull", 1.0)) * DIR_VEC[i].dot(shop_dir) * 10.0
+		elif coin_dir != Vector2.ZERO:
+			# 商店在场时先去商店，没商店才顺路扫金币
+			cost -= float(_p.get("coin_pull", 0.0)) * DIR_VEC[i].dot(coin_dir) * 10.0
 		if cost < best_cost:
 			best_cost = cost
 			best = i
@@ -187,24 +216,106 @@ func _step_toward(cur_dir: int, want: int) -> int:
 		return 1
 	return 0
 
-# ---------------------------------------------------------------- 选卡（P6 会换成商店）
+# ---------------------------------------------------------------- 采购（§8）
 
-func choose_upgrade(_world, options: Array) -> int:
-	if options.is_empty():
-		return -1
-	match pick_policy:
-		"random":
-			return rng.range_i(0, options.size() - 1) if rng != null else 0
-		"armor":
-			for i in options.size():
-				if String(options[i].get("type", "")) == "hull":
-					return i
-			return 0
-		_:
-			for i in options.size():
-				if String(options[i].get("type", "")) == "new_turret":
-					return i
-			for i in options.size():
-				if String(options[i].get("type", "")) == "turret_level":
-					return i
-			return 0
+## 商店里一次走一步。两套策略：
+##   rush_tree —— 一路往高级推：先合并，再优先买能推进最高列的卡
+##   wide      —— 先铺满槽位：优先买能占空位的低级卡，铺满了才升级
+## 没有这个，批量模拟里机甲永远停在开局那门枪上。
+func shop_step(world, shop) -> Dictionary:
+	var mech = world.mech
+
+	# 1. 合并是免费的，而且按 §7.8 的数值单位面积效率总是正收益，能合就合
+	var ms: Array = shop.mergeable(mech)
+	if not ms.is_empty():
+		var m: Dictionary = ms[0]
+		var kids: Array = shop.children_of(String(m["id"]))
+		var choice := ""
+		if kids.size() > 1:
+			choice = _prefer_line(kids)
+		if not kids.is_empty():
+			return {"type": "merge", "a": int(m["a"]), "b": int(m["b"]), "choice": choice}
+
+	# 2. 保险箱里的卡能放就放
+	var idx := _best_in_box(world, shop, mech)
+	if idx >= 0:
+		return {"type": "place", "index": idx, "id": String(shop.safe_box[idx]["id"])}
+
+	# 3. 买一张买得起、而且放得下的卡
+	var buy := _best_to_buy(world, shop, mech)
+	if buy >= 0:
+		return {"type": "buy", "index": buy}
+
+	# 4. 没有想要的就刷新（留一点余钱，别刷到破产）
+	var keep: float = _cheapest_useful(world, shop, mech)
+	if shop.refresh_count < 3 and mech.coins > shop.refresh_cost() + keep:
+		return {"type": "refresh"}
+
+	return {"type": "leave"}
+
+## 线路偏好：固定顺序，保证可复现。pick_policy 顺带当作流派开关
+func _prefer_line(kids: Array) -> String:
+	var order := ["rifle", "spread", "rapid"]
+	if pick_policy == "spread":
+		order = ["spread", "rapid", "rifle"]
+	elif pick_policy == "rapid":
+		order = ["rapid", "rifle", "spread"]
+	for line in order:
+		for k in kids:
+			if String(_db_line(k)) == line:
+				return String(k)
+	return String(kids[0])
+
+var _db_cache = null
+func _db_line(wid: String) -> String:
+	return String(_db_cache.weapons.get(wid, {}).get("line", ""))
+
+func _score(world, wid: String, mech) -> float:
+	_db_cache = world.db
+	var col: float = float(world.db.weapon_column(wid))
+	var dps: float = world.db.weapon_damage(wid, 1) / world.db.weapon_interval(wid, 1)
+	if move_policy == "" or pick_policy == "wide":
+		# 铺满优先：能占空位的低级卡更值钱
+		var free: bool = not mech.free_placements(world.db.weapon_size(wid)).is_empty()
+		return (100.0 if free else 0.0) + dps * 0.001
+	return col * 1000.0 + dps * 0.001        # rush_tree：越高列越优先
+
+func _best_in_box(world, shop, mech) -> int:
+	var best := -1
+	var best_s := -INF
+	for i in shop.safe_box.size():
+		var wid := String(shop.safe_box[i]["id"])
+		var usable := false
+		for t in mech.turrets:
+			if t.weapon_id == wid and t.level < world.db.weapon_max_level(wid):
+				usable = true
+				break
+		if not usable and not mech.free_placements(world.db.weapon_size(wid)).is_empty():
+			usable = true
+		if not usable:
+			continue
+		var sc: float = _score(world, wid, mech)
+		if sc > best_s:
+			best_s = sc
+			best = i
+	return best
+
+func _best_to_buy(world, shop, mech) -> int:
+	var best := -1
+	var best_s := -INF
+	for i in shop.cards.size():
+		var c = shop.cards[i]
+		if c == null or mech.coins < float(c["price"]):
+			continue
+		var sc: float = _score(world, String(c["id"]), mech)
+		if sc > best_s:
+			best_s = sc
+			best = i
+	return best
+
+func _cheapest_useful(_world, shop, _mech) -> float:
+	var lo := INF
+	for c in shop.cards:
+		if c != null:
+			lo = minf(lo, float(c["price"]))
+	return 0.0 if lo == INF else lo

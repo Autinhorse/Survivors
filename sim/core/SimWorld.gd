@@ -10,7 +10,7 @@ const Mech = preload("res://sim/entities/Mech.gd")
 const Turret = preload("res://sim/entities/Turret.gd")
 const SpawnDirector = preload("res://sim/systems/SpawnDirector.gd")
 const CombatSystem = preload("res://sim/systems/CombatSystem.gd")
-const UpgradeSystem = preload("res://sim/systems/UpgradeSystem.gd")
+const ShopSystem = preload("res://sim/systems/ShopSystem.gd")
 const Targeting = preload("res://sim/systems/Targeting.gd")
 const MapEval = preload("res://sim/systems/MapEval.gd")
 const RunLog = preload("res://sim/telemetry/RunLog.gd")
@@ -30,7 +30,7 @@ var spawner = null
 var combat = null
 var targeting = null
 var map_eval = null
-var upgrades = null
+var shop = null
 var log = null
 
 var time: float = 0.0
@@ -40,9 +40,8 @@ var over: bool = false
 var view_w: float = 48.0
 var view_h: float = 27.0
 
-## 升级挂起：手玩时等玩家点，模拟时同 tick 内就选完
-## （P6 会把它换成金币商店，规则和 UI 不动，只换发牌来源）
-var pending_options: Array = []
+## 商店开着时世界暂停（§8：进入商店不占游戏时间）
+var pending_options: Array = []      # 兼容旧接口，恒空
 
 func setup(p_cfg, p_agent, p_db = null) -> void:
 	cfg = p_cfg
@@ -63,10 +62,10 @@ func setup(p_cfg, p_agent, p_db = null) -> void:
 	mech.hp = mech.max_hp
 	mech.move_speed = db.cfg("mech/move_speed", 2.0)
 	mech.turn_seconds = db.cfg("mech/turn_seconds", 1.0)
-	mech.half_size = db.cfg("mech/hull_half_size", 1.5)
+	mech.base_size = 3
 	mech.turrets.append(Turret.new(
 		String(db.balance.get("mech", {}).get("start_weapon", "gun")),
-		int(db.balance.get("mech", {}).get("start_slot", 1)), 1))
+		Vector2i(1, 0), 1, 1))          # 车头正中
 
 	spawner = SpawnDirector.new()
 	spawner.setup(db, rng, torus)
@@ -76,9 +75,10 @@ func setup(p_cfg, p_agent, p_db = null) -> void:
 	targeting.setup(torus)
 	targeting.map_eval = map_eval
 	combat = CombatSystem.new()
+	shop = ShopSystem.new()
+	shop.setup(db, rng, torus)
 	combat.setup(db, rng, torus, targeting)
-	upgrades = UpgradeSystem.new()
-	upgrades.setup(db, rng)
+	combat.shop = shop
 
 	log = RunLog.new()
 	log.seed_value = cfg.seed_value
@@ -86,15 +86,16 @@ func setup(p_cfg, p_agent, p_db = null) -> void:
 	log.move_policy = cfg.move_policy
 	log.pick_policy = cfg.pick_policy
 	log.pick(0.0, "start+" + mech.turrets[0].weapon_id)
+	shop.open_initial(self)          # §8.6：开局就在商店保护罩里，买够再出发
 
 func tick(step: float = -1.0) -> void:
 	if over:
 		return
 	var d := dt if step < 0.0 else step
-	if not pending_options.is_empty():
-		_resolve_pending()
-		if not pending_options.is_empty():
-			return   # 手玩：升级面板开着，世界暂停
+	if shop.open:
+		_run_shop()
+		if shop.open:
+			return   # 商店界面开着，游戏时间不走（§8）
 	time += d
 
 	var input: Dictionary = agent.get_input(self)
@@ -108,12 +109,9 @@ func tick(step: float = -1.0) -> void:
 	combat.hull_contact(mech, d, log)
 	combat.update_turrets(mech, projectiles, d)
 	combat.update_projectiles(projectiles, mech, d, log)
+	shop.collect(mech, d, log)
+	shop.tick(self, d)
 	_cull()
-
-	if upgrades.ready_to_level(mech):
-		upgrades.consume_level(mech)
-		pending_options = upgrades.draw_options(mech)
-		_resolve_pending()
 
 	_sample_behavior(d)
 	log.peak_enemies = maxi(log.peak_enemies, enemies.size())
@@ -140,14 +138,36 @@ func _sample_behavior(d: float) -> void:
 		log.nearest_sum += nearest
 		log.nearest_n += 1
 
-func _resolve_pending() -> void:
-	if pending_options.is_empty():
-		return
-	var i: int = agent.choose_upgrade(self, pending_options)
-	if i < 0:
-		return   # 等玩家点
-	upgrades.apply(mech, pending_options[i], time, log)
-	pending_options.clear()
+## 商店里的一步一步交给 agent 决定；手玩时 agent 返回 wait，等 UI 点
+func _run_shop() -> void:
+	var guard := int(db.shop.get("ai", {}).get("max_actions_per_visit", 40))
+	while shop.open and guard > 0:
+		guard -= 1
+		var act: Dictionary = agent.shop_step(self, shop)
+		if act.is_empty() or String(act.get("type", "")) == "wait":
+			return
+		_apply_shop(act)
+	if guard <= 0 and shop.open:
+		shop.leave(self)      # 兜底：别让 AI 在店里死循环
+
+func _apply_shop(act: Dictionary) -> void:
+	match String(act.get("type", "")):
+		"buy":     shop.buy(mech, int(act.get("index", 0)))
+		"place":
+			if shop.place(mech, int(act.get("index", 0))):
+				log.pick(time, "place+" + String(act.get("id", "")))
+		"merge":
+			if shop.merge(mech, int(act.get("a", 0)), int(act.get("b", 0)), String(act.get("choice", ""))):
+				log.pick(time, "merge+" + String(act.get("choice", "")))
+				log.merge_count += 1
+		"line":
+			if shop.resolve_line_choice(mech, String(act.get("choice", ""))):
+				log.pick(time, "merge+" + String(act.get("choice", "")))
+				log.merge_count += 1
+		"sell_card":   shop.sell_card(mech, int(act.get("index", 0)))
+		"sell_turret": shop.sell_turret(mech, int(act.get("index", 0)))
+		"refresh":     shop.do_refresh(mech)
+		"leave":       shop.leave(self)
 
 func _move_mech(input: Dictionary, d: float) -> void:
 	var mv: Vector2 = input.get("move", Vector2.ZERO)
@@ -187,6 +207,19 @@ func _finish(result: String) -> void:
 	log.run_duration = time
 	log.player_level = mech.level
 	log.coins_left = mech.coins
+	log.shop_visits = shop.visits
+	log.best_column = _best_column()
+	var ids: Array = []
+	for t in mech.turrets:
+		ids.append("%s@%d" % [t.weapon_id, t.level])
+	ids.sort()
+	log.final_build = " ".join(ids)
+
+func _best_column() -> int:
+	var best := 0
+	for t in mech.turrets:
+		best = maxi(best, db.weapon_column(t.weapon_id))
+	return best
 
 ## 批量模拟：一口气跑到结束，返回 RunLog
 func run_to_end(max_ticks: int = 400000):

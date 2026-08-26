@@ -113,7 +113,7 @@ func hull_contact(mech, dt: float, log_ref) -> void:
 ## 有效弧 = min(槽位弧 180°, 武器弧)，弧心朝槽位外侧（§6.4）。
 ## 攻击距离以**机甲中心**为准（§7.6），不按每个炮塔自己的位置算。
 func candidates_for(mech, t, rng_range: float) -> Array:
-	var arc_center: float = mech.slot_arc_center(t.slot)
+	var arc_center: float = mech.slot_arc_center(t)
 	var half_arc := deg_to_rad(mech.SLOT_ARC_DEG) * 0.5
 	var r2 := rng_range * rng_range
 	var out: Array = []
@@ -255,10 +255,11 @@ func _hit(e, p, amount: float, mech, log_ref) -> void:
 			log_ref.add_kill(t.weapon_id)
 		_award(e, mech, log_ref)
 
+var shop = null      # 掉金币要用
+
 func _award(e, mech, log_ref) -> void:
-	mech.xp += 1.0
-	mech.coins += e.coin
+	if shop != null:
+		shop.drop_coin(e.pos, e.coin)      # §4：死亡掉落金币，掉在地上要走过去捡
 	log_ref.kills_total += 1
-	log_ref.coins_earned += e.coin
 	var i: int = clampi(e.wave_pos - 1, 0, 7)
 	log_ref.kills_by_wave_pos[i] = int(log_ref.kills_by_wave_pos[i]) + 1

@@ -6,6 +6,8 @@ extends RefCounted
 func get_input(_world) -> Dictionary:
 	return {"move": Vector2.ZERO, "turn": 0}
 
-## 三选一，返回下标
-func choose_upgrade(_world, options: Array) -> int:
-	return 0 if options.size() > 0 else -1
+## 商店里的一步。返回 {"type": ...}；返回 {"type":"wait"} 表示在等（手玩时是等 UI）。
+## 动作：buy(index) / place(index) / merge(a,b[,choice]) / line(choice) /
+##       sell_card(index) / sell_turret(index) / refresh / leave
+func shop_step(_world, _shop) -> Dictionary:
+	return {"type": "leave"}

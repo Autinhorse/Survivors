@@ -74,13 +74,17 @@ func _run(seed_value: int) -> String:
 ## ---- P3 验收：槽位攻击弧 + 六种索敌 ----
 func check_p3() -> void:
 	var Mech = load("res://sim/entities/Mech.gd")
+	var Turret = load("res://sim/entities/Turret.gd")
 	var m = Mech.new()
+	m.base_size = 3
 	m.rot = 0.0
-	# §6.4 的角度表（0°=正上，顺时针）。槽位编号 1-8 对应索引 0-7。
+	# §6.4 的角度表（0°=正上，顺时针）。1-8 号槽位 = 3×3 格盘上除中心外的 8 格。
+	var CELLS := [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(0,1),
+		Vector2i(2,1), Vector2i(0,2), Vector2i(1,2), Vector2i(2,2)]
 	var want := {0: 315.0, 1: 0.0, 2: 45.0, 3: 270.0, 4: 90.0, 5: 225.0, 6: 180.0, 7: 135.0}
 	var all_ok := true
 	for slot in want.keys():
-		var center_rad: float = m.slot_arc_center(slot)
+		var center_rad: float = m.slot_arc_center(Turret.new("gun", CELLS[slot], 1, 1))
 		# sim 用的是数学角（atan2(y,x)，屏幕系 y 向下）；文档用的是"正上 0°、顺时针"。
 		# 上=(0,-1) 数学角 -90° 对应文档 0°，所以 文档角 = 数学角 + 90°。
 		var deg := fposmod(rad_to_deg(center_rad) + 90.0, 360.0)
@@ -90,10 +94,32 @@ func check_p3() -> void:
 	ok("槽位攻击弧心与 §6.4 的角度表一致", all_ok)
 
 	# 转 90° 后，角落槽的弧应该正好落到下一个角落槽原来的位置（对称性）
-	var before: float = m.slot_arc_center(0)
+	var corner = Turret.new("gun", Vector2i(0, 0), 1, 1)
+	var before: float = m.slot_arc_center(corner)
 	m.rot = PI * 0.5
 	ok("旋转 90° 后角落槽弧心 = 原来的下一个角落槽",
-		absf(wrapf(m.slot_arc_center(0) - before - PI * 0.5, -PI, PI)) < 0.001)
+		absf(wrapf(m.slot_arc_center(corner) - before - PI * 0.5, -PI, PI)) < 0.001)
+
+	# §6.3：3×3 中心 1 格禁放；4×4 中心 2×2 禁放 1×1，2×2 可以压住但不能整个进去
+	var m3 = Mech.new(); m3.base_size = 3
+	ok("3×3：中心格不能放 1×1", not m3.can_place(Vector2i(1, 1), 1))
+	ok("3×3：外围 8 格都能放 1×1", m3.free_placements(1).size() == 8,
+		"%d 格" % m3.free_placements(1).size())
+	var m4 = Mech.new(); m4.base_size = 4
+	ok("4×4：中心 4 格不能放 1×1", m4.free_placements(1).size() == 12,
+		"%d 格" % m4.free_placements(1).size())
+	ok("4×4：2×2 不能整个放进中心", not m4.can_place(Vector2i(1, 1), 2))
+	ok("4×4：2×2 有 8 个合法位置", m4.free_placements(2).size() == 8,
+		"%d 个" % m4.free_placements(2).size())
+	# 四个角各放一个 2×2 正好铺满 —— 这就是终局的火力天花板
+	var m5 = Mech.new(); m5.base_size = 4
+	var placed := 0
+	for c in [Vector2i(0,0), Vector2i(2,0), Vector2i(0,2), Vector2i(2,2)]:
+		if m5.can_place(c, 2):
+			m5.turrets.append(Turret.new("sniper_rifle", c, 1, 2))
+			placed += 1
+	ok("4×4：四角各一门 2×2 正好铺满（终局上限 4 门）",
+		placed == 4 and m5.free_placements(1).is_empty(), "放下 %d 门" % placed)
 
 ## ---- P3 验收：六种索敌方式各自选中预期目标 ----
 func check_targeting() -> void:
@@ -109,7 +135,7 @@ func check_targeting() -> void:
 	var far = Enemy.new();  far.pos  = c + Vector2(0, -8); far.hp  = 5000.0; far.alive = true
 	var weak = Enemy.new(); weak.pos = c + Vector2(0, -5); weak.hp = 10.0;  weak.alive = true
 	var pool := [near, far, weak]
-	var t = Turret.new("gun", 1, 1)
+	var t = Turret.new("gun", Vector2i(1, 0), 1, 1)
 
 	ok("索敌1 最近", w.targeting.pick(1, t, pool, c) == near)
 	ok("索敌3 血量最低", w.targeting.pick(3, t, pool, c) == weak)
@@ -184,8 +210,10 @@ func _world_with(weapon_id: String):
 	var w = SimWorld.new()
 	w.setup(cfg, ScriptedAgent.new())
 	w.mech.turrets.clear()
-	w.mech.turrets.append(Turret.new(weapon_id, 1, 1))   # 槽 1 = 正北，弧心 0°
+	w.mech.turrets.append(Turret.new(weapon_id, Vector2i(1, 0), 1, 1))   # 车头正中，弧心 0°
 	w.spawner._next_wave = 99999                          # 关掉刷怪，只测武器
+	w.shop.leave(w)                                       # 跳过开局商店
+	w.shop.next_spawn_t = 1.0e9
 	return w
 
 ## ---- P4 验收：地图状态评估（§7.6）----
@@ -240,7 +268,7 @@ func check_map_eval() -> void:
 		pack.append(e2)
 	w2.enemies = pack
 	w2.map_eval.evaluate(w2)
-	var t2 = Turret.new("wall_of_lead", 1, 1)
+	var t2 = Turret.new("wall_of_lead", Vector2i(1, 0), 1, 2)
 	var picked = w2.targeting.pick(5, t2, pack, c2)
 	ok("索敌5 范围杀伤最大：选中扎堆的而不是落单的", picked != lone)
 
@@ -254,7 +282,7 @@ func check_map_eval() -> void:
 	w3.enemies = [weak, nasty]
 	w3.map_eval.evaluate(w3)
 	ok("索敌6 对自己DPS最高：选中打得疼的那个",
-		w3.targeting.pick(6, Turret.new("gun", 1, 1), [weak, nasty], c3) == nasty)
+		w3.targeting.pick(6, Turret.new("gun", Vector2i(1, 0), 1, 1), [weak, nasty], c3) == nasty)
 
 	# 性能预算：1000 只敌人一次评估要在 1ms 以内
 	var w4 = _world_with("gun")

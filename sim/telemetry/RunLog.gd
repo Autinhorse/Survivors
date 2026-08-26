@@ -41,6 +41,10 @@ var hull_kills: int = 0
 var hull_damage: float = 0.0
 
 var coins_earned: float = 0.0
+var shop_visits: int = 0
+var merge_count: int = 0
+var best_column: int = 0             # 摸到第几列武器 —— build 到底长起来没有
+var final_build: String = ""
 var coins_left: float = 0.0
 var peak_enemies: int = 0
 
@@ -60,10 +64,11 @@ const COLUMNS := [
 	"player_level", "kills_total", "damage_taken", "enemy_contact_count",
 	"hull_kills", "hull_damage", "distance_moved", "rotation_count",
 	"time_stationary", "time_turning", "time_contacted", "avg_nearest", "peak_enemies",
-	"coins_earned", "coins_left", "damage_by_side", "kills_by_wave_pos",
+	"coins_earned", "coins_left", "shop_visits", "merge_count", "best_column",
+	"damage_by_side", "kills_by_wave_pos",
 	"first_turret_time", "first_fusion_time", "fusion_count", "first_ultimate_time",
 	"ultimate_count", "ultimate_active_seconds", "power_window_ratio",
-	"kills_by_weapon", "damage_by_weapon", "picks",
+	"kills_by_weapon", "damage_by_weapon", "final_build", "picks",
 ]
 
 static func csv_header() -> String:
@@ -77,12 +82,13 @@ func csv_row() -> String:
 		"%.1f" % distance_moved, rotation_count,
 		"%.1f" % time_stationary, "%.1f" % time_turning, "%.1f" % time_contacted,
 		"%.2f" % (nearest_sum / maxf(1.0, float(nearest_n))), peak_enemies,
-		"%.0f" % coins_earned, "%.0f" % coins_left,
+		"%.0f" % coins_earned, "%.0f" % coins_left, shop_visits, merge_count, best_column,
 		_arr(damage_by_side), _arr(kills_by_wave_pos),
 		"%.1f" % first_turret_time, "%.1f" % first_fusion_time, fusion_count,
 		"%.1f" % first_ultimate_time, ultimate_count,
 		"%.1f" % ultimate_active_seconds, "%.3f" % power_window_ratio,
-		_kv(kills_by_weapon), _kv(damage_by_weapon), "|".join(weapon_pick_history),
+		_kv(kills_by_weapon), _kv(damage_by_weapon), final_build,
+		"|".join(weapon_pick_history),
 	]
 	assert(v.size() == COLUMNS.size())
 	var parts: Array = []

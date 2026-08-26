@@ -9,7 +9,9 @@
   "line": {
     "_desc": "朝固定方向一直跑，车头跟着移动方向。环形地图上最笨的有效解",
     "move": "line",
-    "turn": "follow_move"
+    "turn": "follow_move",
+    "shop_pull": 0.0,
+    "coin_pull": 0.0
   },
   "field": {
     "_desc": "势场避让 + 短程试探 + 转向效用比较。代表'会玩的普通人'",
@@ -25,7 +27,11 @@
     "turn_min_gap": 2.0,
     "turn_expect_sec": 3.0,
     "turn_cost_free": false,
-    "_note_turn": "转向滞回是这套 AI 里最敏感的参数：0.05/1.0 会过度转向，每次白扔 1 秒火力"
+    "_note_turn": "转向滞回是这套 AI 里最敏感的参数：0.05/1.0 会过度转向，每次白扔 1 秒火力",
+    "shop_pull": 1.0,
+    "_note_shop": "不去商店就没有成长——第一版漏了这条，结果一局只进 1 次店、存活从 269s 掉到 68s",
+    "coin_pull": 0.8,
+    "_note_coin": "金币掉在地上要走过去捡；不捡就没钱进店，不进店就没有成长。这是第二个漏掉的行为"
   },
   "oracle": {
     "_desc": "同 field，但视野更远、预测更长、试探更密。上界：打得再好也就这样",
@@ -39,6 +45,8 @@
     "strategic_weight": 0.35,
     "turn_hysteresis": 0.25,
     "turn_min_gap": 2.0,
-    "turn_expect_sec": 3.0
+    "turn_expect_sec": 3.0,
+    "shop_pull": 1.4,
+    "coin_pull": 1.0
   }
 }

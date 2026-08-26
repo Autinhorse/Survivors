@@ -1,0 +1,34 @@
+{
+  "_note": "局内商店（§8）。价格来自 §8.6，出售比例来自 §8.7，概率上限在 CardPool.gd（§8.4）。",
+  "_todo": "装甲卡属于 §6.2 的五级树，随 P5 一起做；现在商店只出武器卡。",
+
+  "start_coins": 200,
+
+  "spawn": {
+    "_note": "间隔从离开商店起算；且金币要够买最少 2 张卡才会出现（§8）",
+    "min_gap_sec": 30.0,
+    "max_gap_sec": 90.0,
+    "min_screens": 1.0,
+    "max_screens": 2.0,
+    "site_size": 2.0,
+    "shield_radius": 5.0,
+    "shield_grace_sec": 5.0
+  },
+
+  "slots": {
+    "cards": 4,
+    "safe_box": 8,
+    "slot_machine": 3
+  },
+
+  "refresh_cost_rate": 0.2,
+  "sell_card_rate": 0.25,
+  "sell_turret_rate": 0.25,
+
+  "coin_pickup_radius": 2.0,
+
+  "ai": {
+    "_note": "自动模拟的采购策略；没有它批量跑里机甲永远不成长",
+    "max_actions_per_visit": 40
+  }
+}

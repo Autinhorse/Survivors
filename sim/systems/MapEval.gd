@@ -256,7 +256,7 @@ func _eval_own_dps(mech) -> void:
 	for i in 4:
 		dir_dps[i] = 0.0
 	for t in mech.turrets:
-		var arc_center: float = mech.slot_arc_center(t.slot)
+		var arc_center: float = mech.slot_arc_center(t)
 		var half_arc := deg_to_rad(mech.SLOT_ARC_DEG) * 0.5
 		var dps: float = _db.weapon_damage(t.weapon_id, t.level) \
 			/ _db.weapon_interval(t.weapon_id, t.level) \
