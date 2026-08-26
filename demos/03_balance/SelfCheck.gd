@@ -190,7 +190,11 @@ func check_shapes() -> void:
 			hurt2 += 1
 	var dmg: float = row[0].max_hp - row[0].hp
 	ok("线性形态：一发打穿一列 4 个", hurt2 == 4, "实际 %d 个" % hurt2)
-	ok("线性形态：沿途伤害是 20%", is_equal_approx(dmg, 40000.0 * 0.2), "实际 %.0f" % dmg)
+	# 从数据里读，别写死——数值一调这条就会假失败
+	var pierce: float = w2.db.weapon_damage("pierce_rifle", 1)
+	var falloff: float = w2.db.weapon_mech("pierce_rifle", "line_falloff", 0.2)
+	ok("线性形态：沿途伤害是 %.0f%%" % (falloff * 100.0),
+		is_equal_approx(dmg, pierce * falloff), "实际 %.0f，期望 %.0f" % [dmg, pierce * falloff])
 
 	# 击退：Shotgun 命中后把敌人推开
 	var w3 = _world_with("shotgun")
