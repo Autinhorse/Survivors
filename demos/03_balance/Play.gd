@@ -20,7 +20,9 @@ var center := Vector2(960, 540)
 
 var _hud: Label
 var _panel: VBoxContainer
+var _panel_bg: ColorRect
 var _buttons: Array = []
+var _panel_sig: String = ""
 
 func _ready() -> void:
 	_build_ui()
@@ -73,6 +75,11 @@ func _auto_shop() -> void:
 func _process(delta: float) -> void:
 	if world == null:
 		return
+	# §8.3：商店左边显示机甲底座，右侧是卡牌。开店时把世界视角左移腾地方。
+	var want: Vector2 = Vector2(world.view_w, world.view_h) * 0.5 * PX
+	if world.shop.open:
+		want.x = world.view_w * PX * 0.24
+	center = center.lerp(want, 1.0 - pow(0.001, delta))
 	_read_keys()
 	if not world.over:
 		accum += delta * speed_mult
@@ -210,6 +217,32 @@ func _draw_mech() -> void:
 			draw_line(center + (n * out + t * out) * PX, center + (n * out - t * out) * PX,
 				Color(1.0, 0.6, 0.2, 0.5), 2.0)
 
+	# 底座格盘：空槽画虚框，中心禁区画叉
+	var half := float(m.base_size) * 0.5
+	for gy in m.base_size:
+		for gx in m.base_size:
+			var cell := Vector2i(gx, gy)
+			var occupied := false
+			for t2 in m.turrets:
+				if m.cells_of(t2).has(cell):
+					occupied = true
+					break
+			if occupied:
+				continue
+			var o := (Vector2(cell) + Vector2(0.5, 0.5) - Vector2(half, half)).rotated(m.rot)
+			var cp := center + o * PX
+			var in_center: bool = not m.can_place(cell, 1)
+			var col2 := Color(1, 1, 1, 0.10) if in_center else Color(0.6, 0.9, 1.0, 0.30)
+			var r := PX * 0.36
+			var quad := PackedVector2Array()
+			for corner in [Vector2(-r, -r), Vector2(r, -r), Vector2(r, r), Vector2(-r, r)]:
+				quad.append(cp + corner.rotated(m.rot))
+			quad.append(quad[0])
+			draw_polyline(quad, col2, 1.0)
+			if in_center:
+				draw_line(quad[0], quad[2], col2, 1.0)
+				draw_line(quad[1], quad[3], col2, 1.0)
+
 	for t in m.turrets:
 		var wp: Vector2 = center + m.turret_offset(t).rotated(m.rot) * PX
 		var col := Color(String(world.db.weapons.get(t.weapon_id, {}).get("color", "#ffffff")))
@@ -229,20 +262,50 @@ func _build_ui() -> void:
 	_hud.add_theme_font_size_override("font_size", 16)
 	layer.add_child(_hud)
 
+	_panel_bg = ColorRect.new()
+	_panel_bg.color = Color(0.05, 0.06, 0.09, 0.88)
+	_panel_bg.position = Vector2(920, 100)
+	_panel_bg.size = Vector2(960, 880)
+	_panel_bg.visible = false
+	layer.add_child(_panel_bg)
+
 	_panel = VBoxContainer.new()
-	_panel.position = Vector2(560, 200)
-	_panel.custom_minimum_size = Vector2(800, 0)
+	_panel.position = Vector2(940, 120)
+	_panel.custom_minimum_size = Vector2(900, 0)
 	_panel.visible = false
 	layer.add_child(_panel)
 
-## 商店面板每次重建 —— 内容变化频繁，UI 又小，重建比增量同步简单可靠。
+## 商店面板只在状态真的变化时重建。
+## **不能每帧重建**：按钮的按下和松开分属两帧，每帧 queue_free 会让按下时的
+## 那个按钮实例在松开前被销毁，pressed 信号永远不触发——点了没反应就是这么来的。
 ## §8.3 的拖拽版留到数值验证完再做。
+func _shop_signature() -> String:
+	var shop = world.shop
+	var parts: Array = [str(int(world.mech.coins)), str(shop.safe_box.size()),
+		str(shop.pending_line_choice.size()), str(world.mech.base_size)]
+	for c in shop.cards:
+		parts.append("-" if c == null else String(c["id"]))
+	for c in shop.safe_box:
+		parts.append(String(c["id"]))
+	for t in world.mech.turrets:
+		parts.append("%s%d@%d,%d" % [t.weapon_id, t.level, t.cell.x, t.cell.y])
+	for i in 4:
+		parts.append("%d.%d" % [world.mech.armor_tier[i], world.mech.armor_level[i]])
+	return "|".join(parts)
+
 func _sync_panel() -> void:
 	var shop = world.shop
 	_panel.visible = shop.open
+	_panel_bg.visible = shop.open
 	if not shop.open:
+		_panel_sig = ""
 		return
+	var sig := _shop_signature()
+	if sig == _panel_sig:
+		return
+	_panel_sig = sig
 	for c in _panel.get_children():
+		_panel.remove_child(c)
 		c.queue_free()
 	var m = world.mech
 
@@ -283,12 +346,12 @@ func _sync_panel() -> void:
 			_panel.add_child(h)
 			var b1 := Button.new()
 			b1.text = "装 %s" % c2["name"]
-			b1.custom_minimum_size = Vector2(560, 34)
+			b1.custom_minimum_size = Vector2(660, 34)
 			b1.pressed.connect(func(): human.queued_action = {"type": "place", "index": idx2, "id": c2["id"]})
 			h.add_child(b1)
 			var b2 := Button.new()
 			b2.text = "卖 %d" % int(float(c2["price"]) * 0.25)
-			b2.custom_minimum_size = Vector2(220, 34)
+			b2.custom_minimum_size = Vector2(240, 34)
 			b2.pressed.connect(func(): human.queued_action = {"type": "sell_card", "index": idx2})
 			h.add_child(b2)
 

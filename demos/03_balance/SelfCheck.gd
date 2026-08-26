@@ -56,6 +56,7 @@ func _initialize() -> void:
 	check_map_eval()
 	check_armor()
 	check_armor_v2()
+	check_shop_actions()
 	print("\n%d 项失败" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -448,3 +449,46 @@ func check_armor_v2() -> void:
 	ok("滚轮伤害 = 光环 450 × 3.0", is_equal_approx(row[0].max_hp - row[0].hp, 1350.0),
 		"%.0f" % (row[0].max_hp - row[0].hp))
 	ok("滚轮伤害记在车体那一栏", w3.log.hull_damage > 0.0)
+
+## ---- 手玩商店的动作通路（UI 点按钮 → HumanAgent → SimWorld）----
+func check_shop_actions() -> void:
+	var HumanAgent = load("res://sim/agent/HumanAgent.gd")
+	var cfg = SimConfig.new()
+	cfg.seed_value = 21
+	var human = HumanAgent.new()
+	var w = SimWorld.new()
+	w.setup(cfg, human)          # 开局就在商店里（§8.6）
+	ok("开局商店是开着的", w.shop.open)
+
+	# 塞两张卡进保险箱：一张装甲、一张武器
+	w.shop.safe_box.clear()
+	w.shop.safe_box.append({"kind": "armor", "id": "armor:0", "tier": 0,
+		"column": 1, "price": 50, "name": "装甲"})
+	w.shop.safe_box.append({"kind": "weapon", "id": "gun", "column": 1,
+		"price": 100, "name": "枪"})
+
+	# 点「装 装甲」
+	var lv0: int = w.mech.armor_level[0]
+	human.queued_action = {"type": "place", "index": 0, "id": "armor:0", "side": -1}
+	w.tick()
+	ok("点装甲卡：装到了某一面", w.mech.armor_level[0] > lv0 or w.mech.armor_level[1] > 0,
+		"车头 %d 级" % w.mech.armor_level[0])
+	ok("点装甲卡：保险箱少一张", w.shop.safe_box.size() == 1)
+
+	# 点「装 枪」——已有一门 gun@1，应该升到 2 级
+	var before: int = w.mech.turrets[0].level
+	human.queued_action = {"type": "place", "index": 0, "id": "gun"}
+	w.tick()
+	ok("点武器卡：已有同名炮塔时升级", w.mech.turrets[0].level == before + 1,
+		"lv%d → lv%d" % [before, w.mech.turrets[0].level])
+	ok("点武器卡：保险箱清空", w.shop.safe_box.is_empty())
+
+	# 商店开着时世界不推进（§8：进入商店不占游戏时间）
+	var t0: float = w.time
+	w.tick()
+	ok("商店开着时游戏时间不走", is_equal_approx(w.time, t0), "%.2f → %.2f" % [t0, w.time])
+
+	# 点「离开商店」
+	human.queued_action = {"type": "leave"}
+	w.tick()
+	ok("点离开商店：关闭并恢复计时", not w.shop.open)
