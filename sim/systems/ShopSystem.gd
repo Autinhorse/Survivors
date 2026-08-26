@@ -249,9 +249,17 @@ func place(mech, index: int, side: int = -1, prefer_new: bool = false,
 		return true
 	var wid := String(card["id"])
 	var size: int = _db.weapon_size(wid)
-	# 玩家指定了格子：只在那里放新炮塔；那个位置放不下就整个动作失败，
-	# 不要偷偷放到别处——手玩时"点了没反应"比"放错地方"好排查得多
+	# 玩家指定了格子。三种情况：这一格上已经有同名炮塔就**升级它**（这才是
+	# 叠卡升级的正常路径），空格就放新的，别的情况一律整个动作失败——
+	# 不要偷偷放到别处，手玩时"点了没反应"比"放错地方"好排查得多。
 	if want_cell != null:
+		var hit = turret_at(mech, want_cell)
+		if hit != null:
+			if hit.weapon_id != wid or hit.level >= _db.weapon_max_level(wid):
+				return false
+			hit.level += 1
+			safe_box.remove_at(index)
+			return true
 		if not mech.can_place(want_cell, size):
 			return false
 		mech.turrets.append(Turret.new(wid, want_cell, 1, size))
@@ -277,6 +285,13 @@ func place(mech, index: int, side: int = -1, prefer_new: bool = false,
 	mech.turrets.append(Turret.new(wid, cell, 1, size))
 	safe_box.remove_at(index)
 	return true
+
+## 占住这一格的炮塔（2×2 会盖住四格），没有就返回 null
+func turret_at(mech, cell: Vector2i):
+	for t in mech.turrets:
+		if mech.cells_of(t).has(cell):
+			return t
+	return null
 
 ## 挑一个"离已有炮塔的朝向最远"的空位。
 ## 每个槽只覆盖 180°（§6.4），全堆在一条边上等于背面裸奔——

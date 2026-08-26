@@ -25,6 +25,15 @@ var _buttons: Array = []
 var _panel_sig: String = ""
 var _picked: int = -1        # 保险箱里选中的卡（-1 = 没选）
 
+## 选中的武器卡 id（没选、或选的是装甲卡都返回 ""）
+func _picked_weapon() -> String:
+	if world == null or _picked < 0 or _picked >= world.shop.safe_box.size():
+		return ""
+	var c: Dictionary = world.shop.safe_box[_picked]
+	if String(c.get("kind", "weapon")) != "weapon":
+		return ""
+	return String(c["id"])
+
 func _ready() -> void:
 	_build_ui()
 	_start(0)
@@ -253,6 +262,7 @@ func _draw_mech() -> void:
 
 	# 底座格盘：空槽画虚框，中心禁区画叉
 	var half := float(m.base_size) * 0.5
+	var pick_weapon := _picked_weapon()
 	for gy in m.base_size:
 		for gx in m.base_size:
 			var cell := Vector2i(gx, gy)
@@ -267,7 +277,7 @@ func _draw_mech() -> void:
 			var cp := center + o * PX
 			var in_center: bool = not m.can_place(cell, 1)
 			var col2 := Color(1, 1, 1, 0.10) if in_center else Color(0.6, 0.9, 1.0, 0.30)
-			if _picked >= 0 and world.shop.open and not in_center:
+			if pick_weapon != "" and world.shop.open and not in_center:
 				col2 = Color(0.5, 1.0, 0.6, 0.85)      # 选了卡，能放的格子亮起来
 			var r := PX * 0.36
 			var quad := PackedVector2Array()
@@ -279,11 +289,17 @@ func _draw_mech() -> void:
 				draw_line(quad[0], quad[2], col2, 1.0)
 				draw_line(quad[1], quad[3], col2, 1.0)
 
+	var pick_id := _picked_weapon()
 	for t in m.turrets:
 		var wp: Vector2 = center + m.turret_offset(t).rotated(m.rot) * PX
 		var col := Color(String(world.db.weapons.get(t.weapon_id, {}).get("color", "#ffffff")))
 		draw_circle(wp, 8.0 * float(t.size), col)
 		draw_arc(wp, 12.0 * float(t.size), 0, TAU, 16, col.darkened(0.3), 1.5)
+		# 选中的卡能把这门塔顶上去一级：套个绿环，表示这里可以点
+		if pick_id != "" and t.weapon_id == pick_id 				and t.level < world.db.weapon_max_level(pick_id):
+			draw_arc(wp, 16.0 * float(t.size), 0, TAU, 24, Color(0.5, 1.0, 0.6, 0.9), 2.5)
+		draw_string(ThemeDB.fallback_font, wp + Vector2(-4, 4), str(t.level),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0, 0, 0, 0.85))
 	# 车头指示
 	draw_line(center, center + Vector2(0, -hs - 0.6).rotated(m.rot) * PX, Color(1, 0.9, 0.2), 3.0)
 

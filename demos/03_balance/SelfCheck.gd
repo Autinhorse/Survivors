@@ -505,6 +505,21 @@ func check_shop_actions() -> void:
 	ok("指定格子：炮塔落在点的那一格", landed and w.mech.turrets.size() == n0 + 1,
 		"共 %d 门" % w.mech.turrets.size())
 
+	# 点已有同名炮塔的那一格 = 升级它（叠卡升级的正常路径）
+	w.shop.safe_box.append({"kind": "weapon", "id": "gun", "column": 1,
+		"price": 100, "name": "枪"})
+	var tgt = null
+	for t2 in w.mech.turrets:
+		if t2.cell == want:
+			tgt = t2
+	var lv1: int = tgt.level
+	var n2: int = w.mech.turrets.size()
+	human.queued_action = {"type": "place", "index": 0, "id": "gun", "cell": want}
+	w.tick()
+	ok("点已有炮塔的格子：就地升一级，不新开一门",
+		tgt.level == lv1 + 1 and w.mech.turrets.size() == n2,
+		"lv%d → lv%d，共 %d 门" % [lv1, tgt.level, w.mech.turrets.size()])
+
 	# 指到禁区/占用的格子应当整个作废，而不是偷偷放到别处
 	w.shop.safe_box.append({"kind": "weapon", "id": "gun", "column": 1,
 		"price": 100, "name": "枪"})
