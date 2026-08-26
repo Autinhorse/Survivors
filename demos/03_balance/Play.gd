@@ -196,14 +196,19 @@ func _draw_mech() -> void:
 	# 四面装甲厚度可视化（局部 0=车头 1=右 2=车尾 3=左）
 	const SIDE_LOCAL := [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)]
 	for i in 4:
-		if m.armor[i] <= 0.0 and m.contact_damage[i] <= 0.0:
+		if m.armor[i] <= 0.0 and m.armor_aura[i] <= 0.0:
 			continue
 		var n: Vector2 = SIDE_LOCAL[i].rotated(m.rot)
 		var t: Vector2 = Vector2(-n.y, n.x)
 		var col := Color(0.5, 0.8, 1.0).lerp(Color(1.0, 0.5, 0.3),
-			clampf(m.contact_damage[i] / 30.0, 0.0, 1.0))
+			clampf(m.armor_aura[i] / 200.0, 0.0, 1.0))
 		draw_line(center + (n * hs + t * hs) * PX, center + (n * hs - t * hs) * PX,
 			col, 2.0 + m.armor[i] * 30.0)
+		# 链锯/齿轮/滚筒向外支出的那一圈（敌人挤不进来的范围）
+		if m.armor_range[i] > 0.0:
+			var out: float = hs + m.armor_range[i]
+			draw_line(center + (n * out + t * out) * PX, center + (n * out - t * out) * PX,
+				Color(1.0, 0.6, 0.2, 0.5), 2.0)
 
 	for t in m.turrets:
 		var wp: Vector2 = center + m.turret_offset(t).rotated(m.rot) * PX

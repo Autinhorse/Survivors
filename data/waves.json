@@ -8,7 +8,7 @@
   "spawn_margin": 4.0,
   "base": {
     "hp": 40.0,
-    "count": 15.0,
+    "count": 12.0,
     "attack": 10.0,
     "coin": 50.0
   },
