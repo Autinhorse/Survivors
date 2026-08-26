@@ -226,7 +226,9 @@ func shop_step(world, shop) -> Dictionary:
 	var mech = world.mech
 
 	# 1. 合并是免费的，而且按 §7.8 的数值单位面积效率总是正收益，能合就合
-	var ms: Array = shop.mergeable(mech)
+	# wide 流派：槽位没铺满之前不合并（合并会把两门塔并成一门，等于自断宽度）
+	var ms: Array = [] if (pick_policy == "wide"
+		and not mech.free_placements(1).is_empty()) else shop.mergeable(mech)
 	if not ms.is_empty():
 		var m: Dictionary = ms[0]
 		var kids: Array = shop.children_of(String(m["id"]))
@@ -243,7 +245,8 @@ func shop_step(world, shop) -> Dictionary:
 		var side := -1
 		if String(card.get("kind", "weapon")) == "armor":
 			side = _worst_side(world, mech, int(card["tier"]))
-		return {"type": "place", "index": idx, "id": String(card["id"]), "side": side}
+		return {"type": "place", "index": idx, "id": String(card["id"]), "side": side,
+			"prefer_new": pick_policy == "wide"}
 
 	# 3. 买一张买得起、而且放得下的卡
 	var buy := _best_to_buy(world, shop, mech)
@@ -299,10 +302,10 @@ func _score(world, wid: String, mech) -> float:
 	_db_cache = world.db
 	var col: float = float(world.db.weapon_column(wid))
 	var dps: float = world.db.weapon_damage(wid, 1) / world.db.weapon_interval(wid, 1)
-	if move_policy == "" or pick_policy == "wide":
-		# 铺满优先：能占空位的低级卡更值钱
+	if pick_policy == "wide":
+		# 铺满优先：能占空位的低级卡更值钱；铺满了才看伤害
 		var free: bool = not mech.free_placements(world.db.weapon_size(wid)).is_empty()
-		return (100.0 if free else 0.0) + dps * 0.001
+		return (100.0 if free else 0.0) + col + dps * 0.001
 	return col * 1000.0 + dps * 0.001        # rush_tree：越高列越优先
 
 func _best_in_box(world, shop, mech) -> int:

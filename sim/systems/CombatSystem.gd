@@ -44,7 +44,15 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 			if e.hold_position:
 				e.holding = true
 		elif not e.holding and not touching and dist > 0.001:
-			e.pos = _torus.wrap(e.pos - rel / dist * e.speed * dt)
+			var np: Vector2 = _torus.wrap(e.pos - rel / dist * e.speed * dt)
+			var nrel: Vector2 = _torus.delta(mech.pos, np)
+			# 链锯/齿轮/滚筒向外支出的那一圈，敌人挤不进来（v0.2 §6.2）。
+			# 于是它们被卡在光环里持续掉血，血少的还没够到车体就死了。
+			var nside: int = mech.hit_side(nrel)
+			var stand: float = mech.armor_standoff[nside]
+			# 支出的锯齿占住这一圈，敌人的**边缘**都挤不进来，所以是 stand + radius
+			if stand <= 0.0 or not mech.overlaps(nrel, stand + e.radius):
+				e.pos = np
 
 		# --- 攻击 ---
 		e.attack_cd -= dt
@@ -94,6 +102,29 @@ func _damage_mech(mech, rel: Vector2, amount: float, log_ref) -> void:
 	log_ref.damage_taken += taken
 	log_ref.damage_by_side[side] = float(log_ref.damage_by_side[side]) + taken
 	log_ref.enemy_contact_count += 1
+
+## 齿轮/滚筒：定时朝外飞出齿轮 / 放出滚轮（v0.2 §6.2）
+func armor_projectiles(mech, projectiles: Array, dt: float) -> void:
+	for side in 4:
+		var cfg = mech.armor_proj[side]
+		if cfg == null or mech.armor_aura[side] <= 0.0:
+			continue
+		mech.armor_proj_cd[side] -= dt
+		if mech.armor_proj_cd[side] > 0.0:
+			continue
+		mech.armor_proj_cd[side] = float(cfg.get("interval", 3.0))
+		var n: Vector2 = mech.side_normal(side)
+		var p = Projectile.new()
+		p.pos = _torus.wrap(mech.pos + n * (mech.half_size + 0.2))
+		p.vel = n * float(cfg.get("speed", 8.0))
+		p.damage = mech.armor_aura[side] * float(cfg.get("damage_mult", 2.0))
+		p.shape = "line"                       # 一路碾过去，沿途都判定
+		p.line_falloff = 1.0                   # 齿轮/滚轮不衰减
+		p.hit_radius = float(cfg.get("width", 0.6))
+		p.ttl = float(cfg.get("range", 8.0)) / maxf(1.0, float(cfg.get("speed", 8.0)))
+		p.owner_turret = null
+		p.from_armor = true
+		projectiles.append(p)
 
 ## 链锯/齿轮/滚筒：向外支出的那一圈里，敌人持续掉血（§6.2）
 func hull_contact(mech, dt: float, log_ref) -> void:
@@ -228,10 +259,10 @@ func update_projectiles(projectiles: Array, mech, dt: float, log_ref) -> void:
 			"line":
 				# 线性：一路飞过去，沿途每个敌人吃 line_falloff 比例的伤害，
 				# 最后撞上的那个吃满额（§7.8 穿刺枪）。飞出射程才消失。
-				for e in hash.query(p.pos, 1.5):
+				for e in hash.query(p.pos, p.hit_radius + 1.0):
 					if not e.alive or p.hit_set.has(e):
 						continue
-					if _torus.dist(p.pos, e.pos) <= e.radius + 0.2:
+					if _torus.dist(p.pos, e.pos) <= e.radius + p.hit_radius:
 						p.hit_set.append(e)
 						_hit(e, p, p.damage * p.line_falloff, mech, log_ref)
 			"area":
@@ -262,11 +293,15 @@ func _hit(e, p, amount: float, mech, log_ref) -> void:
 	if t != null:
 		t.damage_done += amount
 		log_ref.add_damage(t.weapon_id, amount)
+	elif p.from_armor:
+		log_ref.hull_damage += amount
 	if e.hp <= 0.0 and e.alive:
 		e.alive = false
 		if t != null:
 			t.kills += 1
 			log_ref.add_kill(t.weapon_id)
+		elif p.from_armor:
+			log_ref.hull_kills += 1
 		_award(e, mech, log_ref)
 
 var shop = null      # 掉金币要用

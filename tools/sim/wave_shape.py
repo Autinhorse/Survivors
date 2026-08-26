@@ -13,15 +13,20 @@ SHAPE 就是现有 §4.5 系数在一个周期内的累乘结果，原样保留 
     python tools/sim/wave_shape.py --sweep atk
 """
 import argparse
+import csv  # noqa: F401
 
-BASE = dict(hp=100.0, cnt=20.0, atk=10.0, coin=50.0)
+import json, pathlib
+_W = json.loads(pathlib.Path("data/waves.json").read_text(encoding="utf-8"))
+_b, _g = _W["base"], _W["growth"]
+BASE = dict(hp=_b["hp"], cnt=_b["count"], atk=_b["attack"], coin=_b["coin"])
+DEFAULT_G = dict(hp=_g["hp"], cnt=_g["count"], atk=_g["attack"], coin=_g["coin"])
 
 # 周期内形状（相对本周期第 1 位）。索引 0..7 对应第 1..8 位。
 SHAPE = dict(
-    hp=[1.0, 1.10, 1.32, 7.92, 0.99, 0.99, 0.198, 1.188],
-    cnt=[1.0, 1.5, 1.5, 0.25, 2.0, 2.5, 10.0, 2.5],
-    atk=[1.0, 1.00, 1.02, 1.0404, 1.0404, 1.0404, 1.0404, 1.0508],
-    coin=[1.0, 1.05, 1.1025, 4.41, 1.1025, 1.1576, 1.1576, 1.2155],
+    hp=[w["shape"]["hp"] for w in _W["waves"]],
+    cnt=[w["shape"]["count"] for w in _W["waves"]],
+    atk=[w["shape"]["attack"] for w in _W["waves"]],
+    coin=[w["shape"]["coin"] for w in _W["waves"]],
 )
 PATTERN = ['random 2.0s', 'random 1.0s', 'Group 瞬发', 'Circle 瞬发',
            'random 0.4s', 'Circle 瞬发 远程', 'Group 瞬发', 'Circle 瞬发 直线']
@@ -74,10 +79,10 @@ def report(G, shape, cycles):
 
 def main():
     ap = argparse.ArgumentParser()
-    for k, d in [('hp', 1.21), ('cnt', 1.05), ('atk', 1.13), ('coin', 1.15)]:
-        ap.add_argument('--g-' + k, type=float, default=d)
-    ap.add_argument('--tank-hp', type=float, default=30.0, help='SHAPE_HP[4]')
-    ap.add_argument('--tank-cnt', type=float, default=0.1, help='SHAPE_CNT[4]')
+    for k in ['hp', 'cnt', 'atk', 'coin']:
+        ap.add_argument('--g-' + k, type=float, default=DEFAULT_G[k])
+    ap.add_argument('--tank-hp', type=float, default=SHAPE['hp'][3], help='SHAPE_HP[4]')
+    ap.add_argument('--tank-cnt', type=float, default=SHAPE['cnt'][3], help='SHAPE_CNT[4]')
     ap.add_argument('--cycles', type=int, default=24)
     ap.add_argument('--sweep', choices=['atk', 'coin', 'both'])
     a = ap.parse_args()

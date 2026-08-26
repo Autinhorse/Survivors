@@ -55,6 +55,7 @@ func _initialize() -> void:
 	check_shapes()
 	check_map_eval()
 	check_armor()
+	check_armor_v2()
 	print("\n%d 项失败" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -377,3 +378,69 @@ func check_armor() -> void:
 			kinds[int(c["tier"])] = true
 	ok("商店只出 0 级装甲卡（四面都还没装）", kinds.size() == 1 and kinds.has(0),
 		"出现的级别 %s" % str(kinds.keys()))
+
+## ---- 补回 v0.2 §6.2 的两条装甲机制 ----
+func check_armor_v2() -> void:
+	var Enemy = load("res://sim/entities/Enemy.gd")
+
+	# standoff：链锯起向外支出，敌人挤不进那一圈，也就够不着车体
+	var w = _world_with("gun")
+	var m = w.mech
+	m.armor_tier[0] = 2                       # 链锯
+	m.armor_level[0] = 3
+	m.refresh_armor(w.db.armor_tiers(), 0.45)
+	var e = Enemy.new()
+	e.pos = m.pos + Vector2(0, -m.half_size - 1.2)
+	e.speed = 3.0; e.attack = 100.0; e.attack_interval = 0.1
+	e.max_hp = 1.0e9; e.hp = e.max_hp; e.radius = 0.3
+	w.enemies = [e]
+	var hp0: float = m.hp
+	for i in 60:
+		w.combat.rebuild_hash(w.enemies)
+		w.combat.update_enemies(w.enemies, m, 1.0 / 30.0, w.enemy_bullets, w.log)
+	var gap: float = w.torus.dist(m.pos, e.pos) - m.half_size
+	ok("链锯 standoff：敌人被挡在支出范围外", gap > 0.45 and gap < 1.1, "%.2f 格" % gap)
+	ok("standoff：够不着车体就打不到", is_equal_approx(m.hp, hp0), "掉了 %.0f" % (hp0 - m.hp))
+
+	# 没有 standoff 的尖刺装甲，敌人能贴上来打
+	var w2 = _world_with("gun")
+	var m2 = w2.mech
+	m2.armor_tier[0] = 1                      # 尖刺
+	m2.armor_level[0] = 3
+	m2.refresh_armor(w2.db.armor_tiers(), 0.45)
+	var e2 = Enemy.new()
+	e2.pos = m2.pos + Vector2(0, -m2.half_size - 1.2)
+	e2.speed = 3.0; e2.attack = 100.0; e2.attack_interval = 0.1
+	e2.max_hp = 1.0e9; e2.hp = e2.max_hp; e2.radius = 0.3
+	w2.enemies = [e2]
+	var hp2: float = m2.hp
+	for i in 60:
+		w2.combat.rebuild_hash(w2.enemies)
+		w2.combat.update_enemies(w2.enemies, m2, 1.0 / 30.0, w2.enemy_bullets, w2.log)
+	ok("尖刺没有 standoff：敌人贴上来能打到", m2.hp < hp2, "掉了 %.0f" % (hp2 - m2.hp))
+
+	# 定时飞出齿轮：滚筒每 2.5 秒朝外扔一发，沿途碾过去
+	var w3 = _world_with("gun")
+	var m3 = w3.mech
+	m3.turrets.clear()                        # 只测滚轮，别让炮塔的伤害混进来
+	m3.armor_tier[0] = 4                      # 滚筒
+	m3.armor_level[0] = 3
+	m3.refresh_armor(w3.db.armor_tiers(), 0.45)
+	var row: Array = []
+	for i in 3:
+		var e3 = Enemy.new()
+		e3.pos = m3.pos + Vector2(0, -4.0 - float(i) * 1.5)
+		e3.speed = 0.0; e3.attack = 0.0
+		e3.max_hp = 1.0e9; e3.hp = e3.max_hp
+		row.append(e3)
+	w3.enemies = row.duplicate()
+	for i in 45:                              # 1.5 秒，只够放出一发滚轮（间隔 2.5 秒）
+		w3.tick()
+	var hurt := 0
+	for e3 in row:
+		if e3.hp < e3.max_hp:
+			hurt += 1
+	ok("滚筒定时放出滚轮：一路碾过 3 个", hurt == 3, "碾到 %d 个" % hurt)
+	ok("滚轮伤害 = 光环 450 × 3.0", is_equal_approx(row[0].max_hp - row[0].hp, 1350.0),
+		"%.0f" % (row[0].max_hp - row[0].hp))
+	ok("滚轮伤害记在车体那一栏", w3.log.hull_damage > 0.0)

@@ -108,6 +108,7 @@ func tick(step: float = -1.0) -> void:
 	combat.update_enemies(enemies, mech, d, enemy_bullets, log)
 	combat.update_enemy_bullets(enemy_bullets, mech, d, log)
 	combat.hull_contact(mech, d, log)
+	combat.armor_projectiles(mech, projectiles, d)
 	combat.update_turrets(mech, projectiles, d)
 	combat.update_projectiles(projectiles, mech, d, log)
 	shop.collect(mech, d, log)
@@ -155,7 +156,8 @@ func _apply_shop(act: Dictionary) -> void:
 	match String(act.get("type", "")):
 		"buy":     shop.buy(mech, int(act.get("index", 0)))
 		"place":
-			if shop.place(mech, int(act.get("index", 0)), int(act.get("side", -1))):
+			if shop.place(mech, int(act.get("index", 0)), int(act.get("side", -1)),
+					bool(act.get("prefer_new", false))):
 				log.pick(time, "place+" + String(act.get("id", "")))
 		"merge":
 			if shop.merge(mech, int(act.get("a", 0)), int(act.get("b", 0)), String(act.get("choice", ""))):

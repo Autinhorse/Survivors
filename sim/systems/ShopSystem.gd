@@ -226,7 +226,7 @@ func sell_turret(mech, index: int) -> bool:
 ## 把保险箱里第 index 张卡用掉：
 ## 武器卡 —— 优先升级已有炮塔，没有就放一个新的；
 ## 装甲卡 —— 装到指定的那一面（side < 0 时自动挑受伤最多的那面）
-func place(mech, index: int, side: int = -1) -> bool:
+func place(mech, index: int, side: int = -1, prefer_new: bool = false) -> bool:
 	if index < 0 or index >= safe_box.size():
 		return false
 	var card: Dictionary = safe_box[index]
@@ -247,12 +247,21 @@ func place(mech, index: int, side: int = -1) -> bool:
 		safe_box.remove_at(index)
 		return true
 	var wid := String(card["id"])
+	var size: int = _db.weapon_size(wid)
+	# prefer_new：先铺满空槽，铺满了才升级。
+	# 之前一律"有同名塔就升级"，导致"铺宽"这条策略根本表达不出来——
+	# 买 3 张卡只会把一门塔顶到 3 级，而实测宽度（8 门）比高度值钱得多。
+	if prefer_new:
+		var c2 = best_placement(mech, size)
+		if c2 != null:
+			mech.turrets.append(Turret.new(wid, c2, 1, size))
+			safe_box.remove_at(index)
+			return true
 	for t in mech.turrets:
 		if t.weapon_id == wid and t.level < _db.weapon_max_level(wid):
 			t.level += 1
 			safe_box.remove_at(index)
 			return true
-	var size: int = _db.weapon_size(wid)
 	var cell = best_placement(mech, size)
 	if cell == null:
 		return false

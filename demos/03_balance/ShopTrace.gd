@@ -12,7 +12,7 @@ func _initialize() -> void:
 	cfg.move_policy = "field"
 	var ag = ScriptedAgent.new()
 	ag.move_policy = "field"
-	ag.pick_policy = "dps"
+	ag.pick_policy = "spread"
 	ag.rng = Rng.new(7)
 	var w = SimWorld.new()
 	w.setup(cfg, ag)
@@ -20,6 +20,7 @@ func _initialize() -> void:
 		% [int(w.mech.coins), w.mech.turrets.size(), w.shop.safe_box.size(), w.shop.next_spawn_t])
 
 	var last_site := false
+	var in_shop := true
 	var last_visits := 1
 	var t_next := 0.0
 	while not w.over:
@@ -31,8 +32,18 @@ func _initialize() -> void:
 					% [w.time, w.torus.dist(w.mech.pos, w.shop.site.pos), int(w.mech.coins)])
 			last_site = has_site
 		if w.shop.visits != last_visits:
-			print("%6.1fs  进店第 %d 次，金币 %d" % [w.time, w.shop.visits, int(w.mech.coins)])
+			print("%6.1fs  进店第 %d 次，进店时金币 %d" % [w.time, w.shop.visits, int(w.mech.coins)])
 			last_visits = w.shop.visits
+		if w.shop.open != in_shop:
+			in_shop = w.shop.open
+			if not in_shop:
+				var ids: Array = []
+				for t in w.mech.turrets:
+					ids.append("%s@%d" % [t.weapon_id, t.level])
+				ids.sort()
+				print("        出店：金币 %d  保险箱 %d  炮塔 %s"
+					% [int(w.mech.coins), w.shop.safe_box.size(),
+						"（空）" if ids.is_empty() else " ".join(ids)])
 		if w.time >= t_next:
 			t_next += 20.0
 			print("%6.1fs  金币 %-6d 地上 %-4d 堆  炮塔 %d  敌人 %d  HP %d  下次商店 %.0fs"

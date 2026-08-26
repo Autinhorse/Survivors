@@ -31,6 +31,9 @@ var armor := [0.0, 0.0, 0.0, 0.0]            # 减伤比例
 var armor_reflect := [0.0, 0.0, 0.0, 0.0]    # 敌人每次攻击这一面自己受到的伤害
 var armor_aura := [0.0, 0.0, 0.0, 0.0]       # 范围内每秒伤害
 var armor_range := [0.0, 0.0, 0.0, 0.0]      # 向外支出几格
+var armor_standoff := [0.0, 0.0, 0.0, 0.0]   # >0 表示敌人被挡在这么远，够不着车体就打不到
+var armor_proj_cd := [0.0, 0.0, 0.0, 0.0]    # 定时飞出齿轮/滚轮的冷却
+var armor_proj := [null, null, null, null]   # 对应那一级的 projectile 配置
 
 var turrets: Array = []           # Array[Turret]，每个带 cell 和 size
 var level: int = 1
@@ -51,6 +54,8 @@ func refresh_armor(tiers: Array, cap: float) -> void:
 			armor_reflect[i] = 0.0
 			armor_aura[i] = 0.0
 			armor_range[i] = 0.0
+			armor_standoff[i] = 0.0
+			armor_proj[i] = null
 			continue
 		var t: Dictionary = tiers[clampi(armor_tier[i], 0, tiers.size() - 1)]
 		armor[i] = minf(cap, float(t.get("reduce_base", 0.0))
@@ -58,6 +63,14 @@ func refresh_armor(tiers: Array, cap: float) -> void:
 		armor_reflect[i] = float(t.get("reflect_base", 0.0)) + float(t.get("reflect_per_level", 0.0)) * float(lv)
 		armor_aura[i] = float(t.get("aura_base", 0.0)) + float(t.get("aura_per_level", 0.0)) * float(lv)
 		armor_range[i] = float(t.get("aura_range", 0.0))
+		# v0.2 §6.2：链锯起"向外支出"，敌人被挡在支出范围外，够不着车体自然打不到
+		armor_standoff[i] = armor_range[i] if bool(t.get("standoff", false)) else 0.0
+		armor_proj[i] = t.get("projectile", null)
+
+## 这一面朝外的法线（世界方向）。定时弹朝这个方向飞
+const SIDE_NORMAL := [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)]
+func side_normal(side: int) -> Vector2:
+	return SIDE_NORMAL[side].rotated(rot)
 
 ## 这一面能不能吃下 tier 级的卡（§6.2：只能一级一级来）
 func armor_accepts(side: int, tier: int) -> bool:

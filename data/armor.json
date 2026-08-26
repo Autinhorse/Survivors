@@ -3,47 +3,96 @@
   "_rule": "每一级 3 张同级卡；到 3 级后再放一张同级卡就晋升到下一级的 1 级（§6.2 的'再放一张就变成一级尖刺装甲'）。",
   "_price": "装甲卡 50，每高一级价格 ×4（§6.2）。",
   "_derive": "reduce=减伤比例  reflect=敌人每次攻击自己受到的伤害  aura_dps=范围内每秒伤害  aura_range=向外支出几格",
-
   "tiers": [
     {
-      "id": "plate", "name": "装甲", "price": 50,
+      "id": "plate",
+      "name": "装甲",
+      "price": 50,
       "_text": "仅仅增加防护，每级降低这个方向的攻击 10%",
-      "reduce_base": 0.0, "reduce_per_level": 0.10,
-      "reflect_base": 0.0, "reflect_per_level": 0.0,
-      "aura_base": 0.0, "aura_per_level": 0.0, "aura_range": 0.0
+      "reduce_base": 0.0,
+      "reduce_per_level": 0.1,
+      "reflect_base": 0.0,
+      "reflect_per_level": 0.0,
+      "aura_base": 0.0,
+      "aura_per_level": 0.0,
+      "aura_range": 0.0,
+      "standoff": false
     },
     {
-      "id": "spike", "name": "尖刺装甲", "price": 200,
+      "id": "spike",
+      "name": "尖刺装甲",
+      "price": 200,
       "_text": "在 3 级装甲的 30% 基础上每级再降 5%；对攻击装甲的敌人造成 20 点/级伤害",
-      "reduce_base": 0.30, "reduce_per_level": 0.05,
-      "reflect_base": 0.0, "reflect_per_level": 20.0,
-      "aura_base": 0.0, "aura_per_level": 0.0, "aura_range": 0.0
+      "reduce_base": 0.3,
+      "reduce_per_level": 0.05,
+      "reflect_base": 0.0,
+      "reflect_per_level": 20.0,
+      "aura_base": 0.0,
+      "aura_per_level": 0.0,
+      "aura_range": 0.0,
+      "standoff": false
     },
     {
-      "id": "saw", "name": "链锯装甲", "price": 800,
+      "id": "saw",
+      "name": "链锯装甲",
+      "price": 800,
       "_text": "保持 45% 减伤与 60 反击；向外支出 1/2 格，范围内每级每秒 25 点",
-      "reduce_base": 0.45, "reduce_per_level": 0.0,
-      "reflect_base": 60.0, "reflect_per_level": 0.0,
-      "aura_base": 0.0, "aura_per_level": 25.0, "aura_range": 0.5
+      "reduce_base": 0.45,
+      "reduce_per_level": 0.0,
+      "reflect_base": 60.0,
+      "reflect_per_level": 0.0,
+      "aura_base": 0.0,
+      "aura_per_level": 25.0,
+      "aura_range": 0.5,
+      "standoff": true
     },
     {
-      "id": "gear", "name": "齿轮装甲", "price": 3200,
+      "id": "gear",
+      "name": "齿轮装甲",
+      "price": 3200,
       "_text": "保持 45%/60/75 每秒，每级再加 50 点/秒（3 级 = 225）",
-      "reduce_base": 0.45, "reduce_per_level": 0.0,
-      "reflect_base": 60.0, "reflect_per_level": 0.0,
-      "aura_base": 75.0, "aura_per_level": 50.0, "aura_range": 0.5
+      "reduce_base": 0.45,
+      "reduce_per_level": 0.0,
+      "reflect_base": 60.0,
+      "reflect_per_level": 0.0,
+      "aura_base": 75.0,
+      "aura_per_level": 50.0,
+      "aura_range": 0.5,
+      "standoff": true,
+      "projectile": {
+        "_text": "定时飞出齿轮攻击敌人",
+        "interval": 3.0,
+        "damage_mult": 2.0,
+        "speed": 8.0,
+        "width": 0.6,
+        "range": 8.0
+      }
     },
     {
-      "id": "roller", "name": "旋转滚筒", "price": 12800,
+      "id": "roller",
+      "name": "旋转滚筒",
+      "price": 12800,
       "_text": "保持 45%/60/225，范围扩到 1 格，每级再加 75 点/秒（3 级 = 450）",
-      "reduce_base": 0.45, "reduce_per_level": 0.0,
-      "reflect_base": 60.0, "reflect_per_level": 0.0,
-      "aura_base": 225.0, "aura_per_level": 75.0, "aura_range": 1.0
+      "reduce_base": 0.45,
+      "reduce_per_level": 0.0,
+      "reflect_base": 60.0,
+      "reflect_per_level": 0.0,
+      "aura_base": 225.0,
+      "aura_per_level": 75.0,
+      "aura_range": 1.0,
+      "standoff": true,
+      "projectile": {
+        "_text": "定时放出滚轮碾压敌人",
+        "interval": 2.5,
+        "damage_mult": 3.0,
+        "speed": 6.0,
+        "width": 1.2,
+        "range": 10.0
+      }
     }
   ],
-
   "levels_per_tier": 3,
   "reduce_cap": 0.45,
-
-  "_todo": "v0.2 里链锯/齿轮/滚筒还有'向外支出后敌人要更靠近才能攻击'和'定时飞出齿轮/滚轮'，v0.3 的 §6.2 没有再提，这里按 v0.3 只做减伤/反击/光环三项。"
+  "_todo": "projectile 的间隔/伤害/速度/宽度 v0.2 和 v0.3 都没给数，下面是首轮拍的值，需要确认。",
+  "_restored": "v0.2 §6.2 的两条机制补回来了：standoff（向外支出后敌人要更靠近才能攻击）、projectile（定时飞出齿轮/放出滚轮）。"
 }
