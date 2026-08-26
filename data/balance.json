@@ -14,7 +14,7 @@
   },
   "mech": {
     "max_hp": 1000.0,
-    "move_speed": 2.0,
+    "move_speed": 3.0,
     "turn_seconds": 1.0,
     "hull_half_size": 1.5,
     "no_heal": true,

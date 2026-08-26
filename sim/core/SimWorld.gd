@@ -157,7 +157,7 @@ func _apply_shop(act: Dictionary) -> void:
 		"buy":     shop.buy(mech, int(act.get("index", 0)))
 		"place":
 			if shop.place(mech, int(act.get("index", 0)), int(act.get("side", -1)),
-					bool(act.get("prefer_new", false))):
+					bool(act.get("prefer_new", false)), act.get("cell", null)):
 				log.pick(time, "place+" + String(act.get("id", "")))
 		"merge":
 			if shop.merge(mech, int(act.get("a", 0)), int(act.get("b", 0)), String(act.get("choice", ""))):

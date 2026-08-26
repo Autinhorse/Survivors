@@ -23,6 +23,7 @@ var _panel: VBoxContainer
 var _panel_bg: ColorRect
 var _buttons: Array = []
 var _panel_sig: String = ""
+var _picked: int = -1        # 保险箱里选中的卡（-1 = 没选）
 
 func _ready() -> void:
 	_build_ui()
@@ -106,6 +107,39 @@ func _read_keys() -> void:
 	if mv.x != 0.0 and mv.y != 0.0:
 		mv.y = 0.0
 	human.move = mv
+
+## 商店里点底座的格子：把选中的卡装到那个位置
+func _unhandled_input(event: InputEvent) -> void:
+	if world == null or not world.shop.open or _picked < 0:
+		return
+	if not (event is InputEventMouseButton) or not event.pressed:
+		return
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	var m = world.mech
+	var local: Vector2 = ((event.position - center) / PX).rotated(-m.rot)
+	var half := float(m.base_size) * 0.5
+	var cell := Vector2i(int(floor(local.x + half)), int(floor(local.y + half)))
+	if cell.x < 0 or cell.y < 0 or cell.x >= m.base_size or cell.y >= m.base_size:
+		return
+	if _picked >= world.shop.safe_box.size():
+		_picked = -1
+		return
+	var card: Dictionary = world.shop.safe_box[_picked]
+	if String(card.get("kind", "weapon")) == "armor":
+		# 装甲按方向装：点哪一格就算哪一面（局部方向 0=车头 1=右 2=车尾 3=左）
+		var rel := Vector2(cell) + Vector2(0.5, 0.5) - Vector2(half, half)
+		var side := 0
+		if absf(rel.y) >= absf(rel.x):
+			side = 0 if rel.y < 0.0 else 2
+		else:
+			side = 1 if rel.x > 0.0 else 3
+		human.queued_action = {"type": "place", "index": _picked, "id": card["id"], "side": side}
+	else:
+		human.queued_action = {"type": "place", "index": _picked, "id": card["id"], "cell": cell}
+	_picked = -1
+	_panel_sig = ""
+	get_viewport().set_input_as_handled()
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
@@ -233,6 +267,8 @@ func _draw_mech() -> void:
 			var cp := center + o * PX
 			var in_center: bool = not m.can_place(cell, 1)
 			var col2 := Color(1, 1, 1, 0.10) if in_center else Color(0.6, 0.9, 1.0, 0.30)
+			if _picked >= 0 and world.shop.open and not in_center:
+				col2 = Color(0.5, 1.0, 0.6, 0.85)      # 选了卡，能放的格子亮起来
 			var r := PX * 0.36
 			var quad := PackedVector2Array()
 			for corner in [Vector2(-r, -r), Vector2(r, -r), Vector2(r, r), Vector2(-r, r)]:
@@ -281,7 +317,7 @@ func _build_ui() -> void:
 ## §8.3 的拖拽版留到数值验证完再做。
 func _shop_signature() -> String:
 	var shop = world.shop
-	var parts: Array = [str(int(world.mech.coins)), str(shop.safe_box.size()),
+	var parts: Array = [str(_picked), str(int(world.mech.coins)), str(shop.safe_box.size()),
 		str(shop.pending_line_choice.size()), str(world.mech.base_size)]
 	for c in shop.cards:
 		parts.append("-" if c == null else String(c["id"]))
@@ -345,9 +381,12 @@ func _sync_panel() -> void:
 			var h := HBoxContainer.new()
 			_panel.add_child(h)
 			var b1 := Button.new()
-			b1.text = "装 %s" % c2["name"]
+			var is_armor: bool = String(c2.get("kind", "weapon")) == "armor"
+			b1.text = ("▶ " if idx2 == _picked else "") + String(c2["name"]) 				+ ("　（选中后点底座某一面）" if is_armor else "　（选中后点底座空格）")
 			b1.custom_minimum_size = Vector2(660, 34)
-			b1.pressed.connect(func(): human.queued_action = {"type": "place", "index": idx2, "id": c2["id"]})
+			b1.pressed.connect(func() -> void:
+				_picked = -1 if _picked == idx2 else idx2
+				_panel_sig = "")
 			h.add_child(b1)
 			var b2 := Button.new()
 			b2.text = "卖 %d" % int(float(c2["price"]) * 0.25)

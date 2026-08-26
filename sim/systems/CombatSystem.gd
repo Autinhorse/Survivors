@@ -59,6 +59,13 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 			if stand <= 0.0 or not mech.overlaps(nrel, stand + e.radius):
 				e.pos = np
 
+		# 敌人不能陷进车体：移动之后统一挤回边上。
+		# 敌人自己会在边缘停下，但**机甲开过去时会把它压进来**——这一步同时吸收
+		# 单 tick 的过冲和被机甲碾压两种情况。standoff（链锯支出）也算进边界。
+		rel = _clamp_outside(mech, e)
+		dist = rel.length()
+		touching = mech.overlaps(rel, e.radius)
+
 		# --- 攻击 ---
 		e.attack_cd -= dt
 		if e.attack_cd > 0.0:
@@ -85,6 +92,23 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 					e.alive = false
 					log_ref.hull_kills += 1
 					_award(e, mech, log_ref)
+
+## 把陷进车体的敌人沿最近的那条边挤出去，返回挤完之后的相对向量
+func _clamp_outside(mech, e) -> Vector2:
+	var rel: Vector2 = _torus.delta(mech.pos, e.pos)
+	var side: int = mech.hit_side(rel)
+	# 余量要往**内**留：挤到边界外侧会被 overlaps 判成"没接触"，敌人就再也打不到机甲；
+	# 挤到内侧 0.001 格则稳定判定为贴住，肉眼也看不出差别。
+	var edge: float = mech.half_size + e.radius + mech.armor_standoff[side] - 0.001
+	var loc: Vector2 = rel.rotated(-mech.rot)
+	if absf(loc.x) >= edge or absf(loc.y) >= edge:
+		return rel
+	if absf(loc.x) >= absf(loc.y):
+		loc.x = edge * (signf(loc.x) if not is_zero_approx(loc.x) else 1.0)
+	else:
+		loc.y = edge * (signf(loc.y) if not is_zero_approx(loc.y) else 1.0)
+	e.pos = _torus.wrap(mech.pos + loc.rotated(mech.rot))
+	return _torus.delta(mech.pos, e.pos)
 
 func update_enemy_bullets(bullets: Array, mech, dt: float, log_ref) -> void:
 	for b in bullets:

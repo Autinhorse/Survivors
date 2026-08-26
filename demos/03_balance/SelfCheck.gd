@@ -57,6 +57,7 @@ func _initialize() -> void:
 	check_armor()
 	check_armor_v2()
 	check_shop_actions()
+	check_no_clip()
 	print("\n%d 项失败" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -350,7 +351,11 @@ func check_armor() -> void:
 		"tier%d lv%d 减伤%.2f 反击%.0f 光环%.0f 范围%.1f" % [m.armor_tier[0], m.armor_level[0],
 			m.armor[0], m.armor_reflect[0], m.armor_aura[0], m.armor_range[0]])
 
-	# 减伤真的生效：同样一击，车头（45%）比车尾（0%）少掉 45%
+	# 减伤/反击要用**没有 standoff** 的尖刺装甲来测——
+	# 链锯及以上会把敌人挡在支出范围外，根本够不着车体，自然也就打不到。
+	m.armor_tier[0] = 1
+	m.armor_level[0] = 3
+	m.refresh_armor(tiers, cap)
 	var before: float = m.hp
 	var e1 = Enemy.new()
 	e1.pos = m.pos + Vector2(0, -m.half_size - 0.2)
@@ -364,7 +369,10 @@ func check_armor() -> void:
 	ok("尖刺反击：攻击者自己掉 60", is_equal_approx(e1.max_hp - e1.hp, 60.0),
 		"%.0f" % (e1.max_hp - e1.hp))
 
-	# 光环：贴在车头 1 格内的敌人每秒掉 450
+	# 光环：贴在车头 1 格内的敌人每秒掉 450（上面为了测反击临时降成了尖刺，这里换回滚筒）
+	m.armor_tier[0] = 4
+	m.armor_level[0] = 3
+	m.refresh_armor(tiers, cap)
 	var e2 = Enemy.new()
 	e2.pos = m.pos + Vector2(0, -m.half_size - 0.5)
 	e2.speed = 0.0; e2.attack = 0.0; e2.max_hp = 1.0e9; e2.hp = e2.max_hp
@@ -483,6 +491,30 @@ func check_shop_actions() -> void:
 		"lv%d → lv%d" % [before, w.mech.turrets[0].level])
 	ok("点武器卡：保险箱清空", w.shop.safe_box.is_empty())
 
+	# 指定格子放置（手玩时是「点卡选中 → 点底座某个格子」）
+	w.shop.safe_box.append({"kind": "weapon", "id": "gun", "column": 1,
+		"price": 100, "name": "枪"})
+	var want := Vector2i(2, 2)
+	var n0: int = w.mech.turrets.size()
+	human.queued_action = {"type": "place", "index": 0, "id": "gun", "cell": want}
+	w.tick()
+	var landed := false
+	for t in w.mech.turrets:
+		if t.cell == want:
+			landed = true
+	ok("指定格子：炮塔落在点的那一格", landed and w.mech.turrets.size() == n0 + 1,
+		"共 %d 门" % w.mech.turrets.size())
+
+	# 指到禁区/占用的格子应当整个作废，而不是偷偷放到别处
+	w.shop.safe_box.append({"kind": "weapon", "id": "gun", "column": 1,
+		"price": 100, "name": "枪"})
+	var n1: int = w.mech.turrets.size()
+	human.queued_action = {"type": "place", "index": 0, "id": "gun", "cell": Vector2i(1, 1)}
+	w.tick()
+	ok("指定中心禁区：不放也不乱放", w.mech.turrets.size() == n1,
+		"共 %d 门" % w.mech.turrets.size())
+	w.shop.safe_box.clear()
+
 	# 商店开着时世界不推进（§8：进入商店不占游戏时间）
 	var t0: float = w.time
 	w.tick()
@@ -492,3 +524,41 @@ func check_shop_actions() -> void:
 	human.queued_action = {"type": "leave"}
 	w.tick()
 	ok("点离开商店：关闭并恢复计时", not w.shop.open)
+
+## ---- 敌人不能陷进车体 ----
+func check_no_clip() -> void:
+	var Enemy = load("res://sim/entities/Enemy.gd")
+	var w = _world_with("gun")
+	var m = w.mech
+	m.turrets.clear()
+
+	# 直接把敌人塞到车体正中，看它会不会被挤出去
+	var e = Enemy.new()
+	e.pos = m.pos
+	e.radius = 0.3
+	e.speed = 3.0; e.attack = 0.0
+	e.max_hp = 1.0e9; e.hp = e.max_hp
+	w.enemies = [e]
+	w.combat.rebuild_hash(w.enemies)
+	w.combat.update_enemies(w.enemies, m, 1.0 / 30.0, w.enemy_bullets, w.log)
+	var loc: Vector2 = w.torus.delta(m.pos, e.pos).rotated(-m.rot)
+	var edge: float = m.half_size + e.radius
+	ok("塞进车体中心的敌人会被挤到边上",
+		absf(loc.x) >= edge - 0.01 or absf(loc.y) >= edge - 0.01,
+		"局部坐标 (%.2f, %.2f)，边界 %.2f" % [loc.x, loc.y, edge])
+
+	# 机甲从静止敌人身上开过去，敌人也不该被压进车体
+	var e2 = Enemy.new()
+	e2.pos = m.pos + Vector2(6.0, 0)
+	e2.radius = 0.3; e2.speed = 0.0; e2.attack = 0.0
+	e2.max_hp = 1.0e9; e2.hp = e2.max_hp
+	w.enemies = [e2]
+	var worst := 999.0
+	for i in 120:
+		m.pos = w.torus.wrap(m.pos + Vector2(m.move_speed / 30.0, 0))   # 机甲朝它开过去
+		w.combat.rebuild_hash(w.enemies)
+		w.combat.update_enemies(w.enemies, m, 1.0 / 30.0, w.enemy_bullets, w.log)
+		var l2: Vector2 = w.torus.delta(m.pos, e2.pos).rotated(-m.rot)
+		worst = minf(worst, maxf(absf(l2.x), absf(l2.y)))
+	ok("机甲碾过去时敌人被挤开而不是压进车体", worst >= m.half_size + 0.25,
+		"最深压到 %.2f（车体半宽 %.2f）" % [worst, m.half_size])
