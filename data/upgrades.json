@@ -1,0 +1,17 @@
+{
+  "_note": "升级选项池。Phase 1 走升到级弹三选一；文档 §8 的金币商店后面再接，届时只换 UpgradeSystem 的取牌来源。",
+
+  "upgrades": [
+    { "id": "hull_armor",  "name": "装甲",     "kind": "armor_side",     "per_side": true,  "max_level": 5, "value": 0.08, "weight": 1.0 },
+    { "id": "hull_spike",  "name": "尖刺装甲", "kind": "contact_damage", "per_side": true,  "max_level": 5, "value": 7.0,  "weight": 0.9 },
+    { "id": "mech_speed",  "name": "引擎",     "kind": "move_speed",     "per_side": false, "max_level": 5, "value": 0.5,  "weight": 0.8 },
+    { "id": "mech_hp",     "name": "结构强化", "kind": "max_hp",         "per_side": false, "max_level": 5, "value": 50.0, "weight": 0.8 },
+    { "id": "mech_turn",   "name": "转向伺服", "kind": "turn_speed",     "per_side": false, "max_level": 3, "value": 0.15, "weight": 0.5 }
+  ],
+
+  "draw": {
+    "options": 3,
+    "new_turret_weight": 1.6,
+    "turret_level_weight": 1.4
+  }
+}

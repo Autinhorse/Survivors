@@ -16,6 +16,9 @@ Thumbs.db
 /*.png
 /*.png.import
 
+# 模拟输出（大批量 CSV 不进库，结论写进 docs/balance/）
+/out/*.csv
+
 # Python
 __pycache__/
 *.pyc

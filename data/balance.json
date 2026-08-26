@@ -1,0 +1,39 @@
+{
+  "_note": "全局系数。距离=格，速度=格/秒，时间=秒。改这里不要改 .gd。",
+  "map": {
+    "width": 200,
+    "height": 100,
+    "wrap_x": true,
+    "wrap_y": true,
+    "view_width": 48,
+    "view_height": 27
+  },
+  "run": {
+    "duration_sec": 1800,
+    "tick_hz": 30
+  },
+  "mech": {
+    "max_hp": 1000.0,
+    "move_speed": 2.0,
+    "turn_seconds": 1.0,
+    "hull_half_size": 1.5,
+    "no_heal": true,
+    "fire_while_turning": false,
+    "start_weapon": "gun",
+    "start_slot": 1
+  },
+  "xp": {
+    "base": 4.0,
+    "exp": 1.35
+  },
+  "difficulty": {
+    "_note": "敌人属性随时间线性成长，按分钟计",
+    "enemy_hp_per_min": 0.12,
+    "enemy_speed_per_min": 0.02,
+    "enemy_damage_per_min": 0.06
+  },
+  "spawn": {
+    "_note": "刷新点在地图边界外这么多格",
+    "margin": 3.0
+  }
+}

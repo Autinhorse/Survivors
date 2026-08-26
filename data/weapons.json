@@ -1,0 +1,109 @@
+{
+  "_note": "枪系 1-13 号，数值抄自设计文档 §7.8。字段名和文档一一对应。",
+  "_shape": "attack_shape: single 单点 / multi 多点 / area 范围 / line 线性",
+  "_targeting": "targeting: 1 最近 / 2 最近并锁定 / 3 血量最低 / 4 血量最高 / 5 范围杀伤最大 / 6 对自己DPS最高（§7.7）",
+  "_upgrade": "每个节点 3 级（§7.2），upgrade 是每张卡的增量；range_pct 是攻击距离的百分比增量",
+  "_ultimate": "ultimate 段先录着不实现（P8）",
+
+  "gun": {
+    "no": 1, "name": "枪", "tier": 1, "line": "rifle", "column": 1, "max_level": 3,
+    "attack_shape": "single", "damage": 100, "interval": 1.5, "range": 6, "aoe": 0,
+    "targeting": 1, "upgrade": { "damage": 50 },
+    "color": "#8fd0ff"
+  },
+  "rifle": {
+    "no": 2, "name": "Rifle", "tier": 2, "line": "rifle", "column": 2, "max_level": 3,
+    "parents": ["gun", "gun"],
+    "attack_shape": "single", "damage": 800, "interval": 2.5, "range": 8, "aoe": 0,
+    "targeting": 4, "upgrade": { "damage": 200, "range_pct": 0.05 },
+    "color": "#7fc4ff"
+  },
+  "marksman_rifle": {
+    "no": 3, "name": "Marksman Rifle", "tier": 3, "line": "rifle", "column": 3, "max_level": 3,
+    "parents": ["rifle", "rifle"],
+    "attack_shape": "single", "damage": 3000, "interval": 3.0, "range": 10, "aoe": 0,
+    "targeting": 4, "upgrade": { "damage": 500, "range_pct": 0.05 },
+    "color": "#6ab8ff"
+  },
+  "sniper_rifle": {
+    "no": 4, "name": "狙击枪", "tier": 4, "line": "rifle", "column": 4, "max_level": 3,
+    "parents": ["marksman_rifle", "marksman_rifle"], "size": 2,
+    "attack_shape": "single", "damage": 12000, "interval": 3.0, "range": 12, "aoe": 0,
+    "targeting": 4, "upgrade": { "damage": 1200, "range_pct": 0.05 },
+    "ultimate": { "text": "攻击频率提升到5倍，持续10秒", "fire_rate_mult": 5.0, "duration": 10.0, "cooldown": 60.0 },
+    "color": "#57acff"
+  },
+  "pierce_rifle": {
+    "no": 5, "name": "穿刺枪", "tier": 5, "line": "rifle", "column": 5, "max_level": 3,
+    "parents": ["sniper_rifle", "sniper_rifle"], "size": 2,
+    "attack_shape": "line", "damage": 40000, "interval": 5.0, "range": 12, "aoe": 0,
+    "targeting": 4, "upgrade": { "damage": 4000 },
+    "mechanic": { "note": "子弹飞向目标，沿途每个敌人受到子弹 20% 伤害", "line_falloff": 0.2 },
+    "ultimate": { "text": "攻击频率提升到5倍，持续15秒", "fire_rate_mult": 5.0, "duration": 15.0, "cooldown": 75.0 },
+    "color": "#3d9dff"
+  },
+
+  "spread_gun": {
+    "no": 6, "name": "Spread Gun", "tier": 1, "line": "spread", "column": 1, "max_level": 3,
+    "attack_shape": "area", "damage": 140, "interval": 2.5, "range": 6, "aoe": 1.0,
+    "targeting": 1, "upgrade": { "damage": 40 },
+    "mechanic": { "note": "命中的敌人被击退 0.5 格", "knockback": 0.5 },
+    "color": "#ffd08a"
+  },
+  "shotgun": {
+    "no": 7, "name": "Shotgun", "tier": 2, "line": "spread", "column": 2, "max_level": 3,
+    "parents": ["spread_gun", "spread_gun"],
+    "attack_shape": "area", "damage": 400, "interval": 2.0, "range": 7, "aoe": 1.5,
+    "targeting": 1, "upgrade": { "damage": 100 },
+    "mechanic": { "note": "击退 0.75 格", "knockback": 0.75 },
+    "color": "#ffc266"
+  },
+  "fragment_cannon": {
+    "no": 8, "name": "Fragment Cannon", "tier": 3, "line": "spread", "column": 3, "max_level": 3,
+    "parents": ["shotgun", "shotgun"],
+    "attack_shape": "area", "damage": 600, "interval": 2.0, "range": 7, "aoe": 2.0,
+    "targeting": 1, "upgrade": { "damage": 150, "burst": 1 },
+    "mechanic": { "note": "击退 1 格；每次连续射击 3 发，可切换目标", "knockback": 1.0, "burst": 3, "burst_gap": 0.12 },
+    "ultimate": { "text": "伤害范围+50%，持续10秒", "aoe_mult": 1.5, "duration": 10.0, "cooldown": 65.0 },
+    "color": "#ffb347"
+  },
+  "wall_of_lead": {
+    "no": 9, "name": "Wall of Lead", "tier": 4, "line": "spread", "column": 4, "max_level": 3,
+    "parents": ["fragment_cannon", "fragment_cannon"], "size": 2,
+    "attack_shape": "area", "damage": 1000, "interval": 2.0, "range": 8, "aoe": 3.0,
+    "targeting": 1, "upgrade": { "damage": 250, "burst": 1 },
+    "mechanic": { "note": "击退 1.5 格；每次连续射击 3 发", "knockback": 1.5, "burst": 3, "burst_gap": 0.12 },
+    "ultimate": { "text": "攻击范围+75%，攻击间隔-50%，持续15秒", "range_mult": 1.75, "interval_mult": 0.5, "duration": 15.0, "cooldown": 90.0 },
+    "color": "#ff9d4a"
+  },
+
+  "machine_gun": {
+    "no": 10, "name": "机枪", "tier": 1, "line": "rapid", "column": 1, "max_level": 3,
+    "attack_shape": "single", "damage": 300, "interval": 0.8, "range": 6, "aoe": 0,
+    "targeting": 3, "upgrade": { "damage": 50, "range_pct": 0.05 },
+    "color": "#d7d7d7"
+  },
+  "heavy_machine_gun": {
+    "no": 11, "name": "重机枪", "tier": 2, "line": "rapid", "column": 2, "max_level": 3,
+    "parents": ["machine_gun", "machine_gun"],
+    "attack_shape": "single", "damage": 750, "interval": 0.75, "range": 7, "aoe": 0,
+    "targeting": 3, "upgrade": { "damage": 75, "range_pct": 0.05 },
+    "color": "#e8e8e8"
+  },
+  "gatling": {
+    "no": 12, "name": "加特林", "tier": 3, "line": "rapid", "column": 3, "max_level": 3,
+    "parents": ["heavy_machine_gun", "heavy_machine_gun"],
+    "attack_shape": "single", "damage": 2000, "interval": 0.6, "range": 7, "aoe": 0,
+    "targeting": 3, "upgrade": { "damage": 250, "range_pct": 0.05 },
+    "ultimate": { "text": "基础攻击距离+3，攻击间隔-50%，持续5秒", "range_add": 3.0, "interval_mult": 0.5, "duration": 5.0, "cooldown": 40.0 },
+    "color": "#ffffff"
+  },
+  "gatling_array": {
+    "no": 13, "name": "加特林阵列", "tier": 4, "line": "rapid", "column": 4, "max_level": 3,
+    "parents": ["gatling", "gatling"], "size": 2,
+    "attack_shape": "single", "damage": 4000, "interval": 0.5, "range": 7, "aoe": 0,
+    "targeting": 3, "upgrade": { "damage": 400, "range_pct": 0.05 },
+    "ultimate": { "text": "基础攻击距离+3，攻击间隔-50%，持续7.5秒", "range_add": 3.0, "interval_mult": 0.5, "duration": 7.5, "cooldown": 55.0 },
+    "color": "#fffbe6"
+  }
+}

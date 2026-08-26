@@ -1,0 +1,56 @@
+{
+  "_note": "波次 = 形状 × 成长。第 c 周期第 k 位的数值 = base × growth^(c-1) × shape[k]。",
+  "_note2": "shape 是波型性格（坦克圈少而硬、快群多而脆…），跨周期不累积；growth 是唯一的成长旋钮，全部 >= 1。",
+  "_angle": "角度以正上为 0°，顺时针；正右 90°。",
+
+  "model": "shape_growth",
+  "cycle_waves": 8,
+  "wave_gap_sec": 10.0,
+  "spawn_margin": 4.0,
+
+  "base": { "hp": 100.0, "count": 20.0, "attack": 10.0, "coin": 50.0 },
+  "growth": { "hp": 1.21, "count": 1.05, "attack": 1.08, "coin": 1.05 },
+
+  "waves": [
+    { "pos": 1, "name": "散兵",
+      "pattern": "random", "interval": 2.0,
+      "move": "chase", "attack_kind": "melee", "speed": 1.0, "attack_interval": 2.0,
+      "shape": { "hp": 1.0, "count": 1.0, "attack": 1.0, "coin": 1.0 } },
+
+    { "pos": 2, "name": "散兵·密",
+      "pattern": "random", "interval": 1.0,
+      "move": "chase", "attack_kind": "melee", "speed": 1.0, "attack_interval": 2.0,
+      "shape": { "hp": 1.10, "count": 1.5, "attack": 1.00, "coin": 1.05 } },
+
+    { "pos": 3, "name": "正方向集群",
+      "pattern": "group", "interval": 0.0, "dirs_deg": [0, 90, 180, 270], "arc_deg": 40,
+      "move": "chase", "attack_kind": "melee", "speed": 1.5, "attack_interval": 2.0,
+      "shape": { "hp": 1.32, "count": 1.5, "attack": 1.02, "coin": 1.1025 } },
+
+    { "pos": 4, "name": "重甲环",
+      "pattern": "circle", "interval": 0.0, "angle_start": 0, "angle_end": 0,
+      "move": "chase", "attack_kind": "melee", "speed": 0.5, "attack_interval": 2.0,
+      "shape": { "hp": 20.0, "count": 0.1, "attack": 1.0404, "coin": 4.41 } },
+
+    { "pos": 5, "name": "冲锋群",
+      "pattern": "random", "interval": 0.4,
+      "move": "chase", "attack_kind": "melee", "speed": 2.5, "attack_interval": 2.0,
+      "shape": { "hp": 0.99, "count": 2.0, "attack": 1.0404, "coin": 1.1025 } },
+
+    { "pos": 6, "name": "远程弧",
+      "pattern": "circle", "interval": 0.0, "angle_start": "random", "arc_deg": 90,
+      "move": "chase", "attack_kind": "ranged", "speed": 1.5, "attack_interval": 2.0,
+      "attack_range": 6.0, "bullet_speed": 1.5, "hold_position": true,
+      "shape": { "hp": 0.99, "count": 2.5, "attack": 1.0404, "coin": 1.1576 } },
+
+    { "pos": 7, "name": "斜角快群",
+      "pattern": "group", "interval": 0.0, "dirs_deg": [45, 135, 225, 315], "arc_deg": 40,
+      "move": "chase", "attack_kind": "melee", "speed": 2.5, "attack_interval": 2.0,
+      "shape": { "hp": 0.198, "count": 10.0, "attack": 1.0404, "coin": 1.1576 } },
+
+    { "pos": 8, "name": "直线冲撞",
+      "pattern": "circle", "interval": 0.0, "angle_start": "random", "arc_deg": 120,
+      "move": "straight", "attack_kind": "melee", "speed": 2.0, "attack_interval": 2.0,
+      "shape": { "hp": 1.188, "count": 2.5, "attack": 1.0508, "coin": 1.2155 } }
+  ]
+}

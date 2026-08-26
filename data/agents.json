@@ -1,0 +1,44 @@
+{
+  "_note": "自动模拟的策略。AI 的参数本身也是被测对象，所以放在数据里而不是写死在 .gd 中。",
+  "_read": "结果要读成区间：stand/line 是下界，field 是主力，oracle 是上界。带宽太窄说明技术不影响结果，带宽太宽说明数值被技术掩盖。",
+  "stand": {
+    "_desc": "完全不动、不转向。绝对下界：回答'一点操作都没有能活多久'",
+    "move": "none",
+    "turn": false
+  },
+  "line": {
+    "_desc": "朝固定方向一直跑，车头跟着移动方向。环形地图上最笨的有效解",
+    "move": "line",
+    "turn": "follow_move"
+  },
+  "field": {
+    "_desc": "势场避让 + 短程试探 + 转向效用比较。代表'会玩的普通人'",
+    "move": "field",
+    "turn": "utility",
+    "vision": 14.0,
+    "predict_enemies": true,
+    "lookahead_sec": 1.0,
+    "probe_hz": 4.0,
+    "panic_radius": 3.0,
+    "strategic_weight": 0.35,
+    "turn_hysteresis": 0.25,
+    "turn_min_gap": 2.0,
+    "turn_expect_sec": 3.0,
+    "turn_cost_free": false,
+    "_note_turn": "转向滞回是这套 AI 里最敏感的参数：0.05/1.0 会过度转向，每次白扔 1 秒火力"
+  },
+  "oracle": {
+    "_desc": "同 field，但视野更远、预测更长、试探更密。上界：打得再好也就这样",
+    "move": "field",
+    "turn": "utility",
+    "vision": 999.0,
+    "predict_enemies": true,
+    "lookahead_sec": 1.5,
+    "probe_hz": 10.0,
+    "panic_radius": 4.0,
+    "strategic_weight": 0.35,
+    "turn_hysteresis": 0.25,
+    "turn_min_gap": 2.0,
+    "turn_expect_sec": 3.0
+  }
+}

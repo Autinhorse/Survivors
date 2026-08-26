@@ -1,0 +1,264 @@
+extends RefCounted
+## 移动 / 索敌 / 弹丸 / 接触伤害。所有几何都在格坐标里算，**距离一律走 Torus**。
+
+const Projectile = preload("res://sim/entities/Projectile.gd")
+const EnemyBullet = preload("res://sim/entities/EnemyBullet.gd")
+const SpatialHash = preload("res://sim/core/SpatialHash.gd")
+
+var _db = null
+var _rng = null
+var _torus = null
+var hash := SpatialHash.new()
+var targeting = null
+
+## 弹丸飞行速度：文档没给（§7.8 只有伤害/间隔/距离），先按 30 格/秒统一，
+## 快到几乎是瞬时命中，避免弹道成为隐藏变量。真要做弹道差异是 P9 的事。
+const PROJECTILE_SPEED := 30.0
+
+func setup(db, rng, torus, p_targeting) -> void:
+	_db = db
+	_rng = rng
+	_torus = torus
+	targeting = p_targeting
+	hash.setup(torus, 2.0)
+
+func rebuild_hash(enemies: Array) -> void:
+	hash.rebuild(enemies)
+
+# ---------------------------------------------------------------- 敌人
+
+func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) -> void:
+	for e in enemies:
+		if not e.alive:
+			continue
+		var rel: Vector2 = _torus.delta(mech.pos, e.pos)   # 机甲 -> 敌人
+		var dist: float = rel.length()
+		var touching: bool = mech.overlaps(rel, e.radius)
+
+		# --- 移动 ---
+		if e.move_kind == "straight":
+			# 生成时锁定方向，之后不再转向（§4.2 第 5 种）
+			e.pos = _torus.wrap(e.pos + e.straight_dir * e.speed * dt)
+		elif e.attack_kind == "ranged" and dist <= e.attack_range:
+			# 进入射程就钉住，主角走了也不追（§4.5 第六波）
+			if e.hold_position:
+				e.holding = true
+		elif not e.holding and not touching and dist > 0.001:
+			e.pos = _torus.wrap(e.pos - rel / dist * e.speed * dt)
+
+		# --- 攻击 ---
+		e.attack_cd -= dt
+		if e.attack_cd > 0.0:
+			continue
+		if e.attack_kind == "ranged":
+			if dist <= e.attack_range:
+				e.attack_cd = e.attack_interval
+				var b = EnemyBullet.new()
+				b.pos = e.pos
+				b.vel = -rel / maxf(dist, 0.001) * e.bullet_speed
+				b.damage = e.attack
+				b.ttl = e.attack_range / maxf(0.1, e.bullet_speed) + 1.0
+				bullets.append(b)
+		elif touching:
+			e.attack_cd = e.attack_interval
+			_damage_mech(mech, rel, e.attack, log_ref)
+
+func update_enemy_bullets(bullets: Array, mech, dt: float, log_ref) -> void:
+	for b in bullets:
+		if not b.alive:
+			continue
+		b.ttl -= dt
+		if b.ttl <= 0.0:
+			b.alive = false
+			continue
+		b.pos = _torus.wrap(b.pos + b.vel * dt)
+		var rel: Vector2 = _torus.delta(mech.pos, b.pos)
+		if mech.overlaps(rel, 0.1):
+			b.alive = false
+			_damage_mech(mech, rel, b.damage, log_ref)
+
+func _damage_mech(mech, rel: Vector2, amount: float, log_ref) -> void:
+	var side: int = mech.hit_side(rel)
+	var taken: float = amount * (1.0 - clampf(mech.armor[side], 0.0, 0.9))
+	mech.hp -= taken
+	log_ref.damage_taken += taken
+	log_ref.damage_by_side[side] = float(log_ref.damage_by_side[side]) + taken
+	log_ref.enemy_contact_count += 1
+
+## 尖刺/链锯类：贴着车体的敌人持续掉血（§6.2）
+func hull_contact(mech, dt: float, log_ref) -> void:
+	var any := false
+	for i in 4:
+		if mech.contact_damage[i] > 0.0:
+			any = true
+	if not any:
+		return
+	for e in hash.query(mech.pos, mech.half_size + 2.0):
+		var rel: Vector2 = _torus.delta(mech.pos, e.pos)
+		if not e.alive or not mech.overlaps(rel, e.radius):
+			continue
+		var side: int = mech.hit_side(rel)
+		var dmg: float = mech.contact_damage[side] * dt
+		if dmg <= 0.0:
+			continue
+		e.hp -= dmg
+		log_ref.hull_damage += dmg
+		if e.hp <= 0.0 and e.alive:
+			e.alive = false
+			log_ref.hull_kills += 1
+			_award(e, mech, log_ref)
+
+# ---------------------------------------------------------------- 炮塔
+
+## 有效弧 = min(槽位弧 180°, 武器弧)，弧心朝槽位外侧（§6.4）。
+## 攻击距离以**机甲中心**为准（§7.6），不按每个炮塔自己的位置算。
+func candidates_for(mech, t, rng_range: float) -> Array:
+	var arc_center: float = mech.slot_arc_center(t.slot)
+	var half_arc := deg_to_rad(mech.SLOT_ARC_DEG) * 0.5
+	var r2 := rng_range * rng_range
+	var out: Array = []
+	for e in hash.query(mech.pos, rng_range):
+		if not e.alive:
+			continue
+		var rel: Vector2 = _torus.delta(mech.pos, e.pos)
+		if rel.length_squared() > r2:
+			continue
+		if absf(wrapf(rel.angle() - arc_center, -PI, PI)) > half_arc:
+			continue
+		out.append(e)
+	return out
+
+func update_turrets(mech, projectiles: Array, dt: float) -> void:
+	if not mech.can_fire():
+		return                          # 转向中不开火（§3.3）
+	for t in mech.turrets:
+		# 连射中（Fragment Cannon / Wall of Lead：一次射 N 发，可以切换目标）
+		if t.burst_left > 0:
+			t.burst_cd -= dt
+			if t.burst_cd <= 0.0:
+				_shoot_once(mech, t, projectiles)
+				t.burst_left -= 1
+				t.burst_cd = _db.weapon_mech(t.weapon_id, "burst_gap", 0.12)
+			continue
+		t.cooldown -= dt
+		if t.cooldown > 0.0:
+			continue
+		var burst: int = maxi(1, _db.weapon_burst(t.weapon_id, t.level))
+		if not _shoot_once(mech, t, projectiles):
+			continue                    # 没有合法目标就不进 CD，下一 tick 再找
+		t.cooldown = _db.weapon_interval(t.weapon_id, t.level)
+		t.burst_left = burst - 1
+		t.burst_cd = _db.weapon_mech(t.weapon_id, "burst_gap", 0.12)
+
+## 打一发。返回是否真的开火了。
+func _shoot_once(mech, t, projectiles: Array) -> bool:
+	var rng_range: float = _db.weapon_range(t.weapon_id, t.level)
+	var cands := candidates_for(mech, t, rng_range)
+	if cands.is_empty():
+		return false
+	var shape: String = _db.weapon_shape(t.weapon_id)
+	var mode: int = _db.weapon_targeting(t.weapon_id)
+	var dmg: float = _db.weapon_damage(t.weapon_id, t.level)
+
+	if shape == "multi":
+		# 多点：同时打 N 个不同目标（冰霜喷射那一类，枪系暂时没有）
+		var n: int = int(_db.weapon_mech(t.weapon_id, "targets", 2.0))
+		var picked: Array = []
+		for i in n:
+			var pool: Array = []
+			for e in cands:
+				if not picked.has(e):
+					pool.append(e)
+			var tgt = targeting.pick(mode, t, pool, mech.pos)
+			if tgt == null:
+				break
+			picked.append(tgt)
+			_spawn_projectile(mech, t, tgt, dmg, projectiles)
+		return not picked.is_empty()
+
+	var target = targeting.pick(mode, t, cands, mech.pos)
+	if target == null:
+		return false
+	_spawn_projectile(mech, t, target, dmg, projectiles)
+	return true
+
+func _spawn_projectile(mech, t, target, dmg: float, projectiles: Array) -> void:
+	var origin: Vector2 = mech.turret_world_pos(t)
+	var a: float = _torus.delta(origin, target.pos).angle()
+	var rng_range: float = _db.weapon_range(t.weapon_id, t.level)
+	var p = Projectile.new()
+	p.pos = _torus.wrap(origin)
+	p.vel = Vector2(cos(a), sin(a)) * PROJECTILE_SPEED
+	p.damage = dmg
+	p.shape = _db.weapon_shape(t.weapon_id)
+	p.aoe_radius = _db.weapon_aoe(t.weapon_id, t.level)
+	p.knockback = _db.weapon_mech(t.weapon_id, "knockback", 0.0)
+	p.line_falloff = _db.weapon_mech(t.weapon_id, "line_falloff", 0.2)
+	p.ttl = (rng_range + 2.0) / PROJECTILE_SPEED
+	p.owner_turret = t
+	projectiles.append(p)
+
+# ---------------------------------------------------------------- 弹丸
+
+func update_projectiles(projectiles: Array, mech, dt: float, log_ref) -> void:
+	for p in projectiles:
+		if not p.alive:
+			continue
+		p.ttl -= dt
+		if p.ttl <= 0.0:
+			p.alive = false
+			continue
+		var prev: Vector2 = p.pos
+		p.pos = _torus.wrap(p.pos + p.vel * dt)
+		match p.shape:
+			"line":
+				# 线性：一路飞过去，沿途每个敌人吃 line_falloff 比例的伤害，
+				# 最后撞上的那个吃满额（§7.8 穿刺枪）。飞出射程才消失。
+				for e in hash.query(p.pos, 1.5):
+					if not e.alive or p.hit_set.has(e):
+						continue
+					if _torus.dist(p.pos, e.pos) <= e.radius + 0.2:
+						p.hit_set.append(e)
+						_hit(e, p, p.damage * p.line_falloff, mech, log_ref)
+			"area":
+				var target = _first_hit(p)
+				if target != null:
+					for e2 in hash.query(p.pos, p.aoe_radius):
+						if e2.alive and _torus.dist(p.pos, e2.pos) <= p.aoe_radius:
+							_hit(e2, p, p.damage, mech, log_ref)
+					p.alive = false
+			_:
+				var target2 = _first_hit(p)
+				if target2 != null:
+					_hit(target2, p, p.damage, mech, log_ref)
+					p.alive = false
+
+func _first_hit(p):
+	for e in hash.query(p.pos, 1.0):
+		if e.alive and _torus.dist(p.pos, e.pos) <= e.radius + 0.15:
+			return e
+	return null
+
+func _hit(e, p, amount: float, mech, log_ref) -> void:
+	e.hp -= amount
+	if p.knockback > 0.0:
+		# 沿弹道方向推开（§7.8 Spread Gun 系列）
+		e.pos = _torus.wrap(e.pos + p.vel.normalized() * p.knockback)
+	var t = p.owner_turret
+	if t != null:
+		t.damage_done += amount
+		log_ref.add_damage(t.weapon_id, amount)
+	if e.hp <= 0.0 and e.alive:
+		e.alive = false
+		if t != null:
+			t.kills += 1
+			log_ref.add_kill(t.weapon_id)
+		_award(e, mech, log_ref)
+
+func _award(e, mech, log_ref) -> void:
+	mech.xp += 1.0
+	mech.coins += e.coin
+	log_ref.kills_total += 1
+	log_ref.coins_earned += e.coin
+	var i: int = clampi(e.wave_pos - 1, 0, 7)
+	log_ref.kills_by_wave_pos[i] = int(log_ref.kills_by_wave_pos[i]) + 1
