@@ -25,9 +25,17 @@ func _initialize() -> void:
 		["spread_gun",1],["spread_gun",1]])
 	_run("8 门 rifle@1 但索敌改成 1", [["rifle",1],["rifle",1],["rifle",1],["rifle",1],
 		["rifle",1],["rifle",1],["rifle",1],["rifle",1]], 1)
+	print("---- 装甲（§6.2 / §26-D）----")
+	_run("无炮塔 + 四面满级尖刺", [], 0, 1)
+	_run("无炮塔 + 四面满级链锯", [], 0, 2)
+	_run("无炮塔 + 四面满级滚筒", [], 0, 4)
+	_run("8 门 gun@3 + 四面满级尖刺", [["gun",3],["gun",3],["gun",3],["gun",3],
+		["gun",3],["gun",3],["gun",3],["gun",3]], 0, 1)
+	_run("8 门 gun@3 + 四面满级滚筒", [["gun",3],["gun",3],["gun",3],["gun",3],
+		["gun",3],["gun",3],["gun",3],["gun",3]], 0, 4)
 	quit()
 
-func _run(name: String, spec: Array, force_targeting: int = 0) -> void:
+func _run(name: String, spec: Array, force_targeting: int = 0, armor_tier: int = -1) -> void:
 	var total := 0.0
 	var dps := 0.0
 	for s in range(5):
@@ -47,6 +55,13 @@ func _run(name: String, spec: Array, force_targeting: int = 0) -> void:
 		w.shop.leave(w)
 		w.shop.next_spawn_t = 1.0e9          # 关掉商店，只比 build
 		w.mech.turrets.clear()
+		# armor_tier >= 0：四面都拉到该级的 3 级（§6.2）
+		if armor_tier >= 0:
+			for side in 4:
+				w.mech.armor_tier[side] = armor_tier
+				w.mech.armor_level[side] = 3
+			w.mech.refresh_armor(w.db.armor_tiers(),
+				float(w.db.armor.get("reduce_cap", 0.45)))
 		dps = 0.0
 		for i in spec.size():
 			var wid: String = spec[i][0]

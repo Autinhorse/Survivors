@@ -66,6 +66,7 @@ func setup(p_cfg, p_agent, p_db = null) -> void:
 	mech.turrets.append(Turret.new(
 		String(db.balance.get("mech", {}).get("start_weapon", "gun")),
 		Vector2i(1, 0), 1, 1))          # 车头正中
+	mech.refresh_armor(db.armor_tiers(), float(db.armor.get("reduce_cap", 0.45)))
 
 	spawner = SpawnDirector.new()
 	spawner.setup(db, rng, torus)
@@ -154,7 +155,7 @@ func _apply_shop(act: Dictionary) -> void:
 	match String(act.get("type", "")):
 		"buy":     shop.buy(mech, int(act.get("index", 0)))
 		"place":
-			if shop.place(mech, int(act.get("index", 0))):
+			if shop.place(mech, int(act.get("index", 0)), int(act.get("side", -1))):
 				log.pick(time, "place+" + String(act.get("id", "")))
 		"merge":
 			if shop.merge(mech, int(act.get("a", 0)), int(act.get("b", 0)), String(act.get("choice", ""))):

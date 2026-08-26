@@ -62,6 +62,16 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 		elif touching:
 			e.attack_cd = e.attack_interval
 			_damage_mech(mech, rel, e.attack, log_ref)
+			# 尖刺及以上：敌人每次攻击这一面，自己也要吃一份（§6.2）
+			var side: int = mech.hit_side(rel)
+			var back: float = mech.armor_reflect[side]
+			if back > 0.0:
+				e.hp -= back
+				log_ref.hull_damage += back
+				if e.hp <= 0.0 and e.alive:
+					e.alive = false
+					log_ref.hull_kills += 1
+					_award(e, mech, log_ref)
 
 func update_enemy_bullets(bullets: Array, mech, dt: float, log_ref) -> void:
 	for b in bullets:
@@ -85,20 +95,24 @@ func _damage_mech(mech, rel: Vector2, amount: float, log_ref) -> void:
 	log_ref.damage_by_side[side] = float(log_ref.damage_by_side[side]) + taken
 	log_ref.enemy_contact_count += 1
 
-## 尖刺/链锯类：贴着车体的敌人持续掉血（§6.2）
+## 链锯/齿轮/滚筒：向外支出的那一圈里，敌人持续掉血（§6.2）
 func hull_contact(mech, dt: float, log_ref) -> void:
-	var any := false
+	var reach := 0.0
 	for i in 4:
-		if mech.contact_damage[i] > 0.0:
-			any = true
-	if not any:
+		if mech.armor_aura[i] > 0.0:
+			reach = maxf(reach, mech.armor_range[i])
+	if reach <= 0.0:
 		return
-	for e in hash.query(mech.pos, mech.half_size + 2.0):
+	for e in hash.query(mech.pos, mech.half_size + reach + 2.0):
 		var rel: Vector2 = _torus.delta(mech.pos, e.pos)
-		if not e.alive or not mech.overlaps(rel, e.radius):
+		if not e.alive:
 			continue
 		var side: int = mech.hit_side(rel)
-		var dmg: float = mech.contact_damage[side] * dt
+		if mech.armor_aura[side] <= 0.0:
+			continue
+		if not mech.overlaps(rel, e.radius + mech.armor_range[side]):
+			continue
+		var dmg: float = mech.armor_aura[side] * dt
 		if dmg <= 0.0:
 			continue
 		e.hp -= dmg

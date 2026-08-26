@@ -48,5 +48,6 @@
     "turn_expect_sec": 3.0,
     "shop_pull": 1.4,
     "coin_pull": 1.0
-  }
+  },
+  "_pick_policy": "采购流派（pick=）：dps 一路推高列 / spread / rapid 指定线路 / armor 优先装甲 / wide 先铺满槽位"
 }

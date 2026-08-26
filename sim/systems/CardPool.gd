@@ -46,6 +46,23 @@ func available(mech, unlocked: Dictionary) -> Array:
 			"price": int(_db.weapons[wid].get("card_price", 100)),
 			"name": _db.weapon_name(wid),
 		})
+	# 装甲卡（§6.2）：某一面能吃下这一级，这张卡才会出现。
+	# column 用 tier+1，好和武器卡共用"按级别设概率上限"那套规则。
+	var tiers: Array = _db.armor_tiers()
+	for tier in tiers.size():
+		var ok := false
+		for side in 4:
+			if mech.armor_accepts(side, tier):
+				ok = true
+				break
+		if not ok:
+			continue
+		out.append({
+			"kind": "armor", "id": "armor:%d" % tier, "tier": tier,
+			"column": tier + 1,
+			"price": int(tiers[tier].get("price", 50)),
+			"name": String(tiers[tier].get("name", "装甲")),
+		})
 	out.sort_custom(func(a, b): return a["id"] < b["id"])   # 固定顺序，保证可复现
 	return out
 
@@ -60,6 +77,11 @@ func weights(cards: Array, mech) -> PackedFloat32Array:
 	var own := {}
 	for t in mech.turrets:
 		own[t.weapon_id] = int(own.get(t.weapon_id, 0)) + 1
+	# 装甲按"已经装了几面"算拥有数，套用同一条加权规则
+	for side in 4:
+		if mech.armor_level[side] > 0:
+			var k := "armor:%d" % mech.armor_tier[side]
+			own[k] = int(own.get(k, 0)) + 1
 	var raw := PackedFloat32Array()
 	raw.resize(cards.size())
 	var cols := {}

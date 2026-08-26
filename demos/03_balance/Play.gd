@@ -326,9 +326,11 @@ func _update_hud() -> void:
 	lines.append("商店 %d 次　合并 %d 次　地上金币 %d 堆" % [
 		world.shop.visits, world.log.merge_count, world.shop.coins.size()])
 	const SIDE := ["头", "右", "尾", "左"]
+	const ARMOR_NAME := ["无", "甲", "刺", "锯", "齿", "滚"]
 	var armor_txt: Array = []
 	for i in 4:
-		armor_txt.append("%s %d%%/%d" % [SIDE[i], int(m.armor[i] * 100.0), int(m.contact_damage[i])])
+		var nm: String = ARMOR_NAME[0] if m.armor_level[i] == 0 else ARMOR_NAME[m.armor_tier[i] + 1]
+		armor_txt.append("%s %s%d 减%d%%" % [SIDE[i], nm, m.armor_level[i], int(m.armor[i] * 100.0)])
 	lines.append("装甲 " + "  ".join(armor_txt) + "   位置 %.0f,%.0f / %.0fx%.0f" % [
 		m.pos.x, m.pos.y, world.torus.w, world.torus.h])
 	lines.append("WASD 移动   Q/E 转 90°   1-4 买卡   空格 4 倍速   R 换种子重开   Esc 退出")

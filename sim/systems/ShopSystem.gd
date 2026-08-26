@@ -223,11 +223,30 @@ func sell_turret(mech, index: int) -> bool:
 
 # ---------------------------------------------------------------- 放卡 / 合并
 
-## 把保险箱里第 index 张卡用掉：优先升级已有炮塔，没有就放一个新的
-func place(mech, index: int) -> bool:
+## 把保险箱里第 index 张卡用掉：
+## 武器卡 —— 优先升级已有炮塔，没有就放一个新的；
+## 装甲卡 —— 装到指定的那一面（side < 0 时自动挑受伤最多的那面）
+func place(mech, index: int, side: int = -1) -> bool:
 	if index < 0 or index >= safe_box.size():
 		return false
-	var wid := String(safe_box[index]["id"])
+	var card: Dictionary = safe_box[index]
+	if String(card.get("kind", "weapon")) == "armor":
+		var tier := int(card["tier"])
+		var s2 := side
+		if s2 < 0 or not mech.armor_accepts(s2, tier):
+			s2 = -1
+			for i in 4:
+				if mech.armor_accepts(i, tier):
+					s2 = i
+					break
+		if s2 < 0:
+			return false
+		if not mech.add_armor(s2, tier, _db.armor_levels_per_tier(), _db.armor_tiers().size() - 1):
+			return false
+		mech.refresh_armor(_db.armor_tiers(), float(_db.armor.get("reduce_cap", 0.45)))
+		safe_box.remove_at(index)
+		return true
+	var wid := String(card["id"])
 	for t in mech.turrets:
 		if t.weapon_id == wid and t.level < _db.weapon_max_level(wid):
 			t.level += 1

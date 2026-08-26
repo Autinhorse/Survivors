@@ -54,6 +54,7 @@ func _initialize() -> void:
 	check_targeting()
 	check_shapes()
 	check_map_eval()
+	check_armor()
 	print("\n%d 项失败" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -304,3 +305,75 @@ func check_map_eval() -> void:
 	ok("1000 敌人单次评估 < 1.5ms（压力值）", us < 1500.0, "%.0f µs" % us)
 	print("\n--- 评估快照（上方 3 只近战 + 右方 1 只重甲）---")
 	print(me.snapshot())
+
+## ---- P5 验收：四面装甲五级树（§6.2）----
+func check_armor() -> void:
+	var Enemy = load("res://sim/entities/Enemy.gd")
+	var w = _world_with("gun")
+	var db = w.db
+	var tiers: Array = db.armor_tiers()
+	var cap: float = float(db.armor.get("reduce_cap", 0.45))
+	var m = w.mech
+
+	# 3 张装甲卡 → 3 级，减伤 30%
+	for i in 3:
+		m.add_armor(0, 0, 3, tiers.size() - 1)
+	m.refresh_armor(tiers, cap)
+	ok("装甲 3 级 = 减伤 30%", is_equal_approx(m.armor[0], 0.30), "%.2f" % m.armor[0])
+
+	# 再放一张装甲卡 → 晋升尖刺 1 级，减伤 35% + 反击 20
+	m.add_armor(0, 0, 3, tiers.size() - 1)
+	m.refresh_armor(tiers, cap)
+	ok("第 4 张装甲卡晋升尖刺 1 级：减伤 35% + 反击 20",
+		m.armor_tier[0] == 1 and is_equal_approx(m.armor[0], 0.35)
+		and is_equal_approx(m.armor_reflect[0], 20.0),
+		"tier%d 减伤%.2f 反击%.0f" % [m.armor_tier[0], m.armor[0], m.armor_reflect[0]])
+	ok("装甲卡对已经升到尖刺的那面无效", not m.armor_accepts(0, 0))
+
+	# 一路升到滚筒 3 级，核对文档写的三个数
+	for tier in range(1, tiers.size()):
+		while m.armor_tier[0] == tier and m.armor_level[0] < 3:
+			m.add_armor(0, tier, 3, tiers.size() - 1)
+		if tier < tiers.size() - 1:
+			m.add_armor(0, tier, 3, tiers.size() - 1)
+	m.refresh_armor(tiers, cap)
+	ok("满级旋转滚筒：减伤 45% / 反击 60 / 光环 450 每秒 / 范围 1 格",
+		m.armor_tier[0] == 4 and m.armor_level[0] == 3
+		and is_equal_approx(m.armor[0], 0.45) and is_equal_approx(m.armor_reflect[0], 60.0)
+		and is_equal_approx(m.armor_aura[0], 450.0) and is_equal_approx(m.armor_range[0], 1.0),
+		"tier%d lv%d 减伤%.2f 反击%.0f 光环%.0f 范围%.1f" % [m.armor_tier[0], m.armor_level[0],
+			m.armor[0], m.armor_reflect[0], m.armor_aura[0], m.armor_range[0]])
+
+	# 减伤真的生效：同样一击，车头（45%）比车尾（0%）少掉 45%
+	var before: float = m.hp
+	var e1 = Enemy.new()
+	e1.pos = m.pos + Vector2(0, -m.half_size - 0.2)
+	e1.attack = 100.0; e1.attack_interval = 999.0; e1.attack_cd = 0.0
+	e1.speed = 0.0; e1.max_hp = 1.0e9; e1.hp = e1.max_hp
+	w.enemies = [e1]
+	w.combat.rebuild_hash(w.enemies)
+	w.combat.update_enemies(w.enemies, m, 0.03, w.enemy_bullets, w.log)
+	var took: float = before - m.hp
+	ok("车头 45% 减伤：100 点打进来只掉 55", is_equal_approx(took, 55.0), "%.1f" % took)
+	ok("尖刺反击：攻击者自己掉 60", is_equal_approx(e1.max_hp - e1.hp, 60.0),
+		"%.0f" % (e1.max_hp - e1.hp))
+
+	# 光环：贴在车头 1 格内的敌人每秒掉 450
+	var e2 = Enemy.new()
+	e2.pos = m.pos + Vector2(0, -m.half_size - 0.5)
+	e2.speed = 0.0; e2.attack = 0.0; e2.max_hp = 1.0e9; e2.hp = e2.max_hp
+	w.enemies = [e2]
+	w.combat.rebuild_hash(w.enemies)
+	w.combat.hull_contact(m, 1.0, w.log)
+	ok("滚筒光环：范围内每秒 450", is_equal_approx(e2.max_hp - e2.hp, 450.0),
+		"%.0f" % (e2.max_hp - e2.hp))
+
+	# 商店里买得到装甲卡，而且只出当前那一面吃得下的级别
+	var w2 = _world_with("gun")
+	var avail: Array = w2.shop.pool.available(w2.mech, w2.shop.unlocked)
+	var kinds := {}
+	for c in avail:
+		if String(c.get("kind", "weapon")) == "armor":
+			kinds[int(c["tier"])] = true
+	ok("商店只出 0 级装甲卡（四面都还没装）", kinds.size() == 1 and kinds.has(0),
+		"出现的级别 %s" % str(kinds.keys()))

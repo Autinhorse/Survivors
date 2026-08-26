@@ -22,9 +22,15 @@ var max_hp: float = 1000.0
 var move_speed: float = 2.0
 var turn_seconds: float = 1.0
 
-## 四面装甲，索引是**局部**方向 0=车头 1=右 2=车尾 3=左（§6.1/§20.4）
-var armor := [0.0, 0.0, 0.0, 0.0]
-var contact_damage := [0.0, 0.0, 0.0, 0.0]
+## 四面装甲（§6.2），索引是**局部**方向 0=车头 1=右 2=车尾 3=左。
+## 每面独立升级：tier 0-4（装甲/尖刺/链锯/齿轮/滚筒），每级 1-3。
+var armor_tier := [0, 0, 0, 0]
+var armor_level := [0, 0, 0, 0]
+## 下面四个是从 tier/level 算出来的派生值，由 refresh_armor() 刷新
+var armor := [0.0, 0.0, 0.0, 0.0]            # 减伤比例
+var armor_reflect := [0.0, 0.0, 0.0, 0.0]    # 敌人每次攻击这一面自己受到的伤害
+var armor_aura := [0.0, 0.0, 0.0, 0.0]       # 范围内每秒伤害
+var armor_range := [0.0, 0.0, 0.0, 0.0]      # 向外支出几格
 
 var turrets: Array = []           # Array[Turret]，每个带 cell 和 size
 var level: int = 1
@@ -35,6 +41,40 @@ var upgrade_levels: Dictionary = {}
 var half_size: float:
 	get:
 		return float(base_size) * 0.5
+
+## 按 data/armor.json 重算四面的派生值。装完卡就要调一次。
+func refresh_armor(tiers: Array, cap: float) -> void:
+	for i in 4:
+		var lv: int = armor_level[i]
+		if lv <= 0:
+			armor[i] = 0.0
+			armor_reflect[i] = 0.0
+			armor_aura[i] = 0.0
+			armor_range[i] = 0.0
+			continue
+		var t: Dictionary = tiers[clampi(armor_tier[i], 0, tiers.size() - 1)]
+		armor[i] = minf(cap, float(t.get("reduce_base", 0.0))
+			+ float(t.get("reduce_per_level", 0.0)) * float(lv))
+		armor_reflect[i] = float(t.get("reflect_base", 0.0)) + float(t.get("reflect_per_level", 0.0)) * float(lv)
+		armor_aura[i] = float(t.get("aura_base", 0.0)) + float(t.get("aura_per_level", 0.0)) * float(lv)
+		armor_range[i] = float(t.get("aura_range", 0.0))
+
+## 这一面能不能吃下 tier 级的卡（§6.2：只能一级一级来）
+func armor_accepts(side: int, tier: int) -> bool:
+	return armor_tier[side] == tier or (armor_level[side] == 0 and tier == 0)
+
+## 装一张 tier 级的装甲卡。3 级满了再放一张同级卡就晋升下一级
+func add_armor(side: int, tier: int, levels_per_tier: int, max_tier: int) -> bool:
+	if not armor_accepts(side, tier):
+		return false
+	if armor_level[side] < levels_per_tier:
+		armor_level[side] += 1
+	elif armor_tier[side] < max_tier:
+		armor_tier[side] += 1
+		armor_level[side] = 1
+	else:
+		return false
+	return true
 
 ## 中心禁区：3×3 是中间 1 格，4×4 是中间 2×2（§6.1 / §6.3）
 func _center_cells() -> Array:

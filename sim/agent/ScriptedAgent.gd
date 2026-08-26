@@ -239,7 +239,11 @@ func shop_step(world, shop) -> Dictionary:
 	# 2. 保险箱里的卡能放就放
 	var idx := _best_in_box(world, shop, mech)
 	if idx >= 0:
-		return {"type": "place", "index": idx, "id": String(shop.safe_box[idx]["id"])}
+		var card: Dictionary = shop.safe_box[idx]
+		var side := -1
+		if String(card.get("kind", "weapon")) == "armor":
+			side = _worst_side(world, mech, int(card["tier"]))
+		return {"type": "place", "index": idx, "id": String(card["id"]), "side": side}
 
 	# 3. 买一张买得起、而且放得下的卡
 	var buy := _best_to_buy(world, shop, mech)
@@ -270,6 +274,27 @@ var _db_cache = null
 func _db_line(wid: String) -> String:
 	return String(_db_cache.weapons.get(wid, {}).get("line", ""))
 
+## 装甲装在挨打最多的那一面（§6.2 装甲是按方向升级的，选错面等于没装）。
+## damage_by_side 记的是**局部**方向，和装甲索引一致。
+func _worst_side(world, mech, tier: int) -> int:
+	var best := -1
+	var best_d := -1.0
+	for i in 4:
+		if not mech.armor_accepts(i, tier):
+			continue
+		var d: float = float(world.log.damage_by_side[i])
+		if d > best_d:
+			best_d = d
+			best = i
+	return best
+
+func _score_card(world, card: Dictionary, mech) -> float:
+	if String(card.get("kind", "weapon")) == "armor":
+		# armor 流派把装甲排在最前；其他流派只在便宜且顺手时买
+		var base: float = 5000.0 if pick_policy == "armor" else 30.0
+		return base + float(card["tier"]) * 100.0
+	return _score(world, String(card["id"]), mech)
+
 func _score(world, wid: String, mech) -> float:
 	_db_cache = world.db
 	var col: float = float(world.db.weapon_column(wid))
@@ -284,17 +309,21 @@ func _best_in_box(world, shop, mech) -> int:
 	var best := -1
 	var best_s := -INF
 	for i in shop.safe_box.size():
-		var wid := String(shop.safe_box[i]["id"])
+		var card: Dictionary = shop.safe_box[i]
 		var usable := false
-		for t in mech.turrets:
-			if t.weapon_id == wid and t.level < world.db.weapon_max_level(wid):
+		if String(card.get("kind", "weapon")) == "armor":
+			usable = _worst_side(world, mech, int(card["tier"])) >= 0
+		else:
+			var wid := String(card["id"])
+			for t in mech.turrets:
+				if t.weapon_id == wid and t.level < world.db.weapon_max_level(wid):
+					usable = true
+					break
+			if not usable and not mech.free_placements(world.db.weapon_size(wid)).is_empty():
 				usable = true
-				break
-		if not usable and not mech.free_placements(world.db.weapon_size(wid)).is_empty():
-			usable = true
 		if not usable:
 			continue
-		var sc: float = _score(world, wid, mech)
+		var sc: float = _score_card(world, card, mech)
 		if sc > best_s:
 			best_s = sc
 			best = i
@@ -307,7 +336,7 @@ func _best_to_buy(world, shop, mech) -> int:
 		var c = shop.cards[i]
 		if c == null or mech.coins < float(c["price"]):
 			continue
-		var sc: float = _score(world, String(c["id"]), mech)
+		var sc: float = _score_card(world, c, mech)
 		if sc > best_s:
 			best_s = sc
 			best = i

@@ -6,6 +6,7 @@ var weapons: Dictionary = {}
 var waves_cfg: Dictionary = {}
 var agents: Dictionary = {}
 var shop: Dictionary = {}
+var armor: Dictionary = {}
 var upgrades: Array = []
 var draw_cfg: Dictionary = {}
 
@@ -24,6 +25,7 @@ static func load_from(dir_path: String) -> RefCounted:
 	db.waves_cfg = db._read(dir_path + "/waves.json")
 	db.agents = db._strip_notes(db._read(dir_path + "/agents.json"))
 	db.shop = db._read(dir_path + "/shop.json")
+	db.armor = db._read(dir_path + "/armor.json")
 	var u: Dictionary = db._read(dir_path + "/upgrades.json")
 	db.upgrades = u.get("upgrades", [])
 	db.draw_cfg = u.get("draw", {})
@@ -111,6 +113,12 @@ func weapon_max_level(id: String) -> int:
 
 func weapon_size(id: String) -> int:
 	return int(weapons.get(id, {}).get("size", 1))
+
+func armor_tiers() -> Array:
+	return armor.get("tiers", [])
+
+func armor_levels_per_tier() -> int:
+	return int(armor.get("levels_per_tier", 3))
 
 func weapon_column(id: String) -> int:
 	return int(weapons.get(id, {}).get("column", 1))
