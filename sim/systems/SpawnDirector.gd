@@ -60,6 +60,15 @@ func wave_stats(n: int) -> Dictionary:
 		var gv: float = float(wgrowth.get(f, growth.get(f, 1.0)))
 		var sv: float = 1.0 if wbase.has(f) else float(shape.get(f, 1.0))
 		out[f] = bv * pow(gv, c) * sv
+	# 射程也随周期长（重甲炮台 9 → 11）。单独一条规则，不进上面那个循环——
+	# 上面四个字段是"总量"，可以无上限地涨；射程涨到超出玩家视野就没意义了，
+	# 必须封顶。谁需要谁在自己那一波写 attack_range_growth / attack_range_max。
+	var rg: float = float(d.get("attack_range_growth", 1.0))
+	if rg != 1.0:
+		var r0: float = float(d.get("attack_range", 0.0))
+		var rmax: float = float(d.get("attack_range_max", r0))
+		out["attack_range"] = minf(rmax, r0 * pow(rg, c))
+
 	out["wave_index"] = n
 	out["cycle"] = c + 1
 	out["start_t"] = wave_gap * float(n - 1)

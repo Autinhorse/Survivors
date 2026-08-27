@@ -105,10 +105,13 @@
         "attack": 1.15,
         "coin": 1.25
       },
-      "attack_range": 12.0,
+      "attack_range": 9.0,
       "bullet_speed": 3.0,
       "hold_position": false,
-      "keep_distance": true
+      "keep_distance": true,
+      "attack_range_growth": 1.011,
+      "attack_range_max": 11.0,
+      "_range_note": "驻守距离随周期从 9 涨到 11（约 20 个周期涨满）。单发线 10-13 始终够得着，机枪线 7-10 始终够不着——这是三条枪线唯一的硬分工。"
     },
     {
       "pos": 5,

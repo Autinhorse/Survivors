@@ -592,24 +592,49 @@ func check_range_within_view() -> void:
 
 	# 重甲炮台 keep_distance 停在自己的射程上。只有单发线该够得着它——
 	# 这是三条枪线唯一的硬分工，机枪／散弹线一旦够得着，单发线就又没用了。
-	var standoff := 0.0
-	for d in w.db.waves_cfg.get("waves", []):
-		if bool(d.get("keep_distance", false)):
-			standoff = maxf(standoff, float(d.get("attack_range", 0.0)))
-	var other_max := 0.0
-	var rifle_max := 0.0
+	# 分工是**时间相关**的：重甲的驻守距离在涨，两条枪线也在换代。
+	# 该比的是"第 c 周期你手上那把枪"对"第 c 周期的驻守距离"，
+	# 不是拿两条线的静态极值去比——那样得出的结论是错的。
+	# 换代节奏用 weapons.json _rule 写死的那条：一代 = 5.1 个周期，第 2 周期起算。
+	var chains := {}
 	for wid in w.db.weapons.keys():
 		if typeof(w.db.weapons[wid]) != TYPE_DICTIONARY:
 			continue
-		var r: float = float(w.db.weapons[wid].get("range", 0.0))
-		if String(w.db.weapons[wid].get("line", "")) == "rifle":
-			rifle_max = maxf(rifle_max, r)
-		else:
-			other_max = maxf(other_max, r)
-	ok("机枪／散弹线够不着重甲炮台", other_max < standoff,
-		"它们最远 %.0f，重甲驻守 %.0f" % [other_max, standoff])
-	ok("单发线够得着重甲炮台", rifle_max >= standoff,
-		"单发最远 %.0f，重甲驻守 %.0f" % [rifle_max, standoff])
+		var wd: Dictionary = w.db.weapons[wid]
+		var ln := String(wd.get("line", ""))
+		if ln == "" or int(wd.get("column", 1)) <= 1:
+			continue                                   # 初始枪是三条线共同的祖先
+		if not chains.has(ln):
+			chains[ln] = []
+		chains[ln].append([int(wd.get("column", 1)), float(wd.get("range", 0.0))])
+	for ln in chains.keys():
+		chains[ln].sort_custom(func(x, y): return x[0] < y[0])
+
+	var wd0: Dictionary = {}
+	for d in w.db.waves_cfg.get("waves", []):
+		if bool(d.get("keep_distance", false)):
+			wd0 = d
+	var bad_rifle := ""
+	var bad_other := ""
+	for c in range(1, 22):
+		var r0: float = float(wd0.get("attack_range", 0.0))
+		var stand: float = minf(float(wd0.get("attack_range_max", r0)),
+			r0 * pow(float(wd0.get("attack_range_growth", 1.0)), float(c - 1)))
+		var tier: int = clampi(int((float(c) - 2.0) / 5.1), 0, 3)
+		for ln in chains.keys():
+			var chain: Array = chains[ln]
+			if tier >= chain.size():
+				continue
+			var rng: float = chain[tier][1]
+			if ln == "rifle":
+				if rng < stand and bad_rifle == "":
+					bad_rifle = "周期 %d：单发第 %d 代射程 %.0f < 驻守 %.1f" % [c, tier + 1, rng, stand]
+			elif rng >= stand and bad_other == "":
+				bad_other = "周期 %d：%s 第 %d 代射程 %.0f >= 驻守 %.1f" % [c, ln, tier + 1, rng, stand]
+	ok("单发线每个周期都够得着重甲炮台", bad_rifle == "",
+		bad_rifle if bad_rifle != "" else "周期 1-21 全程够得着")
+	ok("机枪／散弹线每个周期都够不着重甲炮台", bad_other == "",
+		bad_other if bad_other != "" else "周期 1-21 全程够不着")
 
 func check_no_clip() -> void:
 	var Enemy = load("res://sim/entities/Enemy.gd")
