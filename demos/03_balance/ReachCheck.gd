@@ -50,8 +50,9 @@ func _one(tag: String, spec: Array) -> void:
 	var spawned := PackedInt32Array(); spawned.resize(9)
 	var dmg := PackedFloat32Array(); dmg.resize(9)
 	var seen: Dictionary = {}          # 敌人实例 → wave_pos，用来数"刷了多少"
-	var standoff := 0.0        # 重甲炮台平均离机甲多远
-	var standoff_n := 0.0
+	# 「平均距离」没有判别力：重甲炮台速度慢，长途行军把均值抬到 20 格开外，
+	# 于是明明 35/40 都被打掉了还会显示"永远够不着"。要问的是它**最近能到多近**。
+	var standoff := INF
 	var last_hp: float = w.mech.hp
 
 	while not w.over:
@@ -77,8 +78,7 @@ func _one(tag: String, spec: Array) -> void:
 		if absf(fposmod(w.time, 1.0)) < w.dt:
 			for e in w.enemies:
 				if e.alive and e.wave_pos == 4:
-					standoff += w.torus.dist(w.mech.pos, e.pos)
-					standoff_n += 1.0
+					standoff = minf(standoff, w.torus.dist(w.mech.pos, e.pos))
 
 	var tot := 0.0
 	for x in dmg:
@@ -92,9 +92,9 @@ func _one(tag: String, spec: Array) -> void:
 		print("   %-10s %-8d %-8d %-8s %s" % [NAMES[i], spawned[i], k,
 			"%.0f%%" % (100.0 * float(maxi(0, spawned[i] - k)) / float(spawned[i])),
 			"%.0f%%" % (100.0 * dmg[i] / maxf(1.0, tot))])
-	if standoff_n > 0.0:
-		var d: float = standoff / standoff_n
-		print("   重甲炮台平均停在 %.1f 格外，最远射程 %.0f 格 → %s\n"
-			% [d, reach, "够得着" if d <= reach + w.mech.half_size else "**永远够不着**"])
+	if standoff < INF:
+		print("   重甲炮台最近逼到 %.1f 格，最远射程 %.0f 格 → %s\n"
+			% [standoff, reach,
+				"够得着" if standoff <= reach + w.mech.half_size else "**永远够不着**"])
 	else:
 		print("")

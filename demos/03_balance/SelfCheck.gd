@@ -530,6 +530,33 @@ func check_shop_actions() -> void:
 		"共 %d 门" % w.mech.turrets.size())
 	w.shop.safe_box.clear()
 
+	# 买走自动补货：手玩时"买光四张→掏钱刷新→再买光"是纯粹的手指劳动
+	w.shop.safe_box.clear()
+	w.mech.coins = 100000.0
+	var filled := true
+	for c3 in w.shop.cards:
+		if c3 == null:
+			filled = false
+	ok("货架开局是满的", filled)
+	human.queued_action = {"type": "buy", "index": 0}
+	w.tick()
+	ok("买走一张之后那个位置立刻补上", w.shop.cards[0] != null)
+
+	# 全买：一直买到没钱或保险箱满
+	w.shop.safe_box.clear()
+	human.queued_action = {"type": "buy_all"}
+	w.tick()
+	ok("全买：一次点满保险箱", w.shop.safe_box.size() == w.shop.safe_box_cap(),
+		"%d/%d" % [w.shop.safe_box.size(), w.shop.safe_box_cap()])
+
+	# 保险箱满了就不能再买（以前是先塞进去再从尾巴上截掉，等于白花钱）
+	var coins0: float = w.mech.coins
+	human.queued_action = {"type": "buy", "index": 0}
+	w.tick()
+	ok("保险箱满时买不进去，也不扣钱", is_equal_approx(w.mech.coins, coins0)
+		and w.shop.safe_box.size() == w.shop.safe_box_cap())
+	w.shop.safe_box.clear()
+
 	# 商店开着时世界不推进（§8：进入商店不占游戏时间）
 	var t0: float = w.time
 	w.tick()
