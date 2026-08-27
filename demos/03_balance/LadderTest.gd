@@ -45,7 +45,8 @@ func _initialize() -> void:
 	print("周期 %.0f 秒（%d 波 × %.0f 秒）；一代 %.1f 个周期（%.1f 分钟），代内匀速升到 3 级"
 		% [cycle_sec, probe.spawner.cycle_waves, probe.spawner.wave_gap,
 			tier_cycles, tier_cycles * cycle_sec / 60.0])
-	print("%-26s %-9s %-9s %s" % ["build", "平均存活", "推到第几波", "终局武器"])
+	print("%-26s %-9s %-13s %-9s %s"
+		% ["build", "平均存活", "波动(最短-最长)", "推到第几波", "终局武器"])
 	_run("纯机枪线", [[RAPID, 8]])
 	_run("纯单发线", [[SINGLE, 8]])
 	_run("纯散弹线", [[SPREAD, 8]])
@@ -68,6 +69,11 @@ func _run(name: String, spec: Array) -> void:
 	var total := 0.0
 	var waves := 0
 	var last := ""
+	# 光报平均值会骗人：一次 4 档扫描里 80→120 两个 build 都"活得更久"，
+	# 而经济是关掉的、敌人更疼不可能延长存活——那一行纯粹是噪声。
+	# 不报离散度就分不出信号和噪声，所以每行都带上最短/最长。
+	var lo := INF
+	var hi := 0.0
 	for s in runs:
 		var cfg = SimConfig.new()
 		cfg.seed_value = 300 + s
@@ -104,10 +110,15 @@ func _run(name: String, spec: Array) -> void:
 					t.level = sch.y
 			w.tick()
 		total += w.log.run_duration
+		lo = minf(lo, w.log.run_duration)
+		hi = maxf(hi, w.log.run_duration)
 		waves = maxi(waves, w.log.wave_reached)
 		var ids: Array = []
 		for t in w.mech.turrets:
 			ids.append(w.db.weapon_name(t.weapon_id) + "@" + str(t.level))
 		ids.sort()
 		last = " ".join(ids)
-	print("%-26s %-9.1f %-9d %s" % [name, total / float(runs), waves, last.substr(0, 40)])
+	var avg: float = total / float(runs)
+	print("%-26s %-9.1f %-13s %-9d %s" % [name, avg,
+		"%.0f-%.0f (±%.0f%%)" % [lo, hi, 100.0 * maxf(hi - avg, avg - lo) / maxf(1.0, avg)],
+		waves, last.substr(0, 40)])
