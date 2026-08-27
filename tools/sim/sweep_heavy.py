@@ -68,7 +68,10 @@ def run(only):
         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     for line in out.stdout.split("\n"):
         if line.startswith(only):
-            m = re.search(r"([\d.]+)\s+(\d+)\s", line[len(only):])
+            # 只取名字后面第一个数（平均存活）。别去匹配后面的列——
+            # LadderTest 加了「波动 377-670 (±11%)」那一列之后，原来那个
+            # "浮点 + 空白 + 整数" 的正则就全部匹配失败，整张表变成 '-'。
+            m = re.search(r"^\s*([\d.]+)", line[len(only):])
             if m:
                 return float(m.group(1))
     return None

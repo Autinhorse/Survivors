@@ -22,3 +22,6 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# sweep 脚本的崩溃保护备份，跑完自动删，永远不该进仓库
+*.sweepbak
