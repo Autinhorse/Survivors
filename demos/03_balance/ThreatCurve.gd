@@ -58,6 +58,10 @@ func _one(tag: String, spec: Array) -> void:
 	# 漏掉**比例**上，而在漏掉的**代价**上。这一行量每个周期重甲打出多少
 	# 伤害，换算成几管满血——>1 就表示这个周期光靠挨打就会死一次。
 	var hv_d := PackedFloat32Array(); hv_d.resize(NBUCKETS)
+	# 早期漏掉率没有判别力：周期 1-3 敌人少，"周期切换时还在路上"那部分占比大，
+	# 三套 build 一律读出 27%，真实差别被分桶假象盖住。改看杂兵**打出多少伤害**
+	# ——谁清得好谁挨得少，不受分桶影响。
+	var sw_d := PackedFloat32Array(); sw_d.resize(NBUCKETS)
 	var max_hp: float = 1000.0
 
 	for s in runs:
@@ -91,6 +95,7 @@ func _one(tag: String, spec: Array) -> void:
 		var applied := Vector2i(-1, -1)
 		var last_k: Array = [0, 0, 0, 0, 0, 0, 0, 0]
 		var last_d: float = 0.0
+		var last_ds: float = 0.0
 		max_hp = float(w.db.cfg("mech/max_hp", 1000.0))
 		while not w.over:
 			var sch := _schedule(w.time, cyc)
@@ -113,6 +118,12 @@ func _one(tag: String, spec: Array) -> void:
 			var dd: float = float(w.log.damage_by_wave_pos[HEAVY_POS - 1])
 			hv_d[b] += dd - last_d
 			last_d = dd
+			var ds: float = 0.0
+			for i in 8:
+				if i + 1 != HEAVY_POS:
+					ds += float(w.log.damage_by_wave_pos[i])
+			sw_d[b] += ds - last_ds
+			last_ds = ds
 			# kills_by_wave_pos 是累计值，取差分才是"这个周期杀了多少"
 			for i in 8:
 				var k: int = int(w.log.kills_by_wave_pos[i])
@@ -129,6 +140,7 @@ func _one(tag: String, spec: Array) -> void:
 	var l1 := "%-14s%-9s" % [tag, "杂兵漏掉"]
 	var l2 := "%-14s%-9s" % ["", "重甲漏掉"]
 	var l3 := "%-14s%-9s" % ["", "重甲伤害"]
+	var l0 := "%-14s%-9s" % ["", "杂兵伤害"]
 	for b in NBUCKETS:
 		if sw_s[b] <= 0.0:
 			continue
@@ -136,7 +148,29 @@ func _one(tag: String, spec: Array) -> void:
 		l1 += "%-6s" % ("%.0f%%" % (100.0 * maxf(0.0, sw_s[b] - sw_k[b]) / sw_s[b]))
 		l2 += "%-6s" % ("%.0f%%" % (100.0 * maxf(0.0, hv_s[b] - hv_k[b]) / maxf(1.0, hv_s[b])))
 		l3 += "%-6s" % ("%.1f" % (hv_d[b] / float(runs) / maxf(1.0, max_hp)))
+		l0 += "%-6s" % ("%.1f" % (sw_d[b] / float(runs) / maxf(1.0, max_hp)))
 	print(head)
 	print(l1)
+	print(l0)
 	print(l2)
 	print(l3 + "  （单位：满血管数／周期，>1 = 光挨这一种就够死一次）")
+
+	# 单周期上 3 局的噪声太大（同一份数据里周期 1 和周期 2 能给出相反结论），
+	# 所以再按"早期 1-3 / 中后期 4+"合并一次：样本量乘三倍，才敢下结论。
+	var e_s := 0.0; var e_k := 0.0; var l_s := 0.0; var l_k := 0.0; var hd := 0.0
+	var sd_early := 0.0
+	for b in NBUCKETS:
+		if sw_s[b] <= 0.0:
+			continue
+		hd += hv_d[b] / float(runs) / maxf(1.0, max_hp)
+		if b < 3:
+			sd_early += sw_d[b] / float(runs) / maxf(1.0, max_hp)
+		if b < 3:
+			e_s += sw_s[b]; e_k += sw_k[b]
+		else:
+			l_s += sw_s[b]; l_k += sw_k[b]
+	print("%-14s%-9s早期杂兵伤害 %.1f 管  漏掉 早期 %s 中后期 %s  重甲伤害累计 %.1f 管血
+"
+		% [" ", "合并", sd_early,
+			"%.0f%%" % (100.0 * maxf(0.0, e_s - e_k) / maxf(1.0, e_s)),
+			"%.0f%%" % (100.0 * maxf(0.0, l_s - l_k) / maxf(1.0, l_s)), hd])
