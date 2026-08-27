@@ -590,7 +590,8 @@ func check_range_within_view() -> void:
 	ok("最远的枪也打不出竖直半屏", worst_r <= limit,
 		"%s 射程 %.0f，半屏 %.1f 格" % [worst, worst_r, limit])
 
-	# 重甲炮台 keep_distance 停在自己的射程上。只有单发线该够得着它——
+	# 重甲炮台停在自己的射程上（hold_position：进入射程就钉住）。
+	# 只有单发线该够得着它——
 	# 这是三条枪线唯一的硬分工，机枪／散弹线一旦够得着，单发线就又没用了。
 	# 分工是**时间相关**的：重甲的驻守距离在涨，两条枪线也在换代。
 	# 该比的是"第 c 周期你手上那把枪"对"第 c 周期的驻守距离"，
@@ -612,7 +613,9 @@ func check_range_within_view() -> void:
 
 	var wd0: Dictionary = {}
 	for d in w.db.waves_cfg.get("waves", []):
-		if bool(d.get("keep_distance", false)):
+		# 按 track 精确挑重甲轨道。不能只认 hold_position——第 6 波"远程弧"
+		# 也是钉住型远程，射程只有 6，比机枪还短，会把这条断言判成假失败。
+		if String(d.get("track", "")) == "heavy":
 			wd0 = d
 	var bad_rifle := ""
 	var bad_other := ""
