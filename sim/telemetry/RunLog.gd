@@ -45,6 +45,7 @@ var hull_damage: float = 0.0
 
 var coins_earned: float = 0.0
 var shop_visits: int = 0
+var cards_bought: int = 0          # 一共买了几张卡（用来分辨"买不到"和"买到了铺不开"）
 var merge_count: int = 0
 var best_column: int = 0             # 摸到第几列武器 —— build 到底长起来没有
 var final_build: String = ""
@@ -68,7 +69,7 @@ const COLUMNS := [
 	"hull_kills", "hull_damage", "distance_moved", "rotation_count",
 	"time_stationary", "time_turning", "time_contacted", "avg_nearest", "peak_enemies",
 	"coins_earned", "coins_left", "shop_visits", "merge_count", "best_column",
-	"damage_by_side", "kills_by_wave_pos", "damage_by_wave_pos",
+	"damage_by_side", "kills_by_wave_pos", "damage_by_wave_pos", "cards_bought",
 	"first_turret_time", "first_fusion_time", "fusion_count", "first_ultimate_time",
 	"ultimate_count", "ultimate_active_seconds", "power_window_ratio",
 	"kills_by_weapon", "damage_by_weapon", "final_build", "picks",
@@ -86,7 +87,7 @@ func csv_row() -> String:
 		"%.1f" % time_stationary, "%.1f" % time_turning, "%.1f" % time_contacted,
 		"%.2f" % (nearest_sum / maxf(1.0, float(nearest_n))), peak_enemies,
 		"%.0f" % coins_earned, "%.0f" % coins_left, shop_visits, merge_count, best_column,
-		_arr(damage_by_side), _arr(kills_by_wave_pos), _arr(damage_by_wave_pos),
+		_arr(damage_by_side), _arr(kills_by_wave_pos), _arr(damage_by_wave_pos), cards_bought,
 		"%.1f" % first_turret_time, "%.1f" % first_fusion_time, fusion_count,
 		"%.1f" % first_ultimate_time, ultimate_count,
 		"%.1f" % ultimate_active_seconds, "%.3f" % power_window_ratio,
