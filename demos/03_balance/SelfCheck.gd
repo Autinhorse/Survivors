@@ -590,6 +590,27 @@ func check_range_within_view() -> void:
 	ok("最远的枪也打不出竖直半屏", worst_r <= limit,
 		"%s 射程 %.0f，半屏 %.1f 格" % [worst, worst_r, limit])
 
+	# 重甲炮台 keep_distance 停在自己的射程上。只有单发线该够得着它——
+	# 这是三条枪线唯一的硬分工，机枪／散弹线一旦够得着，单发线就又没用了。
+	var standoff := 0.0
+	for d in w.db.waves_cfg.get("waves", []):
+		if bool(d.get("keep_distance", false)):
+			standoff = maxf(standoff, float(d.get("attack_range", 0.0)))
+	var other_max := 0.0
+	var rifle_max := 0.0
+	for wid in w.db.weapons.keys():
+		if typeof(w.db.weapons[wid]) != TYPE_DICTIONARY:
+			continue
+		var r: float = float(w.db.weapons[wid].get("range", 0.0))
+		if String(w.db.weapons[wid].get("line", "")) == "rifle":
+			rifle_max = maxf(rifle_max, r)
+		else:
+			other_max = maxf(other_max, r)
+	ok("机枪／散弹线够不着重甲炮台", other_max < standoff,
+		"它们最远 %.0f，重甲驻守 %.0f" % [other_max, standoff])
+	ok("单发线够得着重甲炮台", rifle_max >= standoff,
+		"单发最远 %.0f，重甲驻守 %.0f" % [rifle_max, standoff])
+
 func check_no_clip() -> void:
 	var Enemy = load("res://sim/entities/Enemy.gd")
 	var w = _world_with("gun")
