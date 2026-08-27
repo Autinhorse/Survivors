@@ -18,8 +18,17 @@ var wave_gap: float = 10.0
 var spawn_margin: float = 4.0
 var spawn_radius: float = 31.5      # 视野外接圆 + margin
 
+## 开场阶段：关卡内第一次走进商店之前。
+## 这段时间敌人少一些（玩家手上只有 1-3 门枪），而且**从四面均匀来**——
+## 让玩家自己看出"四个方向都得有炮塔"，比任何文字提示都管用。
+## 由 SimWorld 每帧写入（shop.visits < 2，开局那次商店算第 1 次）。
+var opening: bool = false
+var opening_count_mult: float = 0.5
+var opening_uniform: bool = true
+
 var _next_wave: int = 1             # 下一个还没开始的波（从 1 数）
 var _active: Array = []             # 正在逐个吐怪的波（random 型）
+var _uniform_n: int = 0             # 开场四面轮流放的计数
 
 func setup(db, rng, torus) -> void:
 	_db = db
@@ -29,9 +38,15 @@ func setup(db, rng, torus) -> void:
 	cycle_waves = int(w.get("cycle_waves", 8))
 	wave_gap = float(w.get("wave_gap_sec", 10.0))
 	spawn_margin = float(w.get("spawn_margin", 4.0))
+	var op: Dictionary = w.get("opening", {})
+	opening_count_mult = float(op.get("count_mult", 0.5))
+	opening_uniform = bool(op.get("uniform_four_sides", true))
 	var vw: float = db.cfg("map/view_width", 48.0)
 	var vh: float = db.cfg("map/view_height", 27.0)
-	spawn_radius = sqrt(vw * vw + vh * vh) * 0.5 + spawn_margin
+	# 原来是视野外接圆（√(48²+27²)/2 + 4 = 31.5 格）：敌人生成在屏幕四角
+	# 之外，横向要走 8-21 秒才进画面，开局半天见不到人。改成按**长边半屏**
+	# （24 + margin）：横向来的敌人一生成就在画面边缘，纵向来的仍在屏外。
+	spawn_radius = maxf(vw, vh) * 0.5 + spawn_margin
 	_next_wave = 1
 	_active.clear()
 
@@ -93,6 +108,8 @@ func tick(now: float, _dt: float, out_enemies: Array, mech_pos: Vector2) -> void
 func _begin(n: int, now: float, out_enemies: Array, mech_pos: Vector2) -> void:
 	var st := wave_stats(n)
 	var total := int(round(maxf(1.0, float(st["count"]))))
+	if opening:
+		total = maxi(1, int(round(float(total) * opening_count_mult)))
 	var interval := float(st.get("interval", 0.0))
 	if interval > 0.0:
 		_active.append({"stats": st, "total": total, "spawned": 0,
@@ -111,10 +128,21 @@ func _begin(n: int, now: float, out_enemies: Array, mech_pos: Vector2) -> void:
 		out_enemies.append(_make(st, _point_batch(st, base_deg, i, total, mech_pos), mech_pos))
 
 func _point_random(mech_pos: Vector2) -> Vector2:
+	if opening and opening_uniform:
+		_uniform_n += 1
+		var d0: float = float(_uniform_n % 4) * 90.0 + _rng.range_f(-12.0, 12.0)
+		return _torus.wrap(mech_pos + Torus.angle_to_vec(d0) * spawn_radius)
 	var deg: float = _rng.range_f(0.0, 360.0)
 	return _torus.wrap(mech_pos + Torus.angle_to_vec(deg) * spawn_radius)
 
 func _point_batch(st: Dictionary, base_deg: float, i: int, total: int, mech_pos: Vector2) -> Vector2:
+	# 开场阶段压掉原本的波型，一律按四面轮流放。玩家会看到东南西北同时来人，
+	# 于是自然想到四面都要架炮——这是教学，不是配平。
+	if opening and opening_uniform:
+		var deg0: float = float(i % 4) * 90.0 + _rng.range_f(-12.0, 12.0)
+		var ring: float = float(i / 4) * 1.5
+		return _torus.wrap(mech_pos
+			+ Torus.angle_to_vec(deg0) * (spawn_radius + ring))
 	var pattern := String(st.get("pattern", "random"))
 	var r := spawn_radius
 	match pattern:

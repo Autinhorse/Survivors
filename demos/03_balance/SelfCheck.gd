@@ -59,6 +59,7 @@ func _initialize() -> void:
 	check_shop_actions()
 	check_no_clip()
 	check_range_within_view()
+	check_opening()
 	print("\n%d 项失败" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -573,6 +574,51 @@ func check_shop_actions() -> void:
 ## 超出去就是在打玩家看不见的目标：他不知道自己打掉了什么，也不知道
 ## 那门枪到底有没有用。曾经把单发线定到 16-24 格，正是踩了这个坑。
 ## 要拉开射程差就必须先放大视野格数，不能反过来。
+## 开场阶段（关卡内还没走进过商店）：敌人减半、四面均匀来。
+## 四面均匀是**教学**不是配平——让玩家自己看出四个方向都得架炮。
+func check_opening() -> void:
+	var cfg = SimConfig.new()
+	cfg.seed_value = 4242
+	var w = SimWorld.new()
+	w.setup(cfg, ScriptedAgent.new())
+	# SimWorld 每帧写 spawner.opening，先推一帧再看（别写成恒真的断言）
+	w.tick()
+	ok("开局商店没走过时处在开场阶段", w.spawner.opening,
+		"进过商店 %d 次" % w.shop.visits)
+	w.shop.visits = 5
+	w.tick()
+	ok("进过商店之后离开开场阶段", not w.spawner.opening)
+
+	# 直接问 spawner：开场时前 40 个敌人落在哪几个象限
+	w.spawner.opening = true
+	var quad := [0, 0, 0, 0]
+	var pts: Array = []
+	for i in 40:
+		var p: Vector2 = w.spawner._point_batch({}, 0.0, i, 40, Vector2(100, 50))
+		pts.append(p)
+		var d: Vector2 = w.torus.delta(Vector2(100, 50), p)
+		# 局部方向：上/右/下/左
+		if absf(d.y) >= absf(d.x):
+			quad[0 if d.y < 0.0 else 2] += 1
+		else:
+			quad[1 if d.x > 0.0 else 3] += 1
+	var lo := 999
+	for q in quad:
+		lo = mini(lo, q)
+	ok("开场：四个方向都来敌人", lo >= 8, "上%d 右%d 下%d 左%d" % quad)
+
+	# 生成距离：按长边半屏，横向来的一生成就在画面边缘
+	var r: float = w.spawner.spawn_radius
+	var half_long: float = maxf(w.view_w, w.view_h) * 0.5
+	ok("生成半径贴着长边半屏，不是外接圆", r < half_long + 6.0 and r >= half_long,
+		"半径 %.1f 格，长边半屏 %.1f 格" % [r, half_long])
+
+	# 开场敌人减半
+	w.spawner.opening = false
+	var full: int = int(round(float(w.spawner.wave_stats(1)["count"])))
+	ok("开场敌人数量打折", w.spawner.opening_count_mult < 1.0,
+		"×%.2f（满编 %d 个）" % [w.spawner.opening_count_mult, full])
+
 func check_range_within_view() -> void:
 	var cfg = SimConfig.new()
 	var w = SimWorld.new()

@@ -41,7 +41,6 @@ func _one(pol: String) -> void:
 	var turrets := 0.0
 	var cards := 0.0
 	var spawned_n := 0.0
-	var expired_n := 0.0
 	var on_field := 0.0
 	var killed := 0.0
 	var dmg := PackedFloat32Array(); dmg.resize(9)
@@ -67,7 +66,6 @@ func _one(pol: String) -> void:
 		turrets += float(w.mech.turrets.size())
 		cards += float(w.shop.bought_count)
 		spawned_n += float(w.shop.site_spawned)
-		expired_n += float(w.shop.site_expired)
 		killed += float(w.log.kills_total)
 		var alive := 0
 		for e in w.enemies:
@@ -88,8 +86,7 @@ func _one(pol: String) -> void:
 		% [pol, runs, dur / n, int(float(waves) / n), killed / n, on_field / n])
 	print("死时：炮塔 %.1f 门　进过商店 %.1f 次　买了 %.1f 张卡　金币剩 %.0f（没花掉的）"
 		% [turrets / n, shop_visits / n, cards / n, coins_left / n])
-	print("商店点位：生成 %.1f 个，其中 %.1f 个没赶到作废"
-		% [spawned_n / n, expired_n / n])
+	print("商店点位：生成 %.1f 个" % (spawned_n / n))
 	var tot := 0.0
 	for x in dmg:
 		tot += x

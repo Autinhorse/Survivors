@@ -29,15 +29,12 @@ var _pending_merge: Array = []
 
 var next_spawn_t: float = 0.0
 var shield_until: float = -1.0     # 出店后保护罩还能撑到什么时候
-## 这个点位什么时候作废。没有它的话：商店一旦生成，玩家只要没走到，
-## site 就永远不为 null，于是**新商店再也不会出现**——实测真实经济下
-## 117 秒只进得去 1.1 次商店、死时 2.1 门炮塔、4319 金币没花掉。
-var site_expire_t: float = 0.0
 var visits: int = 0
 var refresh_count: int = 0
 var bought_count: int = 0
 var site_spawned: int = 0          # 生成过几个点位
-var site_expired: int = 0          # 其中几个没赶到、作废了
+## 点位**不会过期**：玩家可能正拼命往商店跑，眼看要到了商店没了，
+## 体验太差。原来"新商店永不生成"的问题靠拉近距离解决（10-22 格）。
 
 func setup(db, rng, torus) -> void:
 	_db = db
@@ -85,12 +82,6 @@ func tick(world, dt: float) -> void:
 	elif site != null and not open:
 		if _torus.dist(mech.pos, site.pos) <= site.size * 0.5 + mech.half_size:
 			_enter(world)
-		elif world.time >= site_expire_t:
-			# 没赶上就作废，重新排一个（下一个会开在玩家当时的位置附近）
-			site = null
-			site_expired += 1
-			next_spawn_t = world.time + _rng.range_f(
-				spawn_cfg("min_gap_sec", 30.0), spawn_cfg("max_gap_sec", 90.0)) * 0.5
 
 func in_shield(mech, now: float) -> bool:
 	if now <= shield_until:
@@ -121,7 +112,6 @@ func _spawn_site(world) -> void:
 	site.pos = _torus.wrap(world.mech.pos + dir * dist)
 	site.size = spawn_cfg("site_size", 2.0)
 	site.shield_radius = spawn_cfg("shield_radius", 5.0)
-	site_expire_t = world.time + spawn_cfg("site_ttl_sec", 25.0)
 	site_spawned += 1
 
 ## 开局：玩家出现在商店保护罩里，必须买够再出发（§8.6）
@@ -130,7 +120,6 @@ func open_initial(world) -> void:
 	site.pos = world.mech.pos
 	site.size = spawn_cfg("site_size", 2.0)
 	site.shield_radius = spawn_cfg("shield_radius", 5.0)
-	site_expire_t = world.time + spawn_cfg("site_ttl_sec", 25.0)
 	site_spawned += 1
 	world.mech.coins = float(cfg.get("start_coins", 200))
 	_enter(world)

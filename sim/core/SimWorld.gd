@@ -104,6 +104,8 @@ func tick(step: float = -1.0) -> void:
 
 	combat.rebuild_hash(enemies)
 	map_eval.maybe_evaluate(self)      # 1 Hz，索敌 5/6 和 AI 都读它（§7.6）
+	# 开场阶段 = 关卡内还没走进过商店（开局那次商店算第 1 次）
+	spawner.opening = shop.visits < 2
 	spawner.tick(time, d, enemies, mech.pos)
 	combat.update_enemies(enemies, mech, d, enemy_bullets, log)
 	combat.update_enemy_bullets(enemy_bullets, mech, d, log)
