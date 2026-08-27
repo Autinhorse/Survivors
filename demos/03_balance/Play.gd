@@ -341,6 +341,14 @@ func _draw_mech() -> void:
 			draw_arc(wp, 16.0 * float(t.size), 0, TAU, 24, Color(0.5, 1.0, 0.6, 0.9), 2.5)
 		draw_string(ThemeDB.fallback_font, wp + Vector2(-4, 4), str(t.level),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0, 0, 0, 0.85))
+	# 射程圈：最远那门枪能打到哪。没有它玩家分不清"够不着"和"没打中"，
+	# 也就没法判断该往前压还是该拉开。画得很淡，只在需要时才注意到。
+	var far := 0.0
+	for t2 in m.turrets:
+		far = maxf(far, float(world.db.weapons.get(t2.weapon_id, {}).get("range", 0.0)))
+	if far > 0.0:
+		draw_arc(center, (far + hs) * PX, 0, TAU, 96, Color(0.55, 0.8, 1.0, 0.13), 1.5)
+
 	# 车头指示
 	draw_line(center, center + Vector2(0, -hs - 0.6).rotated(m.rot) * PX, Color(1, 0.9, 0.2), 3.0)
 

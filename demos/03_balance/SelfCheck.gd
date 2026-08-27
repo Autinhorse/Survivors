@@ -58,6 +58,7 @@ func _initialize() -> void:
 	check_armor_v2()
 	check_shop_actions()
 	check_no_clip()
+	check_range_within_view()
 	print("\n%d 项失败" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -568,6 +569,27 @@ func check_shop_actions() -> void:
 	ok("点离开商店：关闭并恢复计时", not w.shop.open)
 
 ## ---- 敌人不能陷进车体 ----
+## 没有一门枪的射程可以超出竖直半屏。
+## 超出去就是在打玩家看不见的目标：他不知道自己打掉了什么，也不知道
+## 那门枪到底有没有用。曾经把单发线定到 16-24 格，正是踩了这个坑。
+## 要拉开射程差就必须先放大视野格数，不能反过来。
+func check_range_within_view() -> void:
+	var cfg = SimConfig.new()
+	var w = SimWorld.new()
+	w.setup(cfg, ScriptedAgent.new())
+	var limit: float = w.view_h * 0.5
+	var worst := ""
+	var worst_r := 0.0
+	for wid in w.db.weapons.keys():
+		if typeof(w.db.weapons[wid]) != TYPE_DICTIONARY:
+			continue
+		var r: float = float(w.db.weapons[wid].get("range", 0.0))
+		if r > worst_r:
+			worst_r = r
+			worst = wid
+	ok("最远的枪也打不出竖直半屏", worst_r <= limit,
+		"%s 射程 %.0f，半屏 %.1f 格" % [worst, worst_r, limit])
+
 func check_no_clip() -> void:
 	var Enemy = load("res://sim/entities/Enemy.gd")
 	var w = _world_with("gun")
