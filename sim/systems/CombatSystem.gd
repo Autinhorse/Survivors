@@ -27,7 +27,15 @@ func rebuild_hash(enemies: Array) -> void:
 
 # ---------------------------------------------------------------- 敌人
 
+var _tick_n: int = 0
+var _sep_tick: bool = false
+
 func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) -> void:
+	# 分离隔帧算：每敌人每帧一次哈希查询把模拟速度从 36 倍砍到 15 倍，
+	# 而这是个软约束，隔一帧推双倍的距离，看起来完全一样。
+	_tick_n += 1
+	_sep_tick = (_tick_n & 1) == 0
+
 	for e in enemies:
 		if not e.alive:
 			continue
@@ -58,6 +66,11 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 			# 支出的锯齿占住这一圈，敌人的**边缘**都挤不进来，所以是 stand + radius
 			if stand <= 0.0 or not mech.overlaps(nrel, stand + e.radius):
 				e.pos = np
+
+		# 敌人之间也要互相挤开（手玩反馈：一堆敌人重在同一个点上，看起来只有一个）。
+		# 只挤 x/y 位置，不动速度——它们的目标始终是机甲，挤开只是排队方式。
+		if _sep_tick:
+			_separate(e, dt * 2.0)
 
 		# 敌人不能陷进车体：移动之后统一挤回边上。
 		# 敌人自己会在边缘停下，但**机甲开过去时会把它压进来**——这一步同时吸收
@@ -92,6 +105,34 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 					e.alive = false
 					log_ref.hull_kills += 1
 					_award(e, mech, log_ref)
+
+## 把和别人重叠的敌人推开一点。
+## 用的是重建于本 tick 开头的 hash，位置略有滞后——不要紧，这是个持续的软约束，
+## 下一 tick 会接着推；换成精确的成对求解只会更慢，还容易抖。
+## 推力上限锁在 e.speed 以内，否则密集时敌人会被弹飞，比重叠更难看。
+func _separate(e, dt: float) -> void:
+	var r2: float = e.radius * 2.0
+	var push := Vector2.ZERO
+	var n := 0
+	for o in hash.query(e.pos, r2):
+		if o == e or not o.alive:
+			continue
+		var d: Vector2 = _torus.delta(o.pos, e.pos)      # 别人 -> 自己
+		var l: float = d.length()
+		if l >= r2:
+			continue
+		if l < 0.001:
+			# 完全重合时给一个确定的方向，不能用随机数（sim 必须可复现）
+			d = Vector2(0.001 * float(1 + (n & 1)), 0.001)
+			l = d.length()
+		push += d / l * (r2 - l)
+		n += 1
+		if n >= 6:                                        # 挤够 6 个就够了，省时间
+			break
+	if n == 0:
+		return
+	var step: float = minf(push.length(), e.speed * dt * 1.5)
+	e.pos = _torus.wrap(e.pos + push.normalized() * step)
 
 ## 把陷进车体的敌人沿最近的那条边挤出去，返回挤完之后的相对向量
 func _clamp_outside(mech, e) -> Vector2:

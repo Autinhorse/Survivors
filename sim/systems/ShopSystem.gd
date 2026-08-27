@@ -184,16 +184,44 @@ func do_refresh(mech) -> bool:
 	_refill(mech, true)
 	return true
 
+func safe_box_cap() -> int:
+	return int(cfg.get("slots", {}).get("safe_box", 8))
+
 func buy(mech, index: int) -> bool:
 	if index < 0 or index >= cards.size() or cards[index] == null:
 		return false
 	var c = cards[index]
 	if mech.coins < float(c["price"]):
 		return false
+	if safe_box.size() >= safe_box_cap():
+		return false
 	mech.coins -= float(c["price"])
 	safe_box.append(c)
 	cards[index] = null
+	# 买走就立刻补一张。手玩反馈：4 张买光→掏钱刷新→再买光，第二次就嫌烦了。
+	# 货架自动补货之后，"刷新"退化成"我不想要这几张"时才用的功能。
+	_refill(mech)
 	return true
+
+## 从左到右把买得起的都买掉，直到钱不够或保险箱满。
+## 有 7000 金币而卡只要 100 时，一张一张点是纯粹的手指劳动，不是决策。
+func buy_all(mech) -> int:
+	var n := 0
+	for _pass in cards.size() * 4:
+		var bought := false
+		for i in cards.size():
+			if cards[i] == null:
+				continue
+			if mech.coins < float(cards[i]["price"]):
+				continue
+			if safe_box.size() >= safe_box_cap():
+				return n
+			if buy(mech, i):
+				n += 1
+				bought = true
+		if not bought:
+			break
+	return n
 
 func sell_card(mech, index: int) -> bool:
 	if index < 0 or index >= safe_box.size():

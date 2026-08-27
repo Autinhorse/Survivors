@@ -14,7 +14,7 @@
     "attack_shape": "single",
     "damage": 100,
     "interval": 1.5,
-    "range": 6,
+    "range": 10,
     "aoe": 0,
     "targeting": 1,
     "upgrade": {
@@ -38,7 +38,7 @@
     "attack_shape": "single",
     "damage": 4066,
     "interval": 2.5,
-    "range": 8,
+    "range": 16,
     "aoe": 0,
     "targeting": 4,
     "upgrade": {
@@ -63,7 +63,7 @@
     "attack_shape": "single",
     "damage": 10814,
     "interval": 3.0,
-    "range": 10,
+    "range": 19,
     "aoe": 0,
     "targeting": 4,
     "upgrade": {
@@ -89,7 +89,7 @@
     "attack_shape": "single",
     "damage": 28767,
     "interval": 3.0,
-    "range": 12,
+    "range": 22,
     "aoe": 0,
     "targeting": 4,
     "upgrade": {
@@ -120,7 +120,7 @@
     "attack_shape": "line",
     "damage": 76519,
     "interval": 5.0,
-    "range": 12,
+    "range": 24,
     "aoe": 0,
     "targeting": 4,
     "upgrade": {
@@ -149,7 +149,7 @@
     "attack_shape": "area",
     "damage": 29,
     "interval": 2.5,
-    "range": 6,
+    "range": 11,
     "aoe": 1.0,
     "targeting": 1,
     "upgrade": {
@@ -181,7 +181,7 @@
     "attack_shape": "area",
     "damage": 77,
     "interval": 2.0,
-    "range": 7,
+    "range": 12,
     "aoe": 1.5,
     "targeting": 1,
     "upgrade": {
@@ -209,7 +209,7 @@
     "attack_shape": "area",
     "damage": 205,
     "interval": 2.0,
-    "range": 7,
+    "range": 13,
     "aoe": 2.0,
     "targeting": 1,
     "upgrade": {
@@ -247,7 +247,7 @@
     "attack_shape": "area",
     "damage": 547,
     "interval": 2.0,
-    "range": 8,
+    "range": 14,
     "aoe": 3.0,
     "targeting": 1,
     "upgrade": {
@@ -280,7 +280,7 @@
     "attack_shape": "single",
     "damage": 68,
     "interval": 0.32,
-    "range": 6,
+    "range": 10,
     "aoe": 0,
     "targeting": 3,
     "upgrade": {
@@ -310,7 +310,7 @@
     "attack_shape": "single",
     "damage": 180,
     "interval": 0.32,
-    "range": 7,
+    "range": 11,
     "aoe": 0,
     "targeting": 3,
     "upgrade": {
@@ -336,7 +336,7 @@
     "attack_shape": "single",
     "damage": 479,
     "interval": 0.32,
-    "range": 7,
+    "range": 12,
     "aoe": 0,
     "targeting": 3,
     "upgrade": {
@@ -370,7 +370,7 @@
     "attack_shape": "single",
     "damage": 1275,
     "interval": 0.32,
-    "range": 7,
+    "range": 13,
     "aoe": 0,
     "targeting": 3,
     "upgrade": {
@@ -390,5 +390,6 @@
   },
   "_rapid_note": "机枪线的设计语言：每一发刚好杀掉一个小怪，多一点都是浪费。所以它的单发伤害跟着小怪血量走，DPS 全靠射速。代价是打重甲时 DPS 远低于单发线（低 3.6-9 倍），这正是分工的来源。",
   "_rule": "三条线用同一条规则：单发伤害 = 该线主打敌人在该阶段的血量 × 系数（机枪 1.0 一枪一个 / 单发 1.0 对重甲一枪一个 / 散弹 0.4 要两三枪）。换代涨幅 = 2 × 同种内涨幅，正好对应'合并 DPS 翻倍'；一代持续 log(2k)/log(血量成长) = 5.1 个周期，四代 27 分钟。",
-  "_anchor": "锚点系数：换代那刻单发伤害 = 靶子血量 × α。机枪/单发 α=1.4（代初一枪一个，末期两枪，合并后回到一枪）；散弹 α=0.6（始终两三枪，靠 AoE 一次打多个）。"
+  "_anchor": "锚点系数：换代那刻单发伤害 = 靶子血量 × α。机枪/单发 α=1.4（代初一枪一个，末期两枪，合并后回到一枪）；散弹 α=0.6（始终两三枪，靠 AoE 一次打多个）。",
+  "_range_note": "2026-08-27 手玩反馈「看到打不到」：视野半高 13.5 格而旧射程只有 6-8。重定为单发 16-24（看多远打多远）／散弹 11-14／机枪 10-13（只管身边一圈）。"
 }

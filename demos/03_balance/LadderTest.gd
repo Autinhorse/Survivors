@@ -23,6 +23,8 @@ const SPREAD := ["spread_gun", "shotgun", "fragment_cannon", "wall_of_lead"]
 
 var runs: int = 5
 var tier_cycles: float = 5.1
+## 一个周期多少秒。**从数据里读**，不能写死——波间隔从 10 改到 7 秒那次，
+## 这里还停在 80，升级表比敌人慢了 30%，跑出来的数字全是错的。
 var cycle_sec: float = 80.0
 var only: String = ""
 var cap: float = 1800.0
@@ -37,8 +39,12 @@ func _initialize() -> void:
 		elif kv.size() == 2 and kv[0] == "cap":
 			cap = float(kv[1])
 
-	print("按时间表升级：一代 %.1f 个周期（%.1f 分钟），代内匀速升到 3 级"
-		% [tier_cycles, tier_cycles * cycle_sec / 60.0])
+	var probe = SimWorld.new()
+	probe.setup(SimConfig.new(), ScriptedAgent.new())
+	cycle_sec = probe.spawner.wave_gap * float(probe.spawner.cycle_waves)
+	print("周期 %.0f 秒（%d 波 × %.0f 秒）；一代 %.1f 个周期（%.1f 分钟），代内匀速升到 3 级"
+		% [cycle_sec, probe.spawner.cycle_waves, probe.spawner.wave_gap,
+			tier_cycles, tier_cycles * cycle_sec / 60.0])
 	print("%-26s %-9s %-9s %s" % ["build", "平均存活", "推到第几波", "终局武器"])
 	_run("纯机枪线", [[RAPID, 8]])
 	_run("纯单发线", [[SINGLE, 8]])

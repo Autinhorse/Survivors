@@ -160,6 +160,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			var i: int = event.keycode - KEY_1
 			if world.shop.open and i < world.shop.cards.size() and world.shop.cards[i] != null:
 				human.queued_action = {"type": "buy", "index": i}
+		KEY_B:
+			if world.shop.open:
+				human.queued_action = {"type": "buy_all"}
 		KEY_SPACE:
 			speed_mult = 4.0 if speed_mult == 1.0 else 1.0
 		KEY_R:
@@ -225,6 +228,20 @@ func _draw() -> void:
 			var to := (sp - center).normalized()
 			var edge := center + to * (minf(w, h) * 0.45)
 			draw_line(edge, edge + to * 28.0, Color(0.3, 0.8, 1.0), 4.0)
+
+	# 屏外的重甲炮台给个箭头。它 keep_distance 停在远处，眼前的杂兵又看不过来，
+	# 手玩时根本不知道它在哪 —— 而它恰恰是唯一值得单发线出手的目标。
+	for e in world.enemies:
+		if not e.alive or e.wave_pos != 4:
+			continue
+		var ep := _screen(e.pos)
+		if ep.x >= 0.0 and ep.y >= 0.0 and ep.x <= w and ep.y <= h:
+			continue
+		var to2 := (ep - center).normalized()
+		var edge2 := center + to2 * (minf(w, h) * 0.42)
+		var side2 := to2.orthogonal() * 9.0
+		var tri2 := PackedVector2Array([edge2 + to2 * 20.0, edge2 + side2, edge2 - side2])
+		draw_colored_polygon(tri2, Color(0.75, 0.45, 1.0, 0.9))
 
 	for b in world.enemy_bullets:
 		draw_circle(_screen(b.pos), 3.0, Color(1, 0.45, 0.35))
@@ -293,8 +310,32 @@ func _draw_mech() -> void:
 	for t in m.turrets:
 		var wp: Vector2 = center + m.turret_offset(t).rotated(m.rot) * PX
 		var col := Color(String(world.db.weapons.get(t.weapon_id, {}).get("color", "#ffffff")))
-		draw_circle(wp, 8.0 * float(t.size), col)
-		draw_arc(wp, 12.0 * float(t.size), 0, TAU, 16, col.darkened(0.3), 1.5)
+		# 三条枪线用三种形状区分（手玩时全是圆点根本分不清哪门是哪门）：
+		# 初始枪 + 机枪线 = 圆，单发线 = 三角，散弹线 = 方块。
+		var line := String(world.db.weapons.get(t.weapon_id, {}).get("line", ""))
+		var r0 := 9.0 * float(t.size)
+		var face: Vector2 = m.turret_offset(t).rotated(m.rot)
+		if face.length_squared() < 0.01:
+			face = Vector2(0, -1).rotated(m.rot)
+		face = face.normalized()
+		if line == "rifle" and t.weapon_id != "gun":
+			var tri := PackedVector2Array()
+			for a in [0.0, TAU / 3.0, TAU * 2.0 / 3.0]:
+				tri.append(wp + face.rotated(a) * r0 * 1.25)
+			draw_colored_polygon(tri, col)
+			tri.append(tri[0])
+			draw_polyline(tri, col.darkened(0.4), 1.5)
+		elif line == "spread":
+			var sq := PackedVector2Array()
+			var perp := face.orthogonal()
+			for c in [face + perp, face - perp, -face - perp, -face + perp]:
+				sq.append(wp + c * r0 * 0.78)
+			draw_colored_polygon(sq, col)
+			sq.append(sq[0])
+			draw_polyline(sq, col.darkened(0.4), 1.5)
+		else:
+			draw_circle(wp, r0 * 0.9, col)
+			draw_arc(wp, r0 * 0.9, 0, TAU, 20, col.darkened(0.4), 1.5)
 		# 选中的卡能把这门塔顶上去一级：套个绿环，表示这里可以点
 		if pick_id != "" and t.weapon_id == pick_id 				and t.level < world.db.weapon_max_level(pick_id):
 			draw_arc(wp, 16.0 * float(t.size), 0, TAU, 24, Color(0.5, 1.0, 0.6, 0.9), 2.5)
@@ -379,7 +420,15 @@ func _sync_panel() -> void:
 		_btn("合并两个 3 级 %s（免费，空出一个槽）" % nm,
 			func(): human.queued_action = {"type": "merge", "a": a, "b": b})
 
-	_row("卡槽（点击购买）", 16)
+	_row("卡槽（点击购买，买走自动补货）", 16)
+	# 有 7000 金币而卡只要 100 时，一张一张点是手指劳动不是决策
+	var cheapest := 1.0e9
+	for c0 in shop.cards:
+		if c0 != null:
+			cheapest = minf(cheapest, float(c0["price"]))
+	_btn("全买（买到没钱或保险箱满）",
+		func(): human.queued_action = {"type": "buy_all"},
+		m.coins >= cheapest and shop.safe_box.size() < shop.safe_box_cap())
 	for i in shop.cards.size():
 		var c = shop.cards[i]
 		if c == null:
@@ -390,7 +439,8 @@ func _sync_panel() -> void:
 			func(): human.queued_action = {"type": "buy", "index": idx}, afford)
 
 	if not shop.safe_box.is_empty():
-		_row("保险箱（点击装到底座 / 右边卖掉）", 16)
+		_row("保险箱 %d/%d（点卡选中 → 再点左边底座的格子放置；右边是卖掉）"
+			% [shop.safe_box.size(), shop.safe_box_cap()], 16)
 		for i in mini(shop.safe_box.size(), 8):
 			var c2 = shop.safe_box[i]
 			var idx2: int = i
@@ -456,7 +506,7 @@ func _update_hud() -> void:
 		armor_txt.append("%s %s%d 减%d%%" % [SIDE[i], nm, m.armor_level[i], int(m.armor[i] * 100.0)])
 	lines.append("装甲 " + "  ".join(armor_txt) + "   位置 %.0f,%.0f / %.0fx%.0f" % [
 		m.pos.x, m.pos.y, world.torus.w, world.torus.h])
-	lines.append("WASD 移动   Q/E 转 90°   1-4 买卡   空格 4 倍速   R 换种子重开   Esc 退出")
+	lines.append("WASD 移动   Q/E 转 90°   1-4 买卡   B 全买   空格 4 倍速   R 换种子重开   Esc 退出")
 	if world.over:
 		lines.append(">>> %s   存活 %.1fs   推到第 %d 波   击杀 %d   （R 重开）" % [
 			world.log.result, world.log.run_duration, world.log.wave_reached, world.log.kills_total])

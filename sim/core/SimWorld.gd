@@ -155,6 +155,7 @@ func _run_shop() -> void:
 func _apply_shop(act: Dictionary) -> void:
 	match String(act.get("type", "")):
 		"buy":     shop.buy(mech, int(act.get("index", 0)))
+		"buy_all": shop.buy_all(mech)
 		"place":
 			if shop.place(mech, int(act.get("index", 0)), int(act.get("side", -1)),
 					bool(act.get("prefer_new", false)), act.get("cell", null)):
