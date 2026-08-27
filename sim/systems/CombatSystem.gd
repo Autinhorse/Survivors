@@ -91,10 +91,11 @@ func update_enemies(enemies: Array, mech, dt: float, bullets: Array, log_ref) ->
 				b.vel = -rel / maxf(dist, 0.001) * e.bullet_speed
 				b.damage = e.attack
 				b.ttl = e.attack_range / maxf(0.1, e.bullet_speed) + 1.0
+				b.wave_pos = e.wave_pos
 				bullets.append(b)
 		elif touching:
 			e.attack_cd = e.attack_interval
-			_damage_mech(mech, rel, e.attack, log_ref)
+			_damage_mech(mech, rel, e.attack, log_ref, e.wave_pos)
 			# 尖刺及以上：敌人每次攻击这一面，自己也要吃一份（§6.2）
 			var side: int = mech.hit_side(rel)
 			var back: float = mech.armor_reflect[side]
@@ -163,15 +164,18 @@ func update_enemy_bullets(bullets: Array, mech, dt: float, log_ref) -> void:
 		var rel: Vector2 = _torus.delta(mech.pos, b.pos)
 		if mech.overlaps(rel, 0.1):
 			b.alive = false
-			_damage_mech(mech, rel, b.damage, log_ref)
+			_damage_mech(mech, rel, b.damage, log_ref, b.wave_pos)
 
-func _damage_mech(mech, rel: Vector2, amount: float, log_ref) -> void:
+## src_pos = 伤害来自周期内第几位（0 = 未知/近战，由调用方补）
+func _damage_mech(mech, rel: Vector2, amount: float, log_ref, src_pos: int = 0) -> void:
 	var side: int = mech.hit_side(rel)
 	var taken: float = amount * (1.0 - clampf(mech.armor[side], 0.0, 0.9))
 	mech.hp -= taken
 	log_ref.damage_taken += taken
 	log_ref.damage_by_side[side] = float(log_ref.damage_by_side[side]) + taken
 	log_ref.enemy_contact_count += 1
+	if src_pos >= 1 and src_pos <= 8:
+		log_ref.damage_by_wave_pos[src_pos - 1] = 			float(log_ref.damage_by_wave_pos[src_pos - 1]) + taken
 
 ## 齿轮/滚筒：定时朝外飞出齿轮 / 放出滚轮（v0.2 §6.2）
 func armor_projectiles(mech, projectiles: Array, dt: float) -> void:

@@ -48,12 +48,11 @@ func _one(tag: String, spec: Array) -> void:
 		reach = maxf(reach, float(w.db.weapons[t.weapon_id].get("range", 0.0)))
 
 	var spawned := PackedInt32Array(); spawned.resize(9)
-	var dmg := PackedFloat32Array(); dmg.resize(9)
 	var seen: Dictionary = {}          # 敌人实例 → wave_pos，用来数"刷了多少"
-	# 「平均距离」没有判别力：重甲炮台速度慢，长途行军把均值抬到 20 格开外，
-	# 于是明明 35/40 都被打掉了还会显示"永远够不着"。要问的是它**最近能到多近**。
+	# 伤害不再按"掉血那一刻最近的敌人"猜——那样远程敌人的伤害会全部记到
+	# 贴脸的近战兵头上（重甲炮台站在 9-11 格外，一路显示 0%，把我骗了好几轮）。
+	# 现在直接读 log.damage_by_wave_pos，它是在伤害发生处记的。
 	var standoff := INF
-	var last_hp: float = w.mech.hp
 
 	while not w.over:
 		w.tick()
@@ -61,28 +60,15 @@ func _one(tag: String, spec: Array) -> void:
 			if not seen.has(e):
 				seen[e] = e.wave_pos
 				spawned[clampi(e.wave_pos, 0, 8)] += 1
-		if w.mech.hp < last_hp:
-			var best := 0
-			var best_d := INF
-			for e in w.combat.hash.query(w.mech.pos, 12.0):
-				if not e.alive:
-					continue
-				var d: float = w.torus.dist(w.mech.pos, e.pos)
-				if d < best_d:
-					best_d = d
-					best = e.wave_pos
-			dmg[clampi(best, 0, 8)] += last_hp - w.mech.hp
-			last_hp = w.mech.hp
-		# 每秒采一次重甲炮台（第 4 位，keep_distance）实际停在多远——
-		# 它要是稳定停在射程外，这条枪线就是永远打不到它，不是"打得慢"
+		# 每秒采一次重甲炮台（第 4 位，keep_distance）最近逼到多远
 		if absf(fposmod(w.time, 1.0)) < w.dt:
 			for e in w.enemies:
 				if e.alive and e.wave_pos == 4:
 					standoff = minf(standoff, w.torus.dist(w.mech.pos, e.pos))
 
 	var tot := 0.0
-	for x in dmg:
-		tot += x
+	for x in w.log.damage_by_wave_pos:
+		tot += float(x)
 	print("── %s　存活 %.1fs　推到第 %d 波　最远射程 %.0f 格" % [tag, w.time, w.log.wave_reached, reach])
 	print("   %-10s %-8s %-8s %-8s %s" % ["敌人", "刷出", "杀掉", "漏掉", "对机甲伤害"])
 	for i in range(1, 9):
@@ -91,7 +77,7 @@ func _one(tag: String, spec: Array) -> void:
 		var k: int = int(w.log.kills_by_wave_pos[i - 1])
 		print("   %-10s %-8d %-8d %-8s %s" % [NAMES[i], spawned[i], k,
 			"%.0f%%" % (100.0 * float(maxi(0, spawned[i] - k)) / float(spawned[i])),
-			"%.0f%%" % (100.0 * dmg[i] / maxf(1.0, tot))])
+			"%.0f%%" % (100.0 * float(w.log.damage_by_wave_pos[i - 1]) / maxf(1.0, tot))])
 	if standoff < INF:
 		print("   重甲炮台最近逼到 %.1f 格，最远射程 %.0f 格 → %s\n"
 			% [standoff, reach,

@@ -33,6 +33,9 @@ var kills_total: int = 0
 var kills_by_weapon: Dictionary = {}
 var damage_by_weapon: Dictionary = {}
 var kills_by_wave_pos := [0, 0, 0, 0, 0, 0, 0, 0]   # 周期内第 1-8 位各杀了多少
+## 第 1-8 位各打了机甲多少伤害。必须在**伤害发生处**记，不能事后按"最近的
+## 敌人"猜：远程敌人站在射程外放子弹，命中时最近的永远是贴脸的近战兵。
+var damage_by_wave_pos := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 var enemy_contact_count: int = 0
 var damage_taken: float = 0.0
@@ -65,7 +68,7 @@ const COLUMNS := [
 	"hull_kills", "hull_damage", "distance_moved", "rotation_count",
 	"time_stationary", "time_turning", "time_contacted", "avg_nearest", "peak_enemies",
 	"coins_earned", "coins_left", "shop_visits", "merge_count", "best_column",
-	"damage_by_side", "kills_by_wave_pos",
+	"damage_by_side", "kills_by_wave_pos", "damage_by_wave_pos",
 	"first_turret_time", "first_fusion_time", "fusion_count", "first_ultimate_time",
 	"ultimate_count", "ultimate_active_seconds", "power_window_ratio",
 	"kills_by_weapon", "damage_by_weapon", "final_build", "picks",
@@ -83,7 +86,7 @@ func csv_row() -> String:
 		"%.1f" % time_stationary, "%.1f" % time_turning, "%.1f" % time_contacted,
 		"%.2f" % (nearest_sum / maxf(1.0, float(nearest_n))), peak_enemies,
 		"%.0f" % coins_earned, "%.0f" % coins_left, shop_visits, merge_count, best_column,
-		_arr(damage_by_side), _arr(kills_by_wave_pos),
+		_arr(damage_by_side), _arr(kills_by_wave_pos), _arr(damage_by_wave_pos),
 		"%.1f" % first_turret_time, "%.1f" % first_fusion_time, fusion_count,
 		"%.1f" % first_ultimate_time, ultimate_count,
 		"%.1f" % ultimate_active_seconds, "%.3f" % power_window_ratio,
